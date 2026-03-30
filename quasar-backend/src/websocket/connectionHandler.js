@@ -108,6 +108,18 @@ class ConnectionHandler {
       },
       onMessage: (messageObj) => {
         this._sendToClient(messageObj);
+
+        // AI decided the interview is over — forward to client then tear down
+        if (messageObj.type === 'interview_ended_by_ai') {
+          logger.info('AI called end_interview — scheduling graceful teardown', {
+            userId: this.user?.id,
+          });
+          // Give the final audio 3.5 s to finish playing on the client before closing
+          setTimeout(() => {
+            this._teardownGemini();
+            this._sendToClient({ type: 'session_ended' });
+          }, 3500);
+        }
       },
       onClose: () => {
         this._sendToClient({ type: 'session_ended' });

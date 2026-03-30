@@ -12,6 +12,7 @@ export interface ServerMessage {
     | 'connected'
     | 'session_ready'
     | 'session_ended'
+    | 'interview_ended_by_ai'
     | 'transcript_user'
     | 'transcript_model'
     | 'audio'
@@ -20,6 +21,7 @@ export interface ServerMessage {
   text?: string;
   data?: string;
   message?: string;
+  closingRemark?: string;
 }
 
 export interface BrowserMessage {

@@ -94,6 +94,13 @@ export function useInterviewSession() {
           if (msg.text) addMessage('assistant', msg.text);
           break;
 
+        case 'interview_ended_by_ai':
+          // AI gracefully concluded — stop mic immediately, let final audio finish
+          setIsRecording(false);
+          stopRecording();
+          // session_ended will arrive ~3.5s later from backend to fully close out
+          break;
+
         case 'session_ended':
           setStatus('ended');
           setIsRecording(false);
