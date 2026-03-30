@@ -7,6 +7,8 @@ import { FillerDetector } from './FillerDetector';
 import { PostSessionResults } from './PostSessionResults';
 import { apiPost } from '../lib/api';
 
+const logger = (...args: unknown[]) => console.log('[InterviewRoom]', ...args);
+
 interface InterviewRoomProps {
   messages: Message[];
   status: SessionStatus;
@@ -40,6 +42,7 @@ export function InterviewRoom({
     fillerBuckets: { t: number; count: number; words?: string[] }[];
   } | null>(null);
   const [reportDownloading, setReportDownloading] = useState(false);
+  const [metricsReady, setMetricsReady] = useState(false);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -59,31 +62,57 @@ export function InterviewRoom({
     setFillerData(data);
   }, []);
 
-  // Save metrics when session ends (run once)
+  // Save metrics when session ends (run once), then signal readiness for evaluation
   useEffect(() => {
     if (!isEnded || !sessionId || metricsSubmittedRef.current) return;
     metricsSubmittedRef.current = true;
 
-    // Save emotion metrics
-    if (emotionSnapshots.length > 0) {
-      apiPost(`/api/sessions/${sessionId}/emotion-metrics`, { metrics: emotionSnapshots })
-        .catch(() => {});
-    }
+    const saveAllMetrics = async () => {
+      logger('Session ended — saving metrics before evaluation…');
 
-    // Save speech metrics
-    if (fillerData) {
-      apiPost(`/api/sessions/${sessionId}/speech-metrics`, {
-        transcript: fillerData.transcript || getTranscript(),
-        fillerBuckets: fillerData.fillerBuckets,
-        totalFillers: fillerData.totalFillers,
-        wordsPerMinute: 0,
-      }).catch(() => {});
-    }
+      const promises: Promise<unknown>[] = [];
 
-    // Note: We do NOT call endSession here. The evaluateSession endpoint
-    // (triggered by PostSessionResults) already sets status='completed'
-    // and saves all scores. Calling endSession with empty body would
-    // overwrite those scores to null due to a race condition.
+      // Save emotion metrics
+      if (emotionSnapshots.length > 0) {
+        promises.push(
+          apiPost(`/api/sessions/${sessionId}/emotion-metrics`, { metrics: emotionSnapshots })
+            .then(() => logger('Emotion metrics saved'))
+            .catch((err) => logger('Emotion metrics save failed:', err))
+        );
+      }
+
+      // Save speech metrics (includes transcript)
+      const transcript = fillerData?.transcript || getTranscript();
+      promises.push(
+        apiPost(`/api/sessions/${sessionId}/speech-metrics`, {
+          transcript,
+          fillerBuckets: fillerData?.fillerBuckets || [],
+          totalFillers: fillerData?.totalFillers || 0,
+          wordsPerMinute: 0,
+        })
+          .then(() => logger('Speech metrics saved'))
+          .catch((err) => logger('Speech metrics save failed:', err))
+      );
+
+      // Also save the transcript directly to the session as a fallback,
+      // so the evaluator always has access to it
+      if (transcript) {
+        promises.push(
+          apiPost(`/api/sessions/${sessionId}/end`, {
+            transcript,
+            durationSeconds: 0, // will be recalculated by evaluator
+          })
+            .then(() => logger('Session transcript persisted'))
+            .catch((err) => logger('Session transcript persist failed:', err))
+        );
+      }
+
+      await Promise.allSettled(promises);
+      logger('All metrics saved — evaluation can proceed');
+      setMetricsReady(true);
+    };
+
+    saveAllMetrics();
   }, [isEnded, sessionId]);
 
   const handleDownloadReport = async () => {
@@ -189,8 +218,21 @@ export function InterviewRoom({
             <MessageBubble key={msg.id} message={msg} />
           ))}
 
-          {/* Post-session: full evaluation results */}
-          {isEnded && sessionId && (
+          {/* Post-session: saving metrics indicator */}
+          {isEnded && sessionId && !metricsReady && (
+            <div className="post-session">
+              <div className="eval-loading">
+                <div className="eval-loading__spinner">
+                  <div className="spinner spinner--large" />
+                </div>
+                <h3>Saving session data…</h3>
+                <p>Preparing your responses for evaluation</p>
+              </div>
+            </div>
+          )}
+
+          {/* Post-session: full evaluation results (only after metrics are saved) */}
+          {isEnded && sessionId && metricsReady && (
             <PostSessionResults
               sessionId={sessionId}
               fillerBuckets={fillerData?.fillerBuckets || []}

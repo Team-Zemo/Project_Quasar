@@ -48,7 +48,7 @@ async function generateReport(req, res) {
     // Generate action plan using Gemini
     let actionPlan = [];
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       const starScores = session.starScores || {};
       const prompt = `Based on these interview performance scores, generate exactly 3 concise actionable improvement tips (one sentence each). Return ONLY a JSON array of 3 strings, no markdown.
 Scores: Overall: ${session.overallScore || 'N/A'}/10, Situation: ${starScores.situation || 'N/A'}, Task: ${starScores.task || 'N/A'}, Action: ${starScores.action || 'N/A'}, Result: ${starScores.result || 'N/A'}, Clarity: ${session.clarityScore || 'N/A'}, Filler words: ${speechMetrics.totalFillers || 0}`;

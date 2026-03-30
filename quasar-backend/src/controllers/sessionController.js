@@ -41,30 +41,35 @@ async function createSession(req, res) {
 }
 
 /**
- * End a session — update status, scores, transcript, duration
+ * End a session — update status, scores, transcript, duration.
+ * Only overwrites fields that are actually provided in the request body,
+ * so a transcript-only save won't wipe scores set by evaluation.
  */
 async function endSession(req, res) {
   try {
     const { sessionId } = req.params;
     const { overallScore, starScores, clarityScore, transcript, durationSeconds } = req.body;
 
-    const session = await Session.findByIdAndUpdate(
-      sessionId,
-      {
-        status: 'completed',
-        overallScore: overallScore || null,
-        starScores: starScores || {},
-        clarityScore: clarityScore || null,
-        transcript: transcript || '',
-        durationSeconds: durationSeconds || 0,
-        endedAt: new Date(),
-      },
-      { new: true }
-    );
+    // Build update object — only set fields the caller explicitly provided
+    const update = { endedAt: new Date() };
 
-    if (!session) {
+    // Only transition status to 'completed' if it's currently 'active'
+    // (don't regress a session that is already completed)
+    const existing = await Session.findById(sessionId).lean();
+    if (!existing) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
     }
+    if (existing.status !== 'completed') {
+      update.status = 'completed';
+    }
+
+    if (overallScore !== undefined && overallScore !== null) update.overallScore = overallScore;
+    if (starScores && Object.keys(starScores).length > 0) update.starScores = starScores;
+    if (clarityScore !== undefined && clarityScore !== null) update.clarityScore = clarityScore;
+    if (transcript) update.transcript = transcript;
+    if (durationSeconds) update.durationSeconds = durationSeconds;
+
+    const session = await Session.findByIdAndUpdate(sessionId, update, { new: true });
 
     return res.json({
       success: true,

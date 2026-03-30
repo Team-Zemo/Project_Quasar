@@ -43,7 +43,7 @@ async function evaluateSession(req, res) {
     }
 
     // Call Gemini for evaluation
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `You are an expert interview evaluator. Analyse this interview transcript and return ONLY valid JSON (no markdown, no code fences) in this exact schema:
 {

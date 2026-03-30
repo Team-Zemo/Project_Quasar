@@ -196,8 +196,12 @@ export function useInterviewSession() {
     stopRecording();
     setIsRecording(false);
     setStatus('ended');
-    wsRef.current?.close();
+    // Give the 'end' message time to flush before closing the socket
+    const ws = wsRef.current;
     wsRef.current = null;
+    setTimeout(() => {
+      ws?.close();
+    }, 200);
   }, [sendWsMessage, stopRecording]);
 
   const resetSession = useCallback(() => {
