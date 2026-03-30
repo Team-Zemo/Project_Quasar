@@ -1715,6 +1715,301 @@ a {
   color: #fb923c;
 }
 
+.auth-link--small {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ── Form label row (label + forgot link) ────────────────────────── */
+.form-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.form-label-row .form-label {
+  margin-bottom: 0;
+}
+
+/* ── OAuth side-by-side buttons ─────────────────────────────────── */
+.oauth-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.btn-oauth {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--c-border-2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--c-text);
+  transition: background var(--t-fast), border-color var(--t-fast), transform var(--t-fast);
+  cursor: pointer;
+}
+.btn-oauth:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+.btn-oauth--github {
+  color: var(--c-text);
+}
+.btn-oauth--github:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* ── Success box (green) ─────────────────────────────────────────── */
+.success-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--c-success-dim);
+  border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: var(--radius-md);
+  color: var(--c-success);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ── Auth success state (sent email / password reset) ────────────── */
+.auth-success-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--space-4) 0 var(--space-2);
+}
+
+.auth-success-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--c-accent-dim);
+  border: 1px solid var(--c-accent-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-accent);
+  margin-bottom: var(--space-5);
+}
+
+.auth-success-icon--green {
+  background: var(--c-success-dim);
+  border-color: rgba(34, 197, 94, 0.25);
+  color: var(--c-success);
+}
+
+.auth-success-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--c-text);
+  margin-bottom: var(--space-3);
+}
+
+.auth-success-text {
+  font-size: 14px;
+  color: var(--c-text-dim);
+  line-height: 1.7;
+  max-width: 320px;
+}
+
+/* ── Settings page ───────────────────────────────────────────────── */
+.settings-page {
+  min-height: 100vh;
+  padding: var(--space-8) var(--space-5);
+}
+
+.settings-container {
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.settings-header {
+  margin-bottom: var(--space-8);
+}
+
+.settings-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--c-text-dim);
+  text-decoration: none;
+  font-size: 13px;
+  margin-bottom: var(--space-5);
+  transition: color var(--t-fast);
+}
+.settings-back:hover {
+  color: var(--c-text);
+}
+
+.settings-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--c-text);
+  margin-bottom: var(--space-2);
+}
+
+.settings-subtitle {
+  font-size: 14px;
+  color: var(--c-text-dim);
+}
+
+.settings-card {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  display: flex;
+  gap: var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.settings-card__icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--c-accent-dim);
+  border: 1px solid var(--c-accent-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-accent);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.settings-card__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-card__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-text);
+  margin-bottom: var(--space-1);
+}
+
+.settings-card__desc {
+  font-size: 13px;
+  color: var(--c-text-dim);
+  margin-bottom: var(--space-5);
+  line-height: 1.5;
+}
+
+.settings-form {
+  gap: var(--space-4);
+}
+
+.settings-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: 12px;
+  color: var(--c-text-mute);
+  line-height: 1.6;
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+}
+.settings-hint svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  opacity: 0.5;
+}
+
+/* ── Settings profile info ───────────────────────────────────────── */
+.settings-profile-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-text-dim);
+  font-size: 13px;
+}
+
+.settings-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--c-border);
+}
+.settings-profile-row:last-child {
+  border-bottom: none;
+}
+
+.settings-profile-label {
+  width: 110px;
+  flex-shrink: 0;
+  color: var(--c-text-mute);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.settings-profile-value {
+  color: var(--c-text);
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.settings-profile-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* ── Settings badges ─────────────────────────────────────────────── */
+.settings-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.settings-badge--green {
+  background: var(--c-success-dim);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  color: var(--c-success);
+}
+
+.settings-badge--dim {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--c-border);
+  color: var(--c-text-mute);
+}
+
+.settings-badge--provider {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--c-border-2);
+  color: var(--c-text-dim);
+}
+
 .auth-loading {
   display: flex;
   flex-direction: column;

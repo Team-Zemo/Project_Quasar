@@ -11,7 +11,10 @@ const userSchema = new mongoose.Schema({
   passwordHash: { type: String, default: null },
   name: { type: String, required: true, trim: true },
   googleId: { type: String, unique: true, sparse: true, default: null },
+  githubId: { type: String, unique: true, sparse: true, default: null },
   avatarUrl: { type: String, default: null },
+  passwordResetToken: { type: String, default: null },
+  passwordResetExpires: { type: Date, default: null },
 }, {
   timestamps: true,
 });

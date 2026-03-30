@@ -4,6 +4,9 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  avatarUrl?: string | null;
+  hasPassword?: boolean;
+  linkedProviders?: string[];
 }
 
 type AuthListener = (user: User | null) => void;
@@ -45,28 +48,24 @@ async function apiFetch(url: string, options: RequestInit = {}): Promise<Respons
   });
 }
 
-export async function register(email: string, password: string, name: string): Promise<{ success: boolean; message: string; data: User | null }> {
+export async function register(email: string, password: string, name: string) {
   const res = await apiFetch(`${BASE}/auth/register`, {
     method: 'POST',
     body: JSON.stringify({ email, password, name }),
   });
   const json = await res.json();
-  if (json.success && json.data) {
-    authState.setUser(json.data);
-  }
-  return json;
+  if (json.success && json.data) authState.setUser(json.data);
+  return json as { success: boolean; message: string; data: User | null };
 }
 
-export async function login(email: string, password: string): Promise<{ success: boolean; message: string; data: User | null }> {
+export async function login(email: string, password: string) {
   const res = await apiFetch(`${BASE}/auth/login`, {
     method: 'POST',
     body: JSON.stringify({ email, password }),
   });
   const json = await res.json();
-  if (json.success && json.data) {
-    authState.setUser(json.data);
-  }
-  return json;
+  if (json.success && json.data) authState.setUser(json.data);
+  return json as { success: boolean; message: string; data: User | null };
 }
 
 export async function refreshSession(): Promise<User | null> {
@@ -105,4 +104,39 @@ export async function fetchMe(): Promise<User | null> {
   } catch {
     return null;
   }
+}
+
+/** Fetch full profile (email, hasPassword, linkedProviders) without mutating authState */
+export async function fetchProfile(): Promise<User | null> {
+  try {
+    const res = await apiFetch(`${BASE}/auth/me`);
+    const json = await res.json();
+    return json.success && json.data ? json.data : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function forgotPassword(email: string) {
+  const res = await apiFetch(`${BASE}/auth/forgot-password`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+  return res.json() as Promise<{ success: boolean; message: string; data: null }>;
+}
+
+export async function resetPassword(token: string, password: string) {
+  const res = await apiFetch(`${BASE}/auth/reset-password`, {
+    method: 'POST',
+    body: JSON.stringify({ token, password }),
+  });
+  return res.json() as Promise<{ success: boolean; message: string; data: null }>;
+}
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  const res = await apiFetch(`${BASE}/auth/change-password`, {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  return res.json() as Promise<{ success: boolean; message: string; data: null }>;
 }
