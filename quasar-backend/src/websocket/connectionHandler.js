@@ -8,8 +8,9 @@ class ConnectionHandler {
    * Represents an abstraction around a single browser -> backend WebSocket
    * @param {WebSocket} ws 
    */
-  constructor(ws) {
+  constructor(ws, user = null) {
     this.ws = ws;
+    this.user = user;
     this.geminiService = null;
     this.isClientConnected = true;
     this.sessionId = null;

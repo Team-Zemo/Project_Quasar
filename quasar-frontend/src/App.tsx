@@ -132,7 +132,7 @@ export default function App() {
           <Route path="/progress" element={
             <ProtectedRoute><ProgressDashboard /></ProtectedRoute>
           } />
-          <Route path="/" element={<InterviewPage />} />
+          <Route path="/" element={<ProtectedRoute><InterviewPage /></ProtectedRoute>} />
         </Routes>
       </main>
 

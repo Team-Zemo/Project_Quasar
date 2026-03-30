@@ -2,7 +2,8 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import type { Message, ServerMessage, BrowserMessage, SessionStatus, SessionConfig } from '../types/interview';
 import { useAudioProcessor } from './useAudioProcessor';
 
-const WS_URL = `ws://${window.location.hostname}:8080/ws/interview`;
+const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const WS_URL = `${WS_PROTOCOL}//${window.location.host}/ws/interview`;
 
 /**
  * Central hook that manages the entire interview session:
