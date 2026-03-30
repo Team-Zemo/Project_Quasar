@@ -12,12 +12,8 @@ const config = {
   jwtAccessExpiry: '15m',
   jwtRefreshExpiry: '7d',
 
-  // PostgreSQL
-  pgHost: process.env.PG_HOST || 'localhost',
-  pgPort: parseInt(process.env.PG_PORT || '5432', 10),
-  pgUser: process.env.PG_USER || 'postgres',
-  pgPassword: process.env.PG_PASSWORD || 'postgres',
-  pgDatabase: process.env.PG_DATABASE || 'quasar',
+  // MongoDB
+  mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/quasar',
 
   // Google OAuth
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',

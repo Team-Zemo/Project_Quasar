@@ -1,6 +1,5 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config/env');
-const { pool } = require('../config/database');
 
 /**
  * requireAuth — blocks unauthenticated requests.

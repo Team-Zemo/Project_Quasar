@@ -1,7 +1,10 @@
 const PDFDocument = require('pdfkit');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const config = require('../config/env');
-const { pool } = require('../config/database');
+const Session = require('../models/Session');
+const SpeechMetrics = require('../models/SpeechMetrics');
+const Persona = require('../models/Persona');
+const User = require('../models/User');
 const logger = require('../utils/logger');
 
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
@@ -15,35 +18,40 @@ async function generateReport(req, res) {
     const { sessionId } = req.params;
 
     // Fetch session data
-    const sessionResult = await pool.query(
-      `SELECT s.*, p.name as persona_name, u.name as user_name, u.email as user_email
-       FROM sessions s
-       LEFT JOIN personas p ON s.persona_id = p.id
-       LEFT JOIN users u ON s.user_id = u.id
-       WHERE s.id = $1`,
-      [sessionId]
-    );
+    const session = await Session.findById(sessionId).lean();
 
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
     }
 
-    const session = sessionResult.rows[0];
+    // Fetch persona name
+    let personaName = null;
+    if (session.personaId) {
+      const persona = await Persona.findById(session.personaId).lean();
+      if (persona) personaName = persona.name;
+    }
+
+    // Fetch user name/email
+    let userName = 'Anonymous';
+    let userEmail = '';
+    if (session.userId) {
+      const user = await User.findById(session.userId).select('name email').lean();
+      if (user) {
+        userName = user.name;
+        userEmail = user.email;
+      }
+    }
 
     // Fetch speech metrics
-    const speechResult = await pool.query(
-      'SELECT * FROM speech_metrics WHERE session_id = $1',
-      [sessionId]
-    );
-    const speechMetrics = speechResult.rows[0] || {};
+    const speechMetrics = await SpeechMetrics.findOne({ sessionId }).lean() || {};
 
     // Generate action plan using Gemini
     let actionPlan = [];
     try {
       const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-      const starScores = session.star_scores || {};
+      const starScores = session.starScores || {};
       const prompt = `Based on these interview performance scores, generate exactly 3 concise actionable improvement tips (one sentence each). Return ONLY a JSON array of 3 strings, no markdown.
-Scores: Overall: ${session.overall_score || 'N/A'}/10, Situation: ${starScores.situation || 'N/A'}, Task: ${starScores.task || 'N/A'}, Action: ${starScores.action || 'N/A'}, Result: ${starScores.result || 'N/A'}, Clarity: ${session.clarity_score || 'N/A'}, Filler words: ${speechMetrics.total_fillers || 0}`;
+Scores: Overall: ${session.overallScore || 'N/A'}/10, Situation: ${starScores.situation || 'N/A'}, Task: ${starScores.task || 'N/A'}, Action: ${starScores.action || 'N/A'}, Result: ${starScores.result || 'N/A'}, Clarity: ${session.clarityScore || 'N/A'}, Filler words: ${speechMetrics.totalFillers || 0}`;
 
       const result = await model.generateContent(prompt);
       let text = result.response.text().trim();
@@ -69,10 +77,10 @@ Scores: Overall: ${session.overall_score || 'N/A'}/10, Situation: ${starScores.s
 
     doc.pipe(res);
 
-    const starScores = session.star_scores || {};
-    const emotionMetrics = session.emotion_metrics || [];
-    const overallScore = parseFloat(session.overall_score) || 0;
-    const durationMin = Math.round((session.duration_seconds || 0) / 60);
+    const starScores = session.starScores || {};
+    const emotionMetrics = session.emotionMetrics || [];
+    const overallScore = parseFloat(session.overallScore) || 0;
+    const durationMin = Math.round((session.durationSeconds || 0) / 60);
 
     // Colors
     const PRIMARY = '#f97316';
@@ -91,7 +99,7 @@ Scores: Overall: ${session.overall_score || 'N/A'}/10, Situation: ${starScores.s
       .text('QUASAR INTERVIEW', 50, 30, { continued: false });
 
     doc.fontSize(10).fillColor('#9ca3af')
-      .text(`Candidate: ${session.user_name || 'Anonymous'}  |  Date: ${new Date(session.started_at).toLocaleDateString()}  |  Duration: ${durationMin} min  |  Persona: ${session.persona_name || 'Default'}`, 50, 62);
+      .text(`Candidate: ${userName}  |  Date: ${new Date(session.startedAt).toLocaleDateString()}  |  Duration: ${durationMin} min  |  Persona: ${personaName || 'Default'}`, 50, 62);
 
     doc.moveDown(3);
 
@@ -130,7 +138,7 @@ Scores: Overall: ${session.overall_score || 'N/A'}/10, Situation: ${starScores.s
       { name: 'Task', score: starScores.task || 0 },
       { name: 'Action', score: starScores.action || 0 },
       { name: 'Result', score: starScores.result || 0 },
-      { name: 'Clarity', score: parseFloat(session.clarity_score) || 0 },
+      { name: 'Clarity', score: parseFloat(session.clarityScore) || 0 },
       { name: 'Conciseness', score: starScores.conciseness || 0 },
       { name: 'Domain Knowledge', score: starScores.domain_knowledge || 0 },
     ];
@@ -166,9 +174,9 @@ Scores: Overall: ${session.overall_score || 'N/A'}/10, Situation: ${starScores.s
     rowY += 25;
 
     const speechData = [
-      { label: 'Total Filler Words', value: (speechMetrics.total_fillers || 0).toString() },
-      { label: 'Filler Rate', value: durationMin > 0 ? `${((speechMetrics.total_fillers || 0) / durationMin).toFixed(1)}/min` : 'N/A' },
-      { label: 'Words Per Minute', value: speechMetrics.words_per_minute ? `${parseFloat(speechMetrics.words_per_minute).toFixed(0)} WPM` : 'N/A' },
+      { label: 'Total Filler Words', value: (speechMetrics.totalFillers || 0).toString() },
+      { label: 'Filler Rate', value: durationMin > 0 ? `${((speechMetrics.totalFillers || 0) / durationMin).toFixed(1)}/min` : 'N/A' },
+      { label: 'Words Per Minute', value: speechMetrics.wordsPerMinute ? `${parseFloat(speechMetrics.wordsPerMinute).toFixed(0)} WPM` : 'N/A' },
     ];
 
     // Find top fillers from transcript

@@ -2,7 +2,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const config = require('../config/env');
-const { pool } = require('../config/database');
+const User = require('../models/User');
+const RefreshToken = require('../models/RefreshToken');
+const SkillVector = require('../models/SkillVector');
 const logger = require('../utils/logger');
 
 const BCRYPT_ROUNDS = 12;
@@ -12,7 +14,7 @@ const BCRYPT_ROUNDS = 12;
  */
 function generateAccessToken(user) {
   return jwt.sign(
-    { sub: user.id, email: user.email, name: user.name },
+    { sub: user._id || user.id, email: user.email, name: user.name },
     config.jwtAccessSecret,
     { expiresIn: config.jwtAccessExpiry }
   );
@@ -23,7 +25,7 @@ function generateAccessToken(user) {
  */
 function generateRefreshToken(user) {
   return jwt.sign(
-    { sub: user.id, type: 'refresh' },
+    { sub: user._id || user.id, type: 'refresh' },
     config.jwtRefreshSecret,
     { expiresIn: config.jwtRefreshExpiry }
   );
@@ -42,20 +44,14 @@ function hashToken(token) {
 async function persistRefreshToken(userId, token) {
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-  await pool.query(
-    'INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES ($1, $2, $3)',
-    [userId, tokenHash, expiresAt]
-  );
+  await RefreshToken.create({ userId, tokenHash, expiresAt });
 }
 
 /**
  * Revoke a refresh token
  */
 async function revokeRefreshToken(tokenHash) {
-  await pool.query(
-    'UPDATE refresh_tokens SET revoked = TRUE WHERE token_hash = $1',
-    [tokenHash]
-  );
+  await RefreshToken.updateOne({ tokenHash }, { revoked: true });
 }
 
 /**
@@ -105,23 +101,22 @@ async function register(req, res) {
     }
 
     // Check existing user
-    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email.toLowerCase()]);
-    if (existing.rows.length > 0) {
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing) {
       return res.status(409).json({ success: false, message: 'Email already registered', data: null });
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const result = await pool.query(
-      'INSERT INTO users (email, password_hash, name) VALUES ($1, $2, $3) RETURNING id, email, name, created_at',
-      [email.toLowerCase(), passwordHash, name]
-    );
-
-    const user = result.rows[0];
+    const user = await User.create({
+      email: email.toLowerCase(),
+      passwordHash,
+      name,
+    });
 
     // Generate tokens
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
-    await persistRefreshToken(user.id, refreshToken);
+    await persistRefreshToken(user._id, refreshToken);
 
     // Set cookies
     setAuthCookies(res, accessToken, refreshToken);
@@ -129,16 +124,17 @@ async function register(req, res) {
     // Initialize skill vectors
     const skills = ['communication', 'technical_depth', 'leadership', 'problem_structuring', 'result_orientation', 'culture_fit'];
     for (const skill of skills) {
-      await pool.query(
-        'INSERT INTO skill_vectors (user_id, skill, score) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING',
-        [user.id, skill, 5.0]
+      await SkillVector.findOneAndUpdate(
+        { userId: user._id, skill },
+        { $setOnInsert: { score: 5.0, attemptCount: 0 } },
+        { upsert: true }
       );
     }
 
     return res.status(201).json({
       success: true,
       message: 'Registration successful',
-      data: { id: user.id, email: user.email, name: user.name }
+      data: { id: user._id, email: user.email, name: user.name }
     });
   } catch (err) {
     logger.error('Registration error', { err: err.message });
@@ -157,36 +153,31 @@ async function login(req, res) {
       return res.status(400).json({ success: false, message: 'Email and password are required', data: null });
     }
 
-    const result = await pool.query(
-      'SELECT id, email, name, password_hash FROM users WHERE email = $1',
-      [email.toLowerCase()]
-    );
+    const user = await User.findOne({ email: email.toLowerCase() });
 
-    if (result.rows.length === 0) {
+    if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials', data: null });
     }
 
-    const user = result.rows[0];
-
-    if (!user.password_hash) {
+    if (!user.passwordHash) {
       return res.status(401).json({ success: false, message: 'This account uses Google login', data: null });
     }
 
-    const valid = await bcrypt.compare(password, user.password_hash);
+    const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       return res.status(401).json({ success: false, message: 'Invalid credentials', data: null });
     }
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
-    await persistRefreshToken(user.id, refreshToken);
+    await persistRefreshToken(user._id, refreshToken);
 
     setAuthCookies(res, accessToken, refreshToken);
 
     return res.json({
       success: true,
       message: 'Login successful',
-      data: { id: user.id, email: user.email, name: user.name }
+      data: { id: user._id, email: user.email, name: user.name }
     });
   } catch (err) {
     logger.error('Login error', { err: err.message });
@@ -216,14 +207,11 @@ async function refresh(req, res) {
     const oldHash = hashToken(oldRefreshToken);
 
     // Check if token exists and is not revoked
-    const tokenResult = await pool.query(
-      'SELECT id, revoked FROM refresh_tokens WHERE token_hash = $1 AND user_id = $2',
-      [oldHash, decoded.sub]
-    );
+    const tokenDoc = await RefreshToken.findOne({ tokenHash: oldHash, userId: decoded.sub });
 
-    if (tokenResult.rows.length === 0 || tokenResult.rows[0].revoked) {
+    if (!tokenDoc || tokenDoc.revoked) {
       // Possible token reuse — revoke all tokens for this user
-      await pool.query('UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1', [decoded.sub]);
+      await RefreshToken.updateMany({ userId: decoded.sub }, { revoked: true });
       clearAuthCookies(res);
       return res.status(401).json({ success: false, message: 'Token reuse detected', data: null });
     }
@@ -232,25 +220,23 @@ async function refresh(req, res) {
     await revokeRefreshToken(oldHash);
 
     // Fetch user
-    const userResult = await pool.query('SELECT id, email, name FROM users WHERE id = $1', [decoded.sub]);
-    if (userResult.rows.length === 0) {
+    const user = await User.findById(decoded.sub).select('email name');
+    if (!user) {
       clearAuthCookies(res);
       return res.status(401).json({ success: false, message: 'User not found', data: null });
     }
 
-    const user = userResult.rows[0];
-
     // Issue new tokens
     const newAccessToken = generateAccessToken(user);
     const newRefreshToken = generateRefreshToken(user);
-    await persistRefreshToken(user.id, newRefreshToken);
+    await persistRefreshToken(user._id, newRefreshToken);
 
     setAuthCookies(res, newAccessToken, newRefreshToken);
 
     return res.json({
       success: true,
       message: 'Token refreshed',
-      data: { id: user.id, email: user.email, name: user.name }
+      data: { id: user._id, email: user.email, name: user.name }
     });
   } catch (err) {
     logger.error('Token refresh error', { err: err.message });
@@ -296,7 +282,7 @@ async function googleCallback(req, res) {
     const user = req.user; // Set by passport
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
-    await persistRefreshToken(user.id, refreshToken);
+    await persistRefreshToken(user._id || user.id, refreshToken);
 
     setAuthCookies(res, accessToken, refreshToken);
 

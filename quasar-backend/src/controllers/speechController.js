@@ -1,4 +1,5 @@
-const { pool } = require('../config/database');
+const SpeechMetrics = require('../models/SpeechMetrics');
+const Session = require('../models/Session');
 const logger = require('../utils/logger');
 
 /**
@@ -15,39 +16,27 @@ async function saveSpeechMetrics(req, res) {
     }
 
     // Check session exists
-    const sessionCheck = await pool.query('SELECT id FROM sessions WHERE id = $1', [sessionId]);
-    if (sessionCheck.rows.length === 0) {
+    const session = await Session.findById(sessionId).select('_id').lean();
+    if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
     }
 
     // Upsert speech metrics
-    const existing = await pool.query('SELECT id FROM speech_metrics WHERE session_id = $1', [sessionId]);
-
-    let result;
-    if (existing.rows.length > 0) {
-      result = await pool.query(
-        `UPDATE speech_metrics SET
-          transcript = $1,
-          filler_buckets = $2,
-          total_fillers = $3,
-          words_per_minute = $4
-         WHERE session_id = $5
-         RETURNING *`,
-        [transcript || '', JSON.stringify(fillerBuckets || []), totalFillers || 0, wordsPerMinute || 0, sessionId]
-      );
-    } else {
-      result = await pool.query(
-        `INSERT INTO speech_metrics (session_id, transcript, filler_buckets, total_fillers, words_per_minute)
-         VALUES ($1, $2, $3, $4, $5)
-         RETURNING *`,
-        [sessionId, transcript || '', JSON.stringify(fillerBuckets || []), totalFillers || 0, wordsPerMinute || 0]
-      );
-    }
+    const result = await SpeechMetrics.findOneAndUpdate(
+      { sessionId },
+      {
+        transcript: transcript || '',
+        fillerBuckets: fillerBuckets || [],
+        totalFillers: totalFillers || 0,
+        wordsPerMinute: wordsPerMinute || 0,
+      },
+      { upsert: true, new: true }
+    );
 
     return res.json({
       success: true,
       message: 'Speech metrics saved',
-      data: result.rows[0]
+      data: result
     });
   } catch (err) {
     logger.error('Save speech metrics error', { err: err.message });
@@ -63,19 +52,16 @@ async function getSpeechMetrics(req, res) {
   try {
     const { sessionId } = req.params;
 
-    const result = await pool.query(
-      'SELECT * FROM speech_metrics WHERE session_id = $1',
-      [sessionId]
-    );
+    const doc = await SpeechMetrics.findOne({ sessionId }).lean();
 
-    if (result.rows.length === 0) {
+    if (!doc) {
       return res.status(404).json({ success: false, message: 'Speech metrics not found', data: null });
     }
 
     return res.json({
       success: true,
       message: 'Speech metrics retrieved',
-      data: result.rows[0]
+      data: doc
     });
   } catch (err) {
     logger.error('Get speech metrics error', { err: err.message });

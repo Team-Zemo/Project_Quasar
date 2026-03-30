@@ -1,6 +1,7 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const config = require('../config/env');
-const { pool } = require('../config/database');
+const JdSession = require('../models/JdSession');
+const JdQuestion = require('../models/JdQuestion');
 const logger = require('../utils/logger');
 
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
@@ -59,29 +60,30 @@ Job Description: ${jobDescription}`;
     }
 
     // Store JD session
-    const jdResult = await pool.query(
-      'INSERT INTO jd_sessions (user_id, job_description, parsed_data) VALUES ($1, $2, $3) RETURNING id',
-      [userId, jobDescription, JSON.stringify(parsedData)]
-    );
-
-    const jdSessionId = jdResult.rows[0].id;
+    const jdSession = await JdSession.create({
+      userId,
+      jobDescription,
+      parsedData,
+    });
 
     // Store individual questions
     if (parsedData.generatedQuestions && Array.isArray(parsedData.generatedQuestions)) {
-      for (const q of parsedData.generatedQuestions) {
-        await pool.query(
-          `INSERT INTO jd_questions (jd_session_id, question, category, difficulty, target_skill, weight)
-           VALUES ($1, $2, $3, $4, $5, $6)`,
-          [jdSessionId, q.question, q.category, q.difficulty, q.targetSkill, q.weight]
-        );
-      }
+      const questions = parsedData.generatedQuestions.map(q => ({
+        jdSessionId: jdSession._id,
+        question: q.question,
+        category: q.category,
+        difficulty: q.difficulty,
+        targetSkill: q.targetSkill,
+        weight: q.weight,
+      }));
+      await JdQuestion.insertMany(questions);
     }
 
     return res.json({
       success: true,
       message: 'Job description parsed successfully',
       data: {
-        jdSessionId,
+        jdSessionId: jdSession._id,
         role: parsedData.role,
         seniority: parsedData.seniority,
         domain: parsedData.domain,
@@ -105,15 +107,12 @@ async function getJDQuestions(req, res) {
   try {
     const { jdSessionId } = req.params;
 
-    const result = await pool.query(
-      'SELECT * FROM jd_questions WHERE jd_session_id = $1 ORDER BY weight DESC',
-      [jdSessionId]
-    );
+    const questions = await JdQuestion.find({ jdSessionId }).sort({ weight: -1 }).lean();
 
     return res.json({
       success: true,
       message: 'Questions retrieved',
-      data: result.rows
+      data: questions
     });
   } catch (err) {
     logger.error('Get JD questions error', { err: err.message });

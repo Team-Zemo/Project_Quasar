@@ -3,16 +3,18 @@ const app = require('./app');
 const config = require('./config/env');
 const logger = require('./utils/logger');
 const SocketManager = require('./websocket/socketManager');
-const { initDatabase } = require('./config/database');
+const { connectDatabase } = require('./config/database');
+const { seedPersonas } = require('./models');
 
 // Wrap Express Application inside Native HTTP server for WS
 const server = http.createServer(app);
 
-// Initialize database tables then start server
+// Initialize database then start server
 async function start() {
   try {
-    await initDatabase();
-    logger.info('Database initialized successfully');
+    await connectDatabase();
+    await seedPersonas();
+    logger.info('Database initialized and personas seeded');
   } catch (err) {
     logger.error('Database initialization failed — continuing without DB', { err: err.message });
   }

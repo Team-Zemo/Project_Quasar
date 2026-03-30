@@ -1,6 +1,9 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const config = require('../config/env');
-const { pool } = require('../config/database');
+const Session = require('../models/Session');
+const SpeechMetrics = require('../models/SpeechMetrics');
+const Persona = require('../models/Persona');
+const SkillVector = require('../models/SkillVector');
 const logger = require('../utils/logger');
 
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
@@ -13,22 +16,23 @@ async function evaluateSession(req, res) {
   try {
     const { sessionId } = req.params;
 
-    // Fetch session + speech transcript
-    const sessionResult = await pool.query(
-      `SELECT s.*, p.name as persona_name, sm.transcript as speech_transcript
-       FROM sessions s
-       LEFT JOIN personas p ON s.persona_id = p.id
-       LEFT JOIN speech_metrics sm ON sm.session_id = s.id
-       WHERE s.id = $1`,
-      [sessionId]
-    );
+    // Fetch session
+    const session = await Session.findById(sessionId).lean();
 
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
     }
 
-    const session = sessionResult.rows[0];
-    const transcript = session.speech_transcript || session.transcript || '';
+    // Fetch persona name
+    let personaName = 'Default Interviewer';
+    if (session.personaId) {
+      const persona = await Persona.findById(session.personaId).lean();
+      if (persona) personaName = persona.name;
+    }
+
+    // Fetch speech transcript
+    const speechDoc = await SpeechMetrics.findOne({ sessionId }).lean();
+    const transcript = speechDoc?.transcript || session.transcript || '';
 
     if (!transcript || transcript.trim().length < 20) {
       return res.status(400).json({
@@ -67,7 +71,7 @@ async function evaluateSession(req, res) {
 }
 
 Domain: ${session.domain || 'General'}
-Persona: ${session.persona_name || 'Default Interviewer'}
+Persona: ${personaName}
 
 Transcript:
 ${transcript.substring(0, 8000)}`;
@@ -89,59 +93,48 @@ ${transcript.substring(0, 8000)}`;
     }
 
     // Calculate duration if not already set
-    let durationSeconds = session.duration_seconds || 0;
-    if (!durationSeconds && session.started_at) {
-      durationSeconds = Math.round((Date.now() - new Date(session.started_at).getTime()) / 1000);
+    let durationSeconds = session.durationSeconds || 0;
+    if (!durationSeconds && session.startedAt) {
+      durationSeconds = Math.round((Date.now() - new Date(session.startedAt).getTime()) / 1000);
     }
 
     // Save scores to session
-    await pool.query(
-      `UPDATE sessions SET
-        status = 'completed',
-        overall_score = $1,
-        star_scores = $2,
-        clarity_score = $3,
-        transcript = $4,
-        duration_seconds = $5,
-        ended_at = COALESCE(ended_at, NOW())
-       WHERE id = $6`,
-      [
-        scores.overallScore || 0,
-        JSON.stringify(scores.starScores || {}),
-        scores.clarityScore || 0,
-        transcript,
-        durationSeconds,
-        sessionId
-      ]
-    );
+    await Session.findByIdAndUpdate(sessionId, {
+      status: 'completed',
+      overallScore: scores.overallScore || 0,
+      starScores: scores.starScores || {},
+      clarityScore: scores.clarityScore || 0,
+      transcript,
+      durationSeconds,
+      endedAt: session.endedAt || new Date(),
+    });
 
     // Update skill vectors if user is authenticated
-    const userId = session.user_id;
+    const userId = session.userId;
     if (userId && scores.categoryScores) {
       for (const [skill, score] of Object.entries(scores.categoryScores)) {
         if (typeof score !== 'number') continue;
 
         const clampedScore = Math.max(0, Math.min(10, score));
 
-        const existing = await pool.query(
-          'SELECT score, attempt_count FROM skill_vectors WHERE user_id = $1 AND skill = $2',
-          [userId, skill]
-        );
+        const existing = await SkillVector.findOne({ userId, skill });
 
-        if (existing.rows.length > 0) {
-          const oldScore = parseFloat(existing.rows[0].score);
+        if (existing) {
+          const oldScore = parseFloat(existing.score);
           const newScore = parseFloat((0.7 * oldScore + 0.3 * clampedScore).toFixed(2));
-          const newCount = existing.rows[0].attempt_count + 1;
+          const newCount = existing.attemptCount + 1;
 
-          await pool.query(
-            'UPDATE skill_vectors SET score = $1, attempt_count = $2, last_updated = NOW() WHERE user_id = $3 AND skill = $4',
-            [newScore, newCount, userId, skill]
+          await SkillVector.findOneAndUpdate(
+            { userId, skill },
+            { score: newScore, attemptCount: newCount, lastUpdated: new Date() }
           );
         } else {
-          await pool.query(
-            'INSERT INTO skill_vectors (user_id, skill, score, attempt_count) VALUES ($1, $2, $3, 1)',
-            [userId, skill, clampedScore]
-          );
+          await SkillVector.create({
+            userId,
+            skill,
+            score: clampedScore,
+            attemptCount: 1,
+          });
         }
       }
     }

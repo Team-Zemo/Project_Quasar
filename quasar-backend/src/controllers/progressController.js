@@ -1,4 +1,5 @@
-const { pool } = require('../config/database');
+const Session = require('../models/Session');
+const SpeechMetrics = require('../models/SpeechMetrics');
 const logger = require('../utils/logger');
 
 /**
@@ -9,22 +10,23 @@ async function getProgress(req, res) {
   try {
     const { userId } = req.params;
 
-    // Get all completed sessions with speech metrics
-    const sessionsResult = await pool.query(
-      `SELECT s.id as session_id, s.started_at as date, s.overall_score,
-              s.star_scores, s.clarity_score, s.emotion_metrics, s.duration_seconds,
-              s.persona_id, s.domain,
-              sm.total_fillers, sm.words_per_minute
-       FROM sessions s
-       LEFT JOIN speech_metrics sm ON sm.session_id = s.id
-       WHERE s.user_id = $1 AND s.status = 'completed'
-       ORDER BY s.started_at ASC`,
-      [userId]
-    );
+    // Get all completed sessions
+    const sessionsRaw = await Session.find({ userId, status: 'completed' })
+      .sort({ startedAt: 1 })
+      .lean();
 
-    const sessions = sessionsResult.rows.map(row => {
-      const starScores = row.star_scores || {};
-      const emotionMetrics = row.emotion_metrics || [];
+    // Get speech metrics for all sessions
+    const sessionIds = sessionsRaw.map(s => s._id);
+    const speechDocs = sessionIds.length > 0
+      ? await SpeechMetrics.find({ sessionId: { $in: sessionIds } }).lean()
+      : [];
+    const speechMap = {};
+    speechDocs.forEach(sm => { speechMap[sm.sessionId.toString()] = sm; });
+
+    const sessions = sessionsRaw.map(row => {
+      const starScores = row.starScores || {};
+      const emotionMetrics = row.emotionMetrics || [];
+      const sm = speechMap[row._id.toString()] || {};
 
       // Calculate confidence average from emotion metrics
       let confidenceAvg = 0;
@@ -34,24 +36,24 @@ async function getProgress(req, res) {
       }
 
       // Calculate filler rate (per minute)
-      const durationMinutes = (row.duration_seconds || 0) / 60;
-      const fillerRate = durationMinutes > 0 ? parseFloat(((row.total_fillers || 0) / durationMinutes).toFixed(1)) : 0;
+      const durationMinutes = (row.durationSeconds || 0) / 60;
+      const fillerRate = durationMinutes > 0 ? parseFloat(((sm.totalFillers || 0) / durationMinutes).toFixed(1)) : 0;
 
       return {
-        sessionId: row.session_id,
-        date: row.date,
-        overallScore: parseFloat(row.overall_score) || 0,
+        sessionId: row._id,
+        date: row.startedAt,
+        overallScore: parseFloat(row.overallScore) || 0,
         starScores: {
           situation: starScores.situation || 0,
           task: starScores.task || 0,
           action: starScores.action || 0,
           result: starScores.result || 0
         },
-        clarityScore: parseFloat(row.clarity_score) || 0,
+        clarityScore: parseFloat(row.clarityScore) || 0,
         fillerRate,
         confidenceAvg,
         domain: row.domain,
-        personaId: row.persona_id
+        personaId: row.personaId
       };
     });
 
@@ -83,11 +85,9 @@ async function getProgress(req, res) {
 
       // Calculate clarity delta
       if (sessions.length === 1) {
-        // With only 1 session, show the raw clarity score
         const score = sessions[0].clarityScore;
         improvement.clarityDelta = `${score.toFixed(1)}/10 (first session)`;
       } else {
-        // Compare most recent session to the average of all previous sessions
         const latest = sessions[sessions.length - 1];
         const previous = sessions.slice(0, -1);
         const prevAvgClarity = previous.reduce((a, s) => a + s.clarityScore, 0) / previous.length;

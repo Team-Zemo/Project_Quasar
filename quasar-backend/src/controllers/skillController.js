@@ -1,4 +1,7 @@
-const { pool } = require('../config/database');
+const SkillVector = require('../models/SkillVector');
+const Session = require('../models/Session');
+const JdQuestion = require('../models/JdQuestion');
+const JdSession = require('../models/JdSession');
 const logger = require('../utils/logger');
 
 // STAR dimension → skill mapping
@@ -53,38 +56,29 @@ async function updateSkillVector(req, res) {
 
     // Apply exponential moving average: newScore = 0.7 * oldScore + 0.3 * latestScore
     for (const { skill, score } of updates) {
-      const existing = await pool.query(
-        'SELECT score, attempt_count FROM skill_vectors WHERE user_id = $1 AND skill = $2',
-        [userId, skill]
-      );
+      const existing = await SkillVector.findOne({ userId, skill });
 
-      if (existing.rows.length > 0) {
-        const oldScore = parseFloat(existing.rows[0].score);
+      if (existing) {
+        const oldScore = parseFloat(existing.score);
         const newScore = parseFloat((0.7 * oldScore + 0.3 * score).toFixed(2));
-        const newCount = existing.rows[0].attempt_count + 1;
+        const newCount = existing.attemptCount + 1;
 
-        await pool.query(
-          'UPDATE skill_vectors SET score = $1, attempt_count = $2, last_updated = NOW() WHERE user_id = $3 AND skill = $4',
-          [newScore, newCount, userId, skill]
+        await SkillVector.findOneAndUpdate(
+          { userId, skill },
+          { score: newScore, attemptCount: newCount, lastUpdated: new Date() }
         );
       } else {
-        await pool.query(
-          'INSERT INTO skill_vectors (user_id, skill, score, attempt_count) VALUES ($1, $2, $3, 1)',
-          [userId, skill, score]
-        );
+        await SkillVector.create({ userId, skill, score, attemptCount: 1 });
       }
     }
 
     // Return updated skill vector
-    const result = await pool.query(
-      'SELECT skill, score, attempt_count, last_updated FROM skill_vectors WHERE user_id = $1 ORDER BY skill',
-      [userId]
-    );
+    const result = await SkillVector.find({ userId }).sort({ skill: 1 }).lean();
 
     return res.json({
       success: true,
       message: 'Skill vector updated',
-      data: result.rows
+      data: result
     });
   } catch (err) {
     logger.error('Update skill vector error', { err: err.message });
@@ -100,15 +94,12 @@ async function getSkillVector(req, res) {
   try {
     const { userId } = req.params;
 
-    const result = await pool.query(
-      'SELECT skill, score, attempt_count, last_updated FROM skill_vectors WHERE user_id = $1 ORDER BY skill',
-      [userId]
-    );
+    const result = await SkillVector.find({ userId }).sort({ skill: 1 }).lean();
 
     return res.json({
       success: true,
       message: 'Skill vector retrieved',
-      data: result.rows
+      data: result
     });
   } catch (err) {
     logger.error('Get skill vector error', { err: err.message });
@@ -125,28 +116,21 @@ async function getNextQuestion(req, res) {
     const { sessionId } = req.params;
 
     // Get session to find user and JD
-    const sessionResult = await pool.query(
-      'SELECT user_id, jd_session_id FROM sessions WHERE id = $1',
-      [sessionId]
-    );
+    const session = await Session.findById(sessionId).select('userId jdSessionId').lean();
 
-    if (sessionResult.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
     }
 
-    const { user_id: userId, jd_session_id: jdSessionId } = sessionResult.rows[0];
+    const userId = session.userId;
+    const jdSessionId = session.jdSessionId;
 
     if (!userId) {
       return res.status(400).json({ success: false, message: 'Session has no user', data: null });
     }
 
     // Get user's skill vector
-    const skillResult = await pool.query(
-      'SELECT skill, score FROM skill_vectors WHERE user_id = $1 ORDER BY score ASC',
-      [userId]
-    );
-
-    const skills = skillResult.rows;
+    const skills = await SkillVector.find({ userId }).sort({ score: 1 }).lean();
 
     // Find 2 lowest-scoring skills
     const weakestSkills = skills.slice(0, 2).map(s => s.skill);
@@ -167,22 +151,14 @@ async function getNextQuestion(req, res) {
     // Build question query — prioritize from JD questions if available
     let questions;
     if (jdSessionId) {
-      const qResult = await pool.query(
-        'SELECT * FROM jd_questions WHERE jd_session_id = $1 ORDER BY weight DESC',
-        [jdSessionId]
-      );
-      questions = qResult.rows;
+      questions = await JdQuestion.find({ jdSessionId }).sort({ weight: -1 }).lean();
     } else {
       // Default: generic questions from any JD for this user
-      const qResult = await pool.query(
-        `SELECT q.* FROM jd_questions q
-         JOIN jd_sessions jd ON q.jd_session_id = jd.id
-         WHERE jd.user_id = $1
-         ORDER BY q.weight DESC
-         LIMIT 50`,
-        [userId]
-      );
-      questions = qResult.rows;
+      const jdSessions = await JdSession.find({ userId }).select('_id').lean();
+      const jdIds = jdSessions.map(j => j._id);
+      questions = jdIds.length > 0
+        ? await JdQuestion.find({ jdSessionId: { $in: jdIds } }).sort({ weight: -1 }).limit(50).lean()
+        : [];
     }
 
     if (questions.length === 0) {
@@ -194,26 +170,22 @@ async function getNextQuestion(req, res) {
     }
 
     // Count completed sessions for spaced repetition
-    const sessionCountResult = await pool.query(
-      "SELECT COUNT(*) as cnt FROM sessions WHERE user_id = $1 AND status = 'completed'",
-      [userId]
-    );
-    const totalSessions = parseInt(sessionCountResult.rows[0].cnt);
+    const totalSessions = await Session.countDocuments({ userId, status: 'completed' });
 
     // Score each question
     const scored = questions.map(q => {
       let priority = q.weight || 0.5;
 
       // Boost if targeting weak skill
-      const targetLower = (q.target_skill || '').toLowerCase();
+      const targetLower = (q.targetSkill || '').toLowerCase();
       if (targetSkillTerms.has(targetLower)) {
         priority += 0.3;
       }
 
       // Spaced repetition boost: not attempted recently + low score
-      if (!q.last_attempted_session) {
+      if (!q.lastAttemptedSession) {
         priority += 0.2; // Never attempted
-      } else if (q.last_score !== null && parseFloat(q.last_score) < 6) {
+      } else if (q.lastScore !== null && parseFloat(q.lastScore) < 6) {
         priority += 0.15;
       }
 
@@ -226,7 +198,7 @@ async function getNextQuestion(req, res) {
 
     // Determine reason
     let reason = 'Highest priority question';
-    const targetLower = (selected.target_skill || '').toLowerCase();
+    const targetLower = (selected.targetSkill || '').toLowerCase();
     if (targetSkillTerms.has(targetLower)) {
       const matchedWeak = weakestSkills.find(ws => {
         if (ws === targetLower) return true;
@@ -247,10 +219,10 @@ async function getNextQuestion(req, res) {
       data: {
         question: selected.question,
         difficulty: selected.difficulty,
-        targetSkill: selected.target_skill,
+        targetSkill: selected.targetSkill,
         category: selected.category,
         reason,
-        questionId: selected.id
+        questionId: selected._id
       }
     });
   } catch (err) {

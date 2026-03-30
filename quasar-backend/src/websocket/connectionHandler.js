@@ -1,5 +1,5 @@
 const GeminiService = require('../services/geminiService');
-const { pool } = require('../config/database');
+const Persona = require('../models/Persona');
 const logger = require('../utils/logger');
 const WebSocket = require('ws');
 
@@ -8,9 +8,8 @@ class ConnectionHandler {
    * Represents an abstraction around a single browser -> backend WebSocket
    * @param {WebSocket} ws 
    */
-  constructor(ws, user = null) {
+  constructor(ws) {
     this.ws = ws;
-    this.user = user;
     this.geminiService = null;
     this.isClientConnected = true;
     this.sessionId = null;
@@ -88,9 +87,9 @@ class ConnectionHandler {
     let systemPrompt = null;
     if (personaId) {
       try {
-        const result = await pool.query('SELECT system_prompt FROM personas WHERE id = $1', [personaId]);
-        if (result.rows.length > 0) {
-          systemPrompt = result.rows[0].system_prompt;
+        const persona = await Persona.findById(personaId).select('systemPrompt').lean();
+        if (persona) {
+          systemPrompt = persona.systemPrompt;
           logger.info(`Using persona system prompt: ${personaId}`);
         }
       } catch (err) {

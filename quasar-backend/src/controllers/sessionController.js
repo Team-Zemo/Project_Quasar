@@ -1,4 +1,5 @@
-const { pool } = require('../config/database');
+const Session = require('../models/Session');
+const Persona = require('../models/Persona');
 const logger = require('../utils/logger');
 
 /**
@@ -13,17 +14,25 @@ async function createSession(req, res) {
       return res.status(400).json({ success: false, message: 'Domain is required', data: null });
     }
 
-    const result = await pool.query(
-      `INSERT INTO sessions (user_id, domain, persona_id, jd_session_id, status)
-       VALUES ($1, $2, $3, $4, 'active')
-       RETURNING id, user_id, domain, persona_id, status, started_at`,
-      [userId, domain, personaId || null, jdSessionId || null]
-    );
+    const session = await Session.create({
+      userId: userId || null,
+      domain,
+      personaId: personaId || null,
+      jdSessionId: jdSessionId || null,
+      status: 'active',
+    });
 
     return res.status(201).json({
       success: true,
       message: 'Session created',
-      data: result.rows[0]
+      data: {
+        id: session._id,
+        user_id: session.userId,
+        domain: session.domain,
+        persona_id: session.personaId,
+        status: session.status,
+        started_at: session.startedAt,
+      }
     });
   } catch (err) {
     logger.error('Create session error', { err: err.message });
@@ -39,28 +48,28 @@ async function endSession(req, res) {
     const { sessionId } = req.params;
     const { overallScore, starScores, clarityScore, transcript, durationSeconds } = req.body;
 
-    const result = await pool.query(
-      `UPDATE sessions SET
-        status = 'completed',
-        overall_score = $1,
-        star_scores = $2,
-        clarity_score = $3,
-        transcript = $4,
-        duration_seconds = $5,
-        ended_at = NOW()
-       WHERE id = $6
-       RETURNING *`,
-      [overallScore || null, JSON.stringify(starScores || {}), clarityScore || null, transcript || '', durationSeconds || 0, sessionId]
+    const session = await Session.findByIdAndUpdate(
+      sessionId,
+      {
+        status: 'completed',
+        overallScore: overallScore || null,
+        starScores: starScores || {},
+        clarityScore: clarityScore || null,
+        transcript: transcript || '',
+        durationSeconds: durationSeconds || 0,
+        endedAt: new Date(),
+      },
+      { new: true }
     );
 
-    if (result.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
     }
 
     return res.json({
       success: true,
       message: 'Session ended',
-      data: result.rows[0]
+      data: session
     });
   } catch (err) {
     logger.error('End session error', { err: err.message });
@@ -75,22 +84,27 @@ async function getSession(req, res) {
   try {
     const { sessionId } = req.params;
 
-    const result = await pool.query(
-      `SELECT s.*, p.name as persona_name, p.description as persona_description
-       FROM sessions s
-       LEFT JOIN personas p ON s.persona_id = p.id
-       WHERE s.id = $1`,
-      [sessionId]
-    );
+    const session = await Session.findById(sessionId).lean();
 
-    if (result.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
+    }
+
+    // Fetch persona info if available
+    let personaName = null;
+    let personaDescription = null;
+    if (session.personaId) {
+      const persona = await Persona.findById(session.personaId).lean();
+      if (persona) {
+        personaName = persona.name;
+        personaDescription = persona.description;
+      }
     }
 
     return res.json({
       success: true,
       message: 'Session retrieved',
-      data: result.rows[0]
+      data: { ...session, persona_name: personaName, persona_description: personaDescription }
     });
   } catch (err) {
     logger.error('Get session error', { err: err.message });
@@ -105,19 +119,33 @@ async function getUserSessions(req, res) {
   try {
     const userId = req.user.id;
 
-    const result = await pool.query(
-      `SELECT s.*, p.name as persona_name
-       FROM sessions s
-       LEFT JOIN personas p ON s.persona_id = p.id
-       WHERE s.user_id = $1
-       ORDER BY s.created_at DESC`,
-      [userId]
-    );
+    const sessions = await Session.find({ userId }).sort({ createdAt: -1 }).lean();
+
+    // Attach persona names
+    const personaIds = [...new Set(sessions.map(s => s.personaId).filter(Boolean))];
+    const personas = personaIds.length > 0
+      ? await Persona.find({ _id: { $in: personaIds } }).lean()
+      : [];
+    const personaMap = {};
+    personas.forEach(p => { personaMap[p._id] = p.name; });
+
+    const result = sessions.map(s => ({
+      id: s._id,
+      domain: s.domain,
+      persona_name: personaMap[s.personaId] || null,
+      status: s.status,
+      overall_score: s.overallScore,
+      star_scores: s.starScores,
+      clarity_score: s.clarityScore,
+      duration_seconds: s.durationSeconds,
+      started_at: s.startedAt,
+      ended_at: s.endedAt,
+    }));
 
     return res.json({
       success: true,
       message: 'Sessions retrieved',
-      data: result.rows
+      data: result
     });
   } catch (err) {
     logger.error('Get user sessions error', { err: err.message });
@@ -126,7 +154,7 @@ async function getUserSessions(req, res) {
 }
 
 /**
- * Store emotion metrics for a session (JSONB)
+ * Store emotion metrics for a session
  */
 async function saveEmotionMetrics(req, res) {
   try {
@@ -137,12 +165,13 @@ async function saveEmotionMetrics(req, res) {
       return res.status(400).json({ success: false, message: 'metrics must be an array', data: null });
     }
 
-    const result = await pool.query(
-      'UPDATE sessions SET emotion_metrics = $1 WHERE id = $2 RETURNING id',
-      [JSON.stringify(metrics), sessionId]
+    const session = await Session.findByIdAndUpdate(
+      sessionId,
+      { emotionMetrics: metrics },
+      { new: true }
     );
 
-    if (result.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
     }
 
@@ -164,19 +193,16 @@ async function getEmotionMetrics(req, res) {
   try {
     const { sessionId } = req.params;
 
-    const result = await pool.query(
-      'SELECT emotion_metrics FROM sessions WHERE id = $1',
-      [sessionId]
-    );
+    const session = await Session.findById(sessionId).select('emotionMetrics').lean();
 
-    if (result.rows.length === 0) {
+    if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
     }
 
     return res.json({
       success: true,
       message: 'Emotion metrics retrieved',
-      data: result.rows[0].emotion_metrics || []
+      data: session.emotionMetrics || []
     });
   } catch (err) {
     logger.error('Get emotion metrics error', { err: err.message });
