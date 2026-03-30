@@ -80,8 +80,10 @@ export function InterviewRoom({
       }).catch(() => {});
     }
 
-    // End session in DB
-    apiPost(`/api/sessions/${sessionId}/end`, {}).catch(() => {});
+    // Note: We do NOT call endSession here. The evaluateSession endpoint
+    // (triggered by PostSessionResults) already sets status='completed'
+    // and saves all scores. Calling endSession with empty body would
+    // overwrite those scores to null due to a race condition.
   }, [isEnded, sessionId]);
 
   const handleDownloadReport = async () => {

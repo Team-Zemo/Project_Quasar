@@ -62,18 +62,8 @@ async function getProgress(req, res) {
       weakestDimension: 'N/A'
     };
 
-    if (sessions.length >= 2) {
-      const recent5 = sessions.slice(-5);
-      const older = sessions.slice(0, -5);
-
-      if (older.length > 0) {
-        const recentAvgClarity = recent5.reduce((a, s) => a + s.clarityScore, 0) / recent5.length;
-        const olderAvgClarity = older.reduce((a, s) => a + s.clarityScore, 0) / older.length;
-        const delta = (recentAvgClarity - olderAvgClarity).toFixed(1);
-        improvement.clarityDelta = `${delta >= 0 ? '+' : ''}${delta} over last ${recent5.length} sessions`;
-      }
-
-      // Find strongest and weakest STAR dimensions
+    if (sessions.length >= 1) {
+      // Find strongest and weakest STAR dimensions (works from 1 session)
       const dimensionTotals = { situation: 0, task: 0, action: 0, result: 0 };
       sessions.forEach(s => {
         dimensionTotals.situation += s.starScores.situation;
@@ -90,6 +80,20 @@ async function getProgress(req, res) {
       dimensions.sort((a, b) => b.avg - a.avg);
       improvement.strongestDimension = dimensions[0].key;
       improvement.weakestDimension = dimensions[dimensions.length - 1].key;
+
+      // Calculate clarity delta
+      if (sessions.length === 1) {
+        // With only 1 session, show the raw clarity score
+        const score = sessions[0].clarityScore;
+        improvement.clarityDelta = `${score.toFixed(1)}/10 (first session)`;
+      } else {
+        // Compare most recent session to the average of all previous sessions
+        const latest = sessions[sessions.length - 1];
+        const previous = sessions.slice(0, -1);
+        const prevAvgClarity = previous.reduce((a, s) => a + s.clarityScore, 0) / previous.length;
+        const delta = (latest.clarityScore - prevAvgClarity).toFixed(1);
+        improvement.clarityDelta = `${delta >= 0 ? '+' : ''}${delta} vs previous ${previous.length} session${previous.length > 1 ? 's' : ''}`;
+      }
     }
 
     return res.json({

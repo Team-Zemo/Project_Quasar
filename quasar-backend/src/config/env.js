@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const config = {
-  port: process.env.PORT || 8080,
+  port: process.env.PORT || 8081,
   geminiApiKey: process.env.GEMINI_API_KEY,
   nodeEnv: process.env.NODE_ENV || 'development',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
@@ -22,7 +22,7 @@ const config = {
   // Google OAuth
   googleClientId: process.env.GOOGLE_CLIENT_ID || '',
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-  appUrl: process.env.APP_URL || 'http://localhost:8080',
+  appUrl: process.env.APP_URL || 'http://localhost:8081',
 };
 
 if (!config.geminiApiKey) {
