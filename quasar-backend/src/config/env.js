@@ -3,6 +3,7 @@ require('dotenv').config();
 const config = {
   port: process.env.PORT || 8081,
   geminiApiKey: process.env.GEMINI_API_KEY,
+  groqApiKey: process.env.GROQ_API_KEY,
   nodeEnv: process.env.NODE_ENV || 'development',
   corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173',
 
@@ -23,6 +24,10 @@ const config = {
 
 if (!config.geminiApiKey) {
   throw new Error('GEMINI_API_KEY is not defined in the environment variables.');
+}
+
+if (!config.groqApiKey) {
+  console.warn('GROQ_API_KEY is not set — JD parsing and transcript evaluation will fail.');
 }
 
 module.exports = config;

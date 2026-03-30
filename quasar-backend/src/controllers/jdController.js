@@ -1,14 +1,11 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-const config = require('../config/env');
+const { chatCompletion } = require('../services/groqService');
 const JdSession = require('../models/JdSession');
 const JdQuestion = require('../models/JdQuestion');
 const logger = require('../utils/logger');
 
-const genAI = new GoogleGenerativeAI(config.geminiApiKey);
-
 /**
  * POST /api/jd/parse
- * Parse a job description and generate custom question bank
+ * Parse a job description and generate custom question bank (powered by Groq)
  */
 async function parseJD(req, res) {
   try {
@@ -19,9 +16,7 @@ async function parseJD(req, res) {
       return res.status(400).json({ success: false, message: 'Job description must be at least 50 characters', data: null });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
-
-    const prompt = `You are an expert technical recruiter. Analyse this job description and return ONLY valid JSON (no markdown, no code fences) in this exact schema:
+    const systemPrompt = `You are an expert technical recruiter. Analyse the provided job description and return ONLY valid JSON (no markdown, no code fences) matching this exact schema:
 {
   "role": string,
   "seniority": "junior" | "mid" | "senior" | "staff" | "principal",
@@ -39,11 +34,15 @@ async function parseJD(req, res) {
     }
   ]
 }
-Generate exactly 20 questions, weighted by importance to the role. Weight values should be between 0.0 and 1.0, higher = more important.
-Job Description: ${jobDescription}`;
+Generate exactly 20 questions, weighted by importance to the role. Weight values should be between 0.0 and 1.0, higher = more important.`;
 
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    const userPrompt = `Job Description:\n${jobDescription}`;
+
+    const responseText = await chatCompletion(systemPrompt, userPrompt, {
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.4,
+      maxTokens: 4096,
+    });
 
     // Parse JSON from response — strip markdown fences if present
     let cleanJson = responseText.trim();
@@ -55,7 +54,7 @@ Job Description: ${jobDescription}`;
     try {
       parsedData = JSON.parse(cleanJson);
     } catch (parseErr) {
-      logger.error('Failed to parse Gemini JD response as JSON', { responseText, err: parseErr.message });
+      logger.error('Failed to parse Groq JD response as JSON', { responseText, err: parseErr.message });
       return res.status(502).json({ success: false, message: 'AI returned invalid JSON. Please try again.', data: null });
     }
 

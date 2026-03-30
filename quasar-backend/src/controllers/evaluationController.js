@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { chatCompletion } = require('../services/groqService');
 const config = require('../config/env');
 const Session = require('../models/Session');
 const SpeechMetrics = require('../models/SpeechMetrics');
@@ -6,11 +6,9 @@ const Persona = require('../models/Persona');
 const SkillVector = require('../models/SkillVector');
 const logger = require('../utils/logger');
 
-const genAI = new GoogleGenerativeAI(config.geminiApiKey);
-
 /**
  * POST /api/sessions/:sessionId/evaluate
- * Calls Gemini to score the interview transcript, saves scores, updates skill vectors
+ * Calls Groq to score the interview transcript, saves scores, updates skill vectors
  */
 async function evaluateSession(req, res) {
   try {
@@ -42,10 +40,8 @@ async function evaluateSession(req, res) {
       });
     }
 
-    // Call Gemini for evaluation
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-
-    const prompt = `You are an expert interview evaluator. Analyse this interview transcript and return ONLY valid JSON (no markdown, no code fences) in this exact schema:
+    // Call Groq for evaluation
+    const systemPrompt = `You are an expert interview evaluator. Analyse the provided interview transcript and return ONLY valid JSON (no markdown, no code fences) matching this exact schema:
 {
   "overallScore": number (0-10, one decimal),
   "starScores": {
@@ -68,27 +64,31 @@ async function evaluateSession(req, res) {
   "strengths": [string, string, string],
   "improvements": [string, string, string],
   "summary": string (2-3 sentence assessment)
-}
+}`;
 
-Domain: ${session.domain || 'General'}
+    const userPrompt = `Domain: ${session.domain || 'General'}
 Persona: ${personaName}
 
 Transcript:
 ${transcript.substring(0, 8000)}`;
 
-    const result = await model.generateContent(prompt);
-    let responseText = result.response.text().trim();
+    const responseText = await chatCompletion(systemPrompt, userPrompt, {
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.3,
+      maxTokens: 4096,
+    });
 
     // Strip markdown fences if present
-    if (responseText.startsWith('```')) {
-      responseText = responseText.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+    let cleanJson = responseText.trim();
+    if (cleanJson.startsWith('```')) {
+      cleanJson = cleanJson.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
     }
 
     let scores;
     try {
-      scores = JSON.parse(responseText);
+      scores = JSON.parse(cleanJson);
     } catch (parseErr) {
-      logger.error('Failed to parse Gemini evaluation response', { responseText, err: parseErr.message });
+      logger.error('Failed to parse Groq evaluation response', { responseText: cleanJson, err: parseErr.message });
       return res.status(502).json({ success: false, message: 'AI returned invalid evaluation. Try again.', data: null });
     }
 

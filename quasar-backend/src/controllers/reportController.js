@@ -1,13 +1,11 @@
 const PDFDocument = require('pdfkit');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { chatCompletion } = require('../services/groqService');
 const config = require('../config/env');
 const Session = require('../models/Session');
 const SpeechMetrics = require('../models/SpeechMetrics');
 const Persona = require('../models/Persona');
 const User = require('../models/User');
 const logger = require('../utils/logger');
-
-const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 
 /**
  * GET /api/sessions/:sessionId/report
@@ -45,22 +43,25 @@ async function generateReport(req, res) {
     // Fetch speech metrics
     const speechMetrics = await SpeechMetrics.findOne({ sessionId }).lean() || {};
 
-    // Generate action plan using Gemini
+    // Generate action plan using Groq
     let actionPlan = [];
     try {
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
       const starScores = session.starScores || {};
-      const prompt = `Based on these interview performance scores, generate exactly 3 concise actionable improvement tips (one sentence each). Return ONLY a JSON array of 3 strings, no markdown.
-Scores: Overall: ${session.overallScore || 'N/A'}/10, Situation: ${starScores.situation || 'N/A'}, Task: ${starScores.task || 'N/A'}, Action: ${starScores.action || 'N/A'}, Result: ${starScores.result || 'N/A'}, Clarity: ${session.clarityScore || 'N/A'}, Filler words: ${speechMetrics.totalFillers || 0}`;
+      const systemPrompt = 'You are an expert interview coach. Return ONLY a JSON array of exactly 3 concise actionable improvement tips (one sentence each). No markdown, no code fences — just the JSON array.';
+      const userPrompt = `Based on these interview performance scores, generate improvement tips.\nScores: Overall: ${session.overallScore || 'N/A'}/10, Situation: ${starScores.situation || 'N/A'}, Task: ${starScores.task || 'N/A'}, Action: ${starScores.action || 'N/A'}, Result: ${starScores.result || 'N/A'}, Clarity: ${session.clarityScore || 'N/A'}, Filler words: ${speechMetrics.totalFillers || 0}`;
 
-      const result = await model.generateContent(prompt);
-      let text = result.response.text().trim();
+      let text = await chatCompletion(systemPrompt, userPrompt, {
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.5,
+        maxTokens: 512,
+      });
+
       if (text.startsWith('```')) {
         text = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
       }
       actionPlan = JSON.parse(text);
     } catch (aiErr) {
-      logger.warn('Failed to generate action plan via Gemini', { err: aiErr.message });
+      logger.warn('Failed to generate action plan via Groq', { err: aiErr.message });
       actionPlan = [
         'Practice structuring answers using the STAR framework.',
         'Reduce filler word usage by pausing instead of using "um" or "like".',
