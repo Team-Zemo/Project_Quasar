@@ -194,14 +194,17 @@ class GeminiService {
     }
 
     // ── Transcriptions ─────────────────────────────────────────────
+    // Per the @google/genai SDK, transcription lives at:
+    //   serverContent.inputTranscription.text  (user's audio → text)
+    //   serverContent.outputTranscription.text (model's audio → text)
     const userTranscription =
-      geminiMessage.serverContent?.inputAudioTranscription?.transcription;
+      geminiMessage.serverContent?.inputTranscription?.text;
     if (userTranscription) {
       this.callbacks.onMessage({ type: 'transcript_user', text: userTranscription });
     }
 
     const modelTranscription =
-      geminiMessage.serverContent?.outputAudioTranscription?.transcription;
+      geminiMessage.serverContent?.outputTranscription?.text;
     if (modelTranscription) {
       this.callbacks.onMessage({ type: 'transcript_model', text: modelTranscription });
     }
