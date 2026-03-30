@@ -12,7 +12,7 @@ import type { SessionConfig } from './types/interview';
 
 function InterviewPage() {
   const [activeDomain, setActiveDomain] = useState('');
-  const { status, messages, error, isRecording, sessionId, startInterview, endInterview, resetSession, getTranscript } =
+  const { status, messages, error, isRecording, sessionId, activeCodingQuestion, startInterview, endInterview, resetSession, getTranscript, submitCode } =
     useInterviewSession();
 
   const isInSession = status === 'connecting' || status === 'active' || status === 'ready';
@@ -39,8 +39,10 @@ function InterviewPage() {
           isRecording={isRecording}
           domain={activeDomain}
           sessionId={sessionId}
+          activeCodingQuestion={activeCodingQuestion}
           onEnd={endInterview}
           onNewInterview={handleNewInterview}
+          onSubmitCode={submitCode}
           getTranscript={getTranscript}
         />
       )}

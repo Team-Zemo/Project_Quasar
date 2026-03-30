@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import type { Message, ServerMessage, BrowserMessage, SessionStatus, SessionConfig } from '../types/interview';
+import type { Message, ServerMessage, BrowserMessage, SessionStatus, SessionConfig, CodingQuestion } from '../types/interview';
 import { useAudioProcessor } from './useAudioProcessor';
 
 const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -18,6 +18,7 @@ export function useInterviewSession() {
   const [error, setError] = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [activeCodingQuestion, setActiveCodingQuestion] = useState<CodingQuestion | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const { startRecording, stopRecording, playChunk, clearQueue, destroy } = useAudioProcessor();
@@ -101,9 +102,21 @@ export function useInterviewSession() {
           // session_ended will arrive ~3.5s later from backend to fully close out
           break;
 
+        case 'coding_question':
+          // AI is presenting a coding challenge — pause mic, surface the code editor
+          setIsRecording(false);
+          stopRecording();
+          setActiveCodingQuestion({
+            title: msg.questionTitle ?? 'Coding Challenge',
+            description: msg.questionDescription ?? '',
+            preferredLanguage: msg.preferredLanguage ?? 'Any',
+          });
+          break;
+
         case 'session_ended':
           setStatus('ended');
           setIsRecording(false);
+          setActiveCodingQuestion(null);
           stopRecording();
           break;
 
@@ -211,7 +224,28 @@ export function useInterviewSession() {
     setError(null);
     setIsRecording(false);
     setSessionId(null);
+    setActiveCodingQuestion(null);
   }, [destroy]);
+
+  /**
+   * Submit the candidate's code. Sends it to the backend which closes the
+   * pending present_coding_question tool call so Gemini can evaluate it.
+   */
+  const submitCode = useCallback((code: string, language: string) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'code_submission',
+        code,
+        language,
+      } satisfies BrowserMessage));
+    }
+    // Close the editor and resume voice capture
+    setActiveCodingQuestion(null);
+    setIsRecording(true);
+    startRecording((base64) => {
+      sendWsMessage({ type: 'audio', data: base64 });
+    }).catch(() => {});
+  }, [sendWsMessage, startRecording]);
 
   /**
    * Get the full transcript from current messages
@@ -226,9 +260,11 @@ export function useInterviewSession() {
     error,
     isRecording,
     sessionId,
+    activeCodingQuestion,
     startInterview,
     endInterview,
     resetSession,
     getTranscript,
+    submitCode,
   };
 }

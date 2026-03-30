@@ -1,5 +1,11 @@
 // Shared TypeScript types for Interview AI
 
+export interface CodingQuestion {
+  title: string;
+  description: string;
+  preferredLanguage: string;
+}
+
 export interface Message {
   id: string;
   role: 'user' | 'assistant';
@@ -13,6 +19,7 @@ export interface ServerMessage {
     | 'session_ready'
     | 'session_ended'
     | 'interview_ended_by_ai'
+    | 'coding_question'
     | 'transcript_user'
     | 'transcript_model'
     | 'audio'
@@ -22,15 +29,23 @@ export interface ServerMessage {
   data?: string;
   message?: string;
   closingRemark?: string;
+  // coding_question fields
+  questionTitle?: string;
+  questionDescription?: string;
+  preferredLanguage?: string;
 }
 
 export interface BrowserMessage {
-  type: 'setup' | 'audio' | 'interrupt' | 'end';
+  type: 'setup' | 'audio' | 'interrupt' | 'end' | 'code_submission';
   domain?: string;
   data?: string;
   personaId?: string;
   customSystemPrompt?: string;
+  // code_submission fields
+  code?: string;
+  language?: string;
 }
+
 
 export type SessionStatus =
   | 'idle'

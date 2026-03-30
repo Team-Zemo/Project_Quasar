@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { Message, SessionStatus, EmotionSnapshot } from '../types/interview';
+import type { Message, SessionStatus, EmotionSnapshot, CodingQuestion } from '../types/interview';
 import { MessageBubble } from './MessageBubble';
 import { AudioVisualizer } from './AudioVisualizer';
 import { EmotionAnalyzer } from './EmotionAnalyzer';
 import { FillerDetector } from './FillerDetector';
 import { PostSessionResults } from './PostSessionResults';
+import { CodeEditor } from './CodeEditor';
 import { apiPost } from '../lib/api';
 
 const logger = (...args: unknown[]) => console.log('[InterviewRoom]', ...args);
@@ -15,8 +16,10 @@ interface InterviewRoomProps {
   isRecording: boolean;
   domain: string;
   sessionId: string | null;
+  activeCodingQuestion: CodingQuestion | null;
   onEnd: () => void;
   onNewInterview: () => void;
+  onSubmitCode: (code: string, language: string) => void;
   getTranscript: () => string;
 }
 
@@ -26,8 +29,10 @@ export function InterviewRoom({
   isRecording,
   domain,
   sessionId,
+  activeCodingQuestion,
   onEnd,
   onNewInterview,
+  onSubmitCode,
   getTranscript,
 }: InterviewRoomProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -151,8 +156,9 @@ export function InterviewRoom({
           <div>
             <p className="room-header__domain">{domain}</p>
             <p className="room-header__status">
-              {status === 'active' && isRecording && 'Session active — speak to respond'}
-              {status === 'active' && !isRecording && 'Connecting audio…'}
+          {status === 'active' && activeCodingQuestion && 'Write your code solution — microphone paused'}
+              {status === 'active' && !activeCodingQuestion && isRecording && 'Session active — speak to respond'}
+              {status === 'active' && !activeCodingQuestion && !isRecording && 'Connecting audio…'}
               {status === 'connecting' && 'Connecting to Gemini…'}
               {status === 'ended' && 'Session completed — reviewing performance'}
               {status === 'error' && 'Connection error'}
@@ -259,6 +265,14 @@ export function InterviewRoom({
           <div ref={bottomRef} />
         </div>
       </div>
+
+      {/* Code editor overlay — shown when AI presents a coding question */}
+      {activeCodingQuestion && (
+        <CodeEditor
+          question={activeCodingQuestion}
+          onSubmit={onSubmitCode}
+        />
+      )}
     </div>
   );
 }

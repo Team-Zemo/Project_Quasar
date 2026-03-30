@@ -5,9 +5,8 @@ const logger = require('../utils/logger');
 // Initialize Gemini SDK with global config
 const ai = new GoogleGenAI({ apiKey: config.geminiApiKey });
 
-// ── Tool declaration ────────────────────────────────────────────────
-// The model calls this when it decides the interview is complete.
-const END_INTERVIEW_TOOL = {
+// ── Tool declarations ───────────────────────────────────────────────
+const INTERVIEW_TOOLS = {
   functionDeclarations: [
     {
       name: 'end_interview',
@@ -26,6 +25,32 @@ const END_INTERVIEW_TOOL = {
         required: ['closing_remark'],
       },
     },
+    {
+      name: 'present_coding_question',
+      description:
+        'Call this function when you want to present a coding challenge to the candidate. ' +
+        "Say the question out loud first, then immediately call this function. " +
+        'The system will pause audio capture and show the candidate a code editor. ' +
+        "You must wait silently — do NOT speak again until you receive the candidate's code submission.",
+      parameters: {
+        type: 'object',
+        properties: {
+          question_title: {
+            type: 'string',
+            description: 'Short title of the coding question, e.g. "Reverse a Linked List".',
+          },
+          question_description: {
+            type: 'string',
+            description: 'Full problem statement including constraints and examples.',
+          },
+          preferred_language: {
+            type: 'string',
+            description: 'Preferred programming language, e.g. "Python", "JavaScript", "Any".',
+          },
+        },
+        required: ['question_title', 'question_description', 'preferred_language'],
+      },
+    },
   ],
 };
 
@@ -36,6 +61,7 @@ class GeminiService {
     this.session = null;
     this.isConnected = false;
     this.customSystemPrompt = customSystemPrompt || null;
+    this._pendingCodingCall = null;
   }
 
   /**
@@ -54,7 +80,7 @@ class GeminiService {
           systemInstruction: this._buildSystemPrompt(),
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          tools: [END_INTERVIEW_TOOL],
+          tools: [INTERVIEW_TOOLS],
         },
         callbacks: {
           onopen: () => {
@@ -108,34 +134,45 @@ class GeminiService {
   }
 
   _interviewStructureGuidance() {
-    return `## Interview Structure — Follow This Carefully
-
-PHASE 1 — INTRODUCTION (do this first, always):
-- Greet the candidate warmly by name if known, otherwise "Hello, welcome!"
-- Briefly introduce yourself: "I'm your interviewer today for this ${this.domain} session."
-- Give a one-sentence overview of what to expect: "We'll go through a mix of conceptual and situational questions. Feel free to take a moment before answering."
-- Ask a simple warm-up: "Could you start by telling me a little about yourself and your experience with ${this.domain}?"
-
-PHASE 2 — CORE INTERVIEW (8 to 10 questions total, including follow-ups):
-- Ask questions ONE AT A TIME. Never ask multiple questions at once.
-- Wait for the full answer before proceeding.
-- Cover a balanced mix: fundamentals, problem-solving, real-world scenarios, and one behavioral/situational question.
-- Follow-up rule: Only ask a follow-up if the answer was notably incomplete, vague, or particularly interesting. Maximum two follow-ups per main question. Do not chain follow-ups.
-- Acknowledge each answer briefly ("That's a good point.", "Interesting approach.", "Got it.") — keep acknowledgements short, max one sentence.
-- Do NOT provide correct answers, coaching, or scoring during the interview. Stay neutral.
-- Aim for 8 questions total (including any follow-ups). Do not exceed 10 exchanges before closing.
-- Keep track mentally. After roughly 8 main responses from the candidate, move to closing.
-
-PHASE 3 — CLOSING (always end using the end_interview function):
-- Deliver a natural verbal closing: thank the candidate, mention feedback will follow.
-- Example: "That wraps up our session today. Thank you so much for your time — you've covered some really solid ground. We'll be in touch with feedback soon. Best of luck!"
-- Immediately after saying this, call the \`end_interview\` function with your closing_remark.
-
-## Critical Rules
-- This is a VOICE interview — keep responses concise and natural. No bullet lists or markdown in speech.
-- Never break character. You are a real interviewer.
-- Never ask more than 10 questions total.
-- Always end the interview by calling end_interview — do not let the session drift indefinitely.`;
+    return (
+      '## Interview Structure — Follow This Carefully\n' +
+      '\n' +
+      'PHASE 1 — INTRODUCTION (do this first, always):\n' +
+      '- Greet the candidate warmly by name if known, otherwise "Hello, welcome!"\n' +
+      `- Briefly introduce yourself: "I'm your interviewer today for this ${this.domain} session."\n` +
+      '- Give a one-sentence overview of what to expect: "We\'ll go through a mix of conceptual and situational questions. Feel free to take a moment before answering."\n' +
+      `- Ask a simple warm-up: "Could you start by telling me a little about yourself and your experience with ${this.domain}?"\n` +
+      '\n' +
+      'PHASE 2 — CORE INTERVIEW (8 to 10 questions total, including follow-ups):\n' +
+      '- Ask questions ONE AT A TIME. Never ask multiple questions at once.\n' +
+      '- Wait for the full answer before proceeding.\n' +
+      '- Cover a balanced mix: fundamentals, problem-solving, real-world scenarios, and one behavioral/situational question.\n' +
+      '- Follow-up rule: Only ask a follow-up if the answer was notably incomplete, vague, or particularly interesting. Maximum two follow-ups per main question. Do not chain follow-ups.\n' +
+      '- Acknowledge each answer briefly ("That\'s a good point.", "Interesting approach.", "Got it.") — keep acknowledgements short, max one sentence.\n' +
+      '- Do NOT provide correct answers, coaching, or scoring during the interview. Stay neutral.\n' +
+      '- Aim for 8 questions total (including any follow-ups). Do not exceed 10 exchanges before closing.\n' +
+      '- Keep track mentally. After roughly 8 main responses from the candidate, move to closing.\n' +
+      '\n' +
+      'CODING QUESTIONS (use sparingly — maximum 1 or 2 per session):\n' +
+      '- If the domain is technical/engineering, include 1 coding question mid-interview (not first, not last).\n' +
+      '- To present a coding question: first SAY the problem out loud clearly and concisely, then IMMEDIATELY call `present_coding_question` with the full details.\n' +
+      '- The candidate will type their code in an editor. You will receive their submission as a tool response — do NOT speak until you receive it.\n' +
+      '- Once you receive the code, evaluate it verbally: comment on correctness, edge cases, time/space complexity, and code clarity. Ask a brief verbal follow-up if needed.\n' +
+      '- Pick problems appropriate to the domain. Examples: algorithms for SWE, SQL queries for data, regex for backend, etc.\n' +
+      '- Keep coding questions concise — solvable in 10-15 minutes. No massive system-design problems.\n' +
+      '- Specify preferred_language based on what the candidate mentioned or the JD. Use "Any" if not specified.\n' +
+      '\n' +
+      'PHASE 3 — CLOSING (always end using the end_interview function):\n' +
+      '- Deliver a natural verbal closing: thank the candidate, mention feedback will follow.\n' +
+      '- Example: "That wraps up our session today. Thank you so much for your time — you\'ve covered some really solid ground. We\'ll be in touch with feedback soon. Best of luck!"\n' +
+      '- Immediately after saying this, call the `end_interview` function with your closing_remark.\n' +
+      '\n' +
+      '## Critical Rules\n' +
+      '- This is a VOICE interview — keep responses concise and natural. No bullet lists or markdown in speech.\n' +
+      '- Never break character. You are a real interviewer.\n' +
+      '- Never ask more than 10 questions total.\n' +
+      '- Always end the interview by calling end_interview — do not let the session drift indefinitely.'
+    );
   }
 
   /**
@@ -203,13 +240,31 @@ PHASE 3 — CLOSING (always end using the end_interview function):
 
         // Notify the client — the front-end will trigger its own teardown
         if (typeof this.callbacks.onMessage === 'function') {
+          this.callbacks.onMessage({ type: 'interview_ended_by_ai', closingRemark });
+        }
+
+      } else if (fc.name === 'present_coding_question') {
+        const { question_title, question_description, preferred_language } = fc.args ?? {};
+
+        // Store the pending call — we respond ONLY when the user submits their code.
+        // Gemini will be blocked (waiting for tool response) until submitCode() is called.
+        this._pendingCodingCall = { id: fc.id, name: fc.name };
+
+        // Signal the client to open the code editor
+        if (typeof this.callbacks.onMessage === 'function') {
           this.callbacks.onMessage({
-            type: 'interview_ended_by_ai',
-            closingRemark,
+            type: 'coding_question',
+            questionTitle: question_title,
+            questionDescription: question_description,
+            preferredLanguage: preferred_language ?? 'Any',
           });
         }
+
+        // Do NOT push a functionResponse here — Gemini waits until submitCode() responds.
+        continue;
+
       } else {
-        // Unknown tool — respond with a no-op so the model isn't blocked
+        // Unknown tool — respond with a no-op so the model is not blocked
         functionResponses.push({
           id: fc.id,
           name: fc.name,
@@ -221,11 +276,48 @@ PHASE 3 — CLOSING (always end using the end_interview function):
     if (functionResponses.length > 0 && this.session && this.isConnected) {
       try {
         this.session.sendToolResponse({ functionResponses });
-        logger.info('Sent tool response for function calls', {
-          count: functionResponses.length,
-        });
+        logger.info('Sent tool response for function calls', { count: functionResponses.length });
       } catch (err) {
         logger.error('Failed to send tool response to Gemini', { err: err.message });
+      }
+    }
+  }
+
+  /**
+   * Send the user's code submission back to Gemini as a tool response.
+   * This unblocks the model (which was waiting on present_coding_question) so
+   * it can evaluate the code verbally and continue the interview.
+   * @param {string} code
+   * @param {string} language
+   */
+  submitCode(code, language) {
+    if (!this.session || !this.isConnected) {
+      logger.warn('submitCode called but Gemini is not connected');
+      return;
+    }
+
+    if (this._pendingCodingCall) {
+      try {
+        this.session.sendToolResponse({
+          functionResponses: [{
+            id: this._pendingCodingCall.id,
+            name: this._pendingCodingCall.name,
+            response: { result: 'code_submitted', language, code },
+          }],
+        });
+        logger.info('Sent code submission as tool response to Gemini', { language });
+      } catch (err) {
+        logger.error('Failed to send code tool response', { err: err.message });
+      }
+      this._pendingCodingCall = null;
+    } else {
+      // Fallback: no pending call — inject as plain text
+      const text = '[Candidate submitted code in ' + language + ']:\n```' + language.toLowerCase() + '\n' + code + '\n```';
+      try {
+        this.session.sendRealtimeInput({ text });
+        logger.info('Sent code as fallback text input to Gemini');
+      } catch (err) {
+        logger.error('Failed to sendRealtimeInput for code', { err: err.message });
       }
     }
   }

@@ -62,6 +62,15 @@ class ConnectionHandler {
         }
         break;
 
+      case 'code_submission':
+        if (this.geminiService) {
+          logger.info('Forwarding code submission to Gemini', { language: payload.language });
+          this.geminiService.submitCode(payload.code ?? '', payload.language ?? 'Unknown');
+        } else {
+          logger.warn('Code submission received before Gemini readiness');
+        }
+        break;
+
       case 'end':
         this._teardownGemini();
         this._sendToClient({ type: 'session_ended' });
