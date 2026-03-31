@@ -1,3 +1,4 @@
+const { extractTextFromPDF } = require('../utils/pdfExtract');
 const { chatCompletion } = require('../services/groqService');
 const JdSession = require('../models/JdSession');
 const JdQuestion = require('../models/JdQuestion');
@@ -9,10 +10,21 @@ const logger = require('../utils/logger');
  */
 async function parseJD(req, res) {
   try {
-    const { jobDescription } = req.body;
     const userId = req.user?.id;
 
-    if (!jobDescription || jobDescription.trim().length < 50) {
+    // Support both PDF upload (multipart) and plain-text body
+    let jobDescription = req.body?.jobDescription?.trim() || '';
+
+    if (req.file) {
+      try {
+        jobDescription = await extractTextFromPDF(req.file.buffer);
+      } catch (pdfErr) {
+        logger.error('PDF extraction failed on JD upload', { err: pdfErr.message });
+        return res.status(422).json({ success: false, message: `Could not extract text from JD PDF: ${pdfErr.message}`, data: null });
+      }
+    }
+
+    if (!jobDescription || jobDescription.length < 50) {
       return res.status(400).json({ success: false, message: 'Job description must be at least 50 characters', data: null });
     }
 

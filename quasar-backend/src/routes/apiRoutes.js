@@ -1,5 +1,6 @@
 const express = require('express');
 const { requireAuth } = require('../middleware/auth');
+const upload = require('../middleware/upload');
 
 const sessionController = require('../controllers/sessionController');
 const speechController = require('../controllers/speechController');
@@ -9,6 +10,7 @@ const progressController = require('../controllers/progressController');
 const skillController = require('../controllers/skillController');
 const reportController = require('../controllers/reportController');
 const evaluationController = require('../controllers/evaluationController');
+const resumeCompareController = require('../controllers/resumeCompareController');
 
 const router = express.Router();
 
@@ -32,8 +34,17 @@ router.post('/sessions/:sessionId/speech-metrics', requireAuth, speechController
 router.get('/sessions/:sessionId/speech-metrics', requireAuth, speechController.getSpeechMetrics);
 
 // ── JD Parser ─────────────────────────────────────────────
-router.post('/jd/parse', requireAuth, jdController.parseJD);
+// Accepts multipart (PDF upload) OR JSON body (plain text) — upload.single('jd') is optional
+router.post('/jd/parse', requireAuth, upload.single('jd'), jdController.parseJD);
 router.get('/jd/:jdSessionId/questions', requireAuth, jdController.getJDQuestions);
+
+// ── Resume vs JD Comparison ───────────────────────────────
+router.post(
+  '/resume/compare',
+  requireAuth,
+  upload.fields([{ name: 'resume', maxCount: 1 }, { name: 'jd', maxCount: 1 }]),
+  resumeCompareController.compareResumeToJD
+);
 
 // ── Progress Tracker ──────────────────────────────────────
 router.get('/users/:userId/progress', requireAuth, progressController.getProgress);

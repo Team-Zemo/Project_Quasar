@@ -1,32 +1,53 @@
-import { useState } from 'react';
-import { apiPost } from '../lib/api';
+import { useRef, useState } from 'react';
 
 interface JDParserProps {
   onParsed: (jdSessionId: string, questions: any[]) => void;
   onSkip: () => void;
 }
 
+const API_BASE = '';
+
 export function JDParser({ onParsed, onSkip }: JDParserProps) {
+  const [mode, setMode] = useState<'text' | 'pdf'>('text');
   const [jdText, setJDText] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [parsedData, setParsedData] = useState<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleParse = async () => {
-    if (jdText.trim().length < 50) {
-      setError('Job description must be at least 50 characters');
-      return;
-    }
-
     setError('');
     setLoading(true);
 
     try {
-      const result = await apiPost<any>('/api/jd/parse', { jobDescription: jdText });
+      let result: any;
+
+      if (mode === 'pdf') {
+        if (!pdfFile) { setError('Please select a JD PDF file.'); setLoading(false); return; }
+        const formData = new FormData();
+        formData.append('jd', pdfFile);
+        const resp = await fetch(`${API_BASE}/api/jd/parse`, {
+          method: 'POST',
+          credentials: 'include',
+          body: formData,
+        });
+        result = await resp.json();
+      } else {
+        if (jdText.trim().length < 50) { setError('Job description must be at least 50 characters.'); setLoading(false); return; }
+        const resp = await fetch(`${API_BASE}/api/jd/parse`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobDescription: jdText }),
+        });
+        result = await resp.json();
+      }
+
       if (result.success) {
         setParsedData(result.data);
       } else {
-        setError(result.message);
+        setError(result.message || 'Failed to parse JD.');
       }
     } catch (err) {
       setError('Failed to parse job description. Please try again.');
@@ -105,19 +126,90 @@ export function JDParser({ onParsed, onSkip }: JDParserProps) {
 
   return (
     <div className="jd-parser">
-      <h3 className="jd-parser__title">📋 Paste Job Description</h3>
+      <h3 className="jd-parser__title">📋 Job Description</h3>
       <p className="jd-parser__subtitle">
-        Paste a job description to generate custom interview questions tailored to the role
+        Paste text or upload a PDF to generate custom interview questions
       </p>
 
-      <textarea
-        id="jd-textarea"
-        className="jd-textarea"
-        value={jdText}
-        onChange={(e) => setJDText(e.target.value)}
-        placeholder="Paste the full job description here... (minimum 50 characters)"
-        rows={8}
-      />
+      {/* Mode toggle */}
+      <div className="jd-mode-toggle">
+        <button
+          className={`jd-mode-btn ${mode === 'text' ? 'jd-mode-btn--active' : ''}`}
+          onClick={() => setMode('text')}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+            <line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/>
+          </svg>
+          Plain Text
+        </button>
+        <button
+          className={`jd-mode-btn ${mode === 'pdf' ? 'jd-mode-btn--active' : ''}`}
+          onClick={() => setMode('pdf')}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          Upload PDF
+        </button>
+      </div>
+
+      {mode === 'text' ? (
+        <textarea
+          id="jd-textarea"
+          className="jd-textarea"
+          value={jdText}
+          onChange={(e) => setJDText(e.target.value)}
+          placeholder="Paste the full job description here... (minimum 50 characters)"
+          rows={8}
+        />
+      ) : (
+        <div
+          className={`jd-pdf-dropzone ${pdfFile ? 'jd-pdf-dropzone--filled' : ''}`}
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            const f = e.dataTransfer.files[0];
+            if (f?.type === 'application/pdf') setPdfFile(f);
+            else setError('Please drop a PDF file.');
+          }}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="application/pdf"
+            style={{ display: 'none' }}
+            onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
+          />
+          {pdfFile ? (
+            <>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--c-success)" strokeWidth="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="9" y1="15" x2="15" y2="15"/>
+              </svg>
+              <span className="jd-pdf-name">{pdfFile.name}</span>
+              <span className="jd-pdf-size">{(pdfFile.size / 1024).toFixed(0)} KB</span>
+              <button className="jd-pdf-remove" onClick={(e) => { e.stopPropagation(); setPdfFile(null); }}>
+                ✕ Remove
+              </button>
+            </>
+          ) : (
+            <>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--c-text-mute)" strokeWidth="1.5">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 12 15 15"/>
+              </svg>
+              <span className="jd-pdf-hint">Click or drag & drop a JD PDF</span>
+              <span className="jd-pdf-hint-sub">Max 10 MB · PDF only</span>
+            </>
+          )}
+        </div>
+      )}
 
       {error && (
         <div className="error-box" role="alert">
@@ -135,7 +227,7 @@ export function JDParser({ onParsed, onSkip }: JDParserProps) {
           id="parse-jd-btn"
           className="btn-primary"
           onClick={handleParse}
-          disabled={loading || jdText.trim().length < 50}
+          disabled={loading || (mode === 'text' ? jdText.trim().length < 50 : !pdfFile)}
         >
           {loading ? (
             <>
