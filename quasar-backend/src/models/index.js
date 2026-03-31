@@ -6,6 +6,7 @@ const Persona = require('./Persona');
 const JdSession = require('./JdSession');
 const JdQuestion = require('./JdQuestion');
 const SkillVector = require('./SkillVector');
+const UserStats = require('./UserStats');
 const logger = require('../utils/logger');
 
 /**
@@ -74,5 +75,6 @@ module.exports = {
   JdSession,
   JdQuestion,
   SkillVector,
+  UserStats,
   seedPersonas,
 };

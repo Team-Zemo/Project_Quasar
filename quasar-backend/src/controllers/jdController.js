@@ -2,6 +2,7 @@ const { extractTextFromPDF } = require('../utils/pdfExtract');
 const { chatCompletion } = require('../services/groqService');
 const JdSession = require('../models/JdSession');
 const JdQuestion = require('../models/JdQuestion');
+const { onJDParsed } = require('../services/gamificationService');
 const logger = require('../utils/logger');
 
 /**
@@ -90,18 +91,21 @@ Generate exactly 20 questions, weighted by importance to the role. Weight values
       await JdQuestion.insertMany(questions);
     }
 
+    // Fire-and-forget gamification (non-blocking)
+    if (userId) onJDParsed(userId).catch(() => {});
+
     return res.json({
       success: true,
       message: 'Job description parsed successfully',
       data: {
-        jdSessionId: jdSession._id,
-        role: parsedData.role,
-        seniority: parsedData.seniority,
-        domain: parsedData.domain,
+        jdSessionId:    jdSession._id,
+        role:           parsedData.role,
+        seniority:      parsedData.seniority,
+        domain:         parsedData.domain,
         requiredSkills: parsedData.requiredSkills,
         niceToHaveSkills: parsedData.niceToHaveSkills,
-        culturalSignals: parsedData.culturalSignals,
-        questions: parsedData.generatedQuestions
+        culturalSignals:  parsedData.culturalSignals,
+        questions:        parsedData.generatedQuestions
       }
     });
   } catch (err) {

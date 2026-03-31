@@ -1,5 +1,6 @@
 const { extractTextFromPDF } = require('../utils/pdfExtract');
 const { chatCompletion } = require('../services/groqService');
+const { onResumeCompare } = require('../services/gamificationService');
 const logger = require('../utils/logger');
 
 /**
@@ -105,13 +106,17 @@ Analyse the provided RESUME against the JOB DESCRIPTION and return ONLY valid JS
       return res.status(502).json({ success: false, message: 'AI returned invalid JSON. Please try again.', data: null });
     }
 
+    // Fire-and-forget gamification
+    const gamification = await onResumeCompare(req.user?.id);
+
     return res.json({
       success: true,
       message: 'Resume vs JD comparison complete',
       data: {
         ...analysis,
         resumeFileName: resumeFile.originalname,
-        jdFileName: jdFile?.originalname || 'Plain text input',
+        jdFileName:     jdFile?.originalname || 'Plain text input',
+        newBadge:       gamification?.newBadge || null,
       },
     });
   } catch (err) {

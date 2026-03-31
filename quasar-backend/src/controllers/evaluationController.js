@@ -4,6 +4,7 @@ const Session = require('../models/Session');
 const SpeechMetrics = require('../models/SpeechMetrics');
 const Persona = require('../models/Persona');
 const SkillVector = require('../models/SkillVector');
+const { processSession } = require('../services/gamificationService');
 const logger = require('../utils/logger');
 
 /**
@@ -139,18 +140,29 @@ ${transcript.substring(0, 8000)}`;
       }
     }
 
+    // ── Gamification ─────────────────────────────────────────
+    const gamification = await processSession(userId, {
+      sessionId:       sessionId,
+      overallScore:    scores.overallScore,
+      durationSeconds: durationSeconds,
+      domain:          session.domain,
+      personaId:       session.personaId,
+      jdSessionId:     session.jdSessionId,
+    });
+
     return res.json({
       success: true,
       message: 'Session evaluated',
       data: {
-        overallScore: scores.overallScore,
-        starScores: scores.starScores,
-        clarityScore: scores.clarityScore,
+        overallScore:   scores.overallScore,
+        starScores:     scores.starScores,
+        clarityScore:   scores.clarityScore,
         categoryScores: scores.categoryScores,
-        strengths: scores.strengths,
-        improvements: scores.improvements,
-        summary: scores.summary,
-        passed: (scores.overallScore || 0) >= 6.5
+        strengths:      scores.strengths,
+        improvements:   scores.improvements,
+        summary:        scores.summary,
+        passed:         (scores.overallScore || 0) >= 6.5,
+        gamification:   gamification || null,
       }
     });
   } catch (err) {

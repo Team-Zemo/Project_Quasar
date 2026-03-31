@@ -1,245 +1,428 @@
-You are an expert full-stack engineer. You are working inside an existing AI interview platform with two folders:
-- `quasar-frontend` — Vite JS, Tailwind CSS 
-- `quasar-backend` — Node.js, Express, PostgreSQL, Mongoose for any MongoDB models
+# Gamification Frontend — Generation Guide
 
-The platform already has a working core: the Gemini 3.1 Flash Live model conducts voice interviews with candidates in real time. Do NOT touch or break that core flow.
-
----
-
-## YOUR TASK
-
-Implement the following features end-to-end. For each feature, write production-quality code: clean, modular, no shortcuts. Do not explain what you are doing — just write the code. Do not scaffold boilerplate I didn't ask for.
+> Hand this document to an implementation agent.  
+> Backend is fully live — do NOT modify any backend files.
 
 ---
 
-## 1. AUTHENTICATION (Industry Standard)
+## 1. New API Endpoints (all require cookie auth)
 
-Implement full auth for the platform:
+| Method | Path | Returns |
+|--------|------|---------|
+| `GET` | `/api/users/:userId/stats` | Full XP / level / streak profile |
+| `GET` | `/api/users/:userId/badges` | Full badge catalogue (locked + unlocked) |
 
-- **Registration & Login** with email + password
-- Passwords hashed with `bcrypt` (minimum 12 rounds)
-- **JWT-based sessions**: access token (15min expiry) + refresh token (7 days), both stored as `httpOnly` `Secure` `SameSite=Strict` cookies — never in localStorage
-- Refresh token rotation: on every refresh, invalidate old token, issue new one, persist hashed refresh tokens to DB with user binding
-- **Google OAuth 2.0** via `passport-google-oauth20` — on first login create user record, on subsequent logins match by Google ID
-- Auth middleware: `requireAuth` (blocks unauthenticated), `optionalAuth` (attaches user if present)
-- Rate limiting on `/auth/*` routes: 10 requests/15min per IP using `express-rate-limit`
-- All responses must never leak stack traces or internal errors — return standardised `{ success, message, data }` shape
-- In `quasar-frontend`: persist auth state in a JS module (not localStorage). On app load, silently call `/auth/refresh` to restore session. Protect routes — redirect to `/login` if unauthenticated.
+`userId` = the authenticated user's ID (available in the auth context as `user.id`).
 
 ---
 
-## 2. LIVE EMOTION & CONFIDENCE ANALYSER
+## 2. API Shapes
 
-**Frontend only** (`quasar-frontend`). No server calls during analysis.
+### `GET /api/users/:userId/stats`
+```ts
+interface UserStats {
+  xp:                number;       // total XP earned
+  level:             number;       // 1-10
+  xpToNextLevel:     number | null; // null at max level
+  currentStreak:     number;       // days
+  longestStreak:     number;
+  lastPracticeDate:  string | null; // "YYYY-MM-DD" UTC
+  totalSessions:     number;
+  badges:            EarnedBadge[];
+  domainsPlayed:     string[];
+  personasUsed:      string[];
+  jdsParsed:         number;
+  resumeComparesRun: number;
+}
+```
 
-- Load `face-api.js` from CDN during the interview session
-- Load models: `tinyFaceDetector`, `faceExpressionNet`, `faceLandmark68Net` — from a `/models` static path or CDN
-- Start webcam stream with `getUserMedia`. Run detection every **500ms** using `requestAnimationFrame` or `setInterval`
-- From each detection frame, extract:
-  - **Confidence score** (0–100): weighted composite of `happy` + `neutral` expressions minus `fearful` + `surprised`
-  - **Nervousness indicator**: rolling 5-second average of micro-expression variance (rapid fluctuation across `fearful`, `surprised`, `disgusted`)
-  - **Eye contact proxy**: face detected + landmark nose/eye alignment within centre 60% of video frame = good eye contact
-- Render three live gauges on the interview UI using plain CSS/SVG — no chart library needed here:
-  - Confidence meter (vertical bar)
-  - Nervousness level (colour-coded pill: green/amber/red)
-  - Eye contact indicator (dot: on/off)
-- Collect per-second snapshots into a session array `[{ t, confidence, nervousness, eyeContact }]`
-- On session end, POST this array to `/api/sessions/:sessionId/emotion-metrics` — backend stores it in PostgreSQL as a JSONB column
+### `GET /api/users/:userId/badges`
+```ts
+interface BadgeCatalogueResponse {
+  earned: number;  // count of unlocked badges
+  total:  number;  // 25
+  badges: BadgeEntry[];
+}
+
+interface BadgeEntry {
+  id:          string;
+  name:        string;
+  description: string;
+  icon:        string;   // emoji
+  unlocked:    boolean;
+  unlockedAt:  string | null; // ISO date
+}
+```
+
+### Gamification block appended to `POST /api/sessions/:sessionId/evaluate`
+```ts
+interface GamificationResult {
+  xpEarned:      number;
+  xpBreakdown:   { event: string; xp: number }[];
+  totalXp:       number;
+  level:         number;
+  levelUp:       boolean;
+  currentStreak: number;
+  longestStreak: number;
+  newBadges:     { id: string; name: string; icon: string }[];
+}
+// Evaluate response: data.gamification: GamificationResult | null
+```
+
+### `POST /api/resume/compare` — badge added to response
+```ts
+// data.newBadge: { id, name, icon, description } | null
+// show toast if newBadge is present
+```
 
 ---
 
-## 3. FILLER WORD & SPEECH PATTERN DETECTOR
+## 3. Components to Build
 
-**Frontend** (`quasar-frontend`):
+### 3.1 `XPBar` — inline XP / level widget
+**Used in:** TopNav (next to user avatar) and StatsPage header
 
-- Use the `webkitSpeechRecognition` / `SpeechRecognition` API in `continuous` + `interimResults` mode
-- On each `onresult` event, run a regex against the full rolling transcript:
-```js
-  const FILLERS = /\b(um+|uh+|like|you know|basically|literally|actually|so+|right\?|okay so|i mean)\b/gi;
 ```
-- Show a **live filler counter** on the interview UI: "Fillers: 7 (2.3/min)"
-- After session ends, segment the transcript into 10-second buckets. Count fillers per bucket. Send to backend.
+╔══════════════════════════════════╗
+║  Lvl 5  ▓▓▓▓▓▓▓░░░░  740/900    ║
+╚══════════════════════════════════╝
+```
 
-**Backend** (`quasar-backend`):
+**Props:**
+```ts
+interface XPBarProps {
+  xp:           number;
+  level:        number;
+  xpToNext:     number | null;
+  compact?:     boolean;  // true → show only in TopNav (smaller)
+}
+```
 
-- `POST /api/sessions/:sessionId/speech-metrics` — accepts `{ transcript: string, fillerBuckets: [{t, count}], totalFillers: number, wordsPerMinute: number }`
-- Store in a `speech_metrics` table linked to session
-- `GET /api/sessions/:sessionId/speech-metrics` — returns data for post-session heatmap rendering
-
-**Frontend post-session heatmap**:
-
-- Render a horizontal timeline bar divided into 10-second segments
-- Colour each segment by filler density: white → light amber → deep red
-- Label peak segments with the actual filler words used
+**Design:**
+- Level displayed as pill badge `Lvl N` with accent colour gradient by tier:
+  - 1-3: `#6b7280`  4-6: `#3b82f6`  7-9: `#f97316`  10: `#fbbf24` (gold)
+- Progress bar: animated width fill, uses `--c-accent` → glowing effect
+- Show `MAX` when `xpToNext` is null
 
 ---
 
-## 4. INTERVIEWER PERSONA SYSTEM
+### 3.2 `StreakWidget` — daily streak card
+**Used in:** StatsPage and optionally Progress Dashboard
 
-**Backend** (`quasar-backend`):
-
-- Create a `personas` table (or seed JSON) with these 4 personas. Each has: `id`, `name`, `description`, `systemPrompt`, `interruptionStyle`, `followUpAggression` (1–5)
-
-Persona system prompts:
-
-**FAANG Engineer**
 ```
-You are a senior Staff Engineer at Google conducting a structured behavioural and system design interview. Ask one question at a time. Follow up with "Tell me more about X" or "How would you scale that?". Expect STAR-format answers. Be professional, methodical, and technically exacting. If the candidate is vague, press for specifics. Never accept the first answer — always probe one level deeper.
+╔══════════════╗
+║  🔥  7       ║
+║  day streak  ║
+║  Best: 12    ║
+╚══════════════╝
 ```
 
-**Aggressive Startup Founder**
-```
-You are a Series A startup founder conducting a high-pressure interview. You have 20 minutes and zero tolerance for fluff. Interrupt if the candidate is rambling. Ask things like "Why should I hire you over someone with 5 more years?", "That sounds like something everyone says — what's actually unique about you?", "We move fast — give me evidence you can too." Be blunt, impatient, and direct. Challenge every claim.
-```
-
-**HR Manager**
-```
-You are an HR Manager focused on culture fit, values alignment, and soft skills. Ask about teamwork, conflict resolution, growth mindset, and how the candidate handles failure. Use open-ended questions. Be warm but probing. Follow up vague answers with "Can you walk me through a specific example?" Avoid technical questions entirely.
-```
-
-**Hostile Panel**
-```
-You are a panel of three interviewers. One is technical and skeptical, one is focused on leadership, one is challenging every answer for consistency. Rotate perspectives in your responses. Create mild pressure and contradictions: "Our technical interviewer thinks your answer lacks depth, but our leadership interviewer liked the people angle — can you address both?" Make the candidate work harder to satisfy multiple viewpoints simultaneously.
+**Props:**
+```ts
+interface StreakWidgetProps {
+  currentStreak: number;
+  longestStreak: number;
+  lastPracticeDate: string | null;
+}
 ```
 
-- `GET /api/personas` — returns list for the frontend persona selector
-- When creating a session, accept `personaId` in the request body. Store on the session record. Inject the persona's `systemPrompt` as the system instruction to the Gemini Live model at session initialisation.
-
-**Frontend** (`quasar-frontend`):
-
-- Before starting a session, show a persona selector: 4 cards with name, description, aggression level indicator (dots 1–5). Selected persona card gets a highlight border.
-- Pass selected `personaId` to the session creation API call.
+**Design:**
+- Fire emoji pulses with CSS animation when streak ≥ 3
+- Show "Practice today to keep your streak!" if `lastPracticeDate !== todayUTC`
+- Convert `lastPracticeDate` UTC → local date display in the frontend (no backend changes)
+- Background: subtle gradient from `rgba(249,115,22,0.08)` to `rgba(234,179,8,0.08)`
 
 ---
 
-## 5. JOB DESCRIPTION PARSER → CUSTOM QUESTION BANK
+### 3.3 `BadgeGrid` — full badge catalogue page/panel
+**Used in:** StatsPage (tab) and `/badges` route
 
-**Backend** (`quasar-backend`):
+Layout: responsive grid of badge cards, locked badges are greyscale with `filter: grayscale(1) opacity(0.4)`.
 
-- `POST /api/jd/parse` — accepts `{ jobDescription: string, userId }`
-- Call the Gemini API (text, not live) with this prompt structure:
+**Props:**
+```ts
+interface BadgeGridProps {
+  badges: BadgeEntry[];
+}
 ```
-  You are an expert technical recruiter. Analyse this job description and return ONLY valid JSON (no markdown) in this exact schema:
-  {
-    "role": string,
-    "seniority": "junior" | "mid" | "senior" | "staff" | "principal",
-    "domain": string,
-    "requiredSkills": string[],
-    "niceToHaveSkills": string[],
-    "culturalSignals": string[],
-    "generatedQuestions": [
-      {
-        "question": string,
-        "category": "behavioural" | "technical" | "system-design" | "culture-fit",
-        "difficulty": 1 | 2 | 3,
-        "targetSkill": string,
-        "weight": number  // 0.0–1.0, higher = more important for this role
-      }
-    ]
-  }
-  Generate exactly 20 questions, weighted by importance to the role.
-  Job Description: {{JD_TEXT}}
+
+**Design per card:**
 ```
-- Parse the JSON response. Store the question bank linked to the user + a `jd_sessions` record.
-- `GET /api/jd/:jdSessionId/questions` — returns the question list ordered by weight desc
-
-**Frontend** (`quasar-frontend`):
-
-- Add a "Paste Job Description" step before session start (after persona selection)
-- Show a textarea + "Parse JD" button. On success, show extracted role/skills as tags and a preview of top 5 generated questions
-- User confirms → session starts using this custom question bank instead of the default pack
+╔════════════════╗
+║   🔥           ║  ← emoji (large, 36px)
+║  On Fire       ║  ← name
+║  3-day streak  ║  ← description (12px, muted)
+║  Mar 31, 2026  ║  ← unlockedAt OR locked icon
+╚════════════════╝
+```
+- Unlocked cards: coloured border glow matching badge category
+- Badge categories by ID prefix for colour grouping:
+  - `streak_*` → orange `#f97316`
+  - `*_sessions`, `first_session`, `century` → blue `#3b82f6`
+  - `*_pass`, `high_achiever`, `perfect_ten`, `comeback_kid` → green `#22c55e`
+  - `level_*`, `xp_*` → gold `#fbbf24`
+  - `domain_*`, `polymath` → purple `var(--c-purple)`
+  - `no_fillers`, `speed_demon`, `slow_and_steady` → teal `#14b8a6`
+  - `night_owl`, `early_bird`, `resume_checker`, `jd_parser`, `persona_collector` → pink `#ec4899`
 
 ---
 
-## 6. PROGRESS TRACKER ACROSS SESSIONS
+### 3.4 `GamificationToast` — XP / badge notification
+**Used in:** InterviewRoom (after evaluate completes) and ResumeComparePage
 
-**Backend** (`quasar-backend`):
+This is a transient notification that appears after a session is evaluated.  
+Show for 6 seconds then fade out.
 
-- `GET /api/users/:userId/progress` — aggregates across all completed sessions for this user:
-```json
-  {
-    "sessions": [
-      {
-        "sessionId": "uuid",
-        "date": "ISO string",
-        "overallScore": 7.2,
-        "starScores": { "situation": 8, "task": 6, "action": 7, "result": 5 },
-        "clarityScore": 6,
-        "fillerRate": 3.2,
-        "confidenceAvg": 71
-      }
-    ],
-    "improvement": {
-      "clarityDelta": "+2.1 over last 5 sessions",
-      "strongestDimension": "action",
-      "weakestDimension": "result"
-    }
-  }
+**Props:**
+```ts
+interface GamificationToastProps {
+  gamification: GamificationResult;
+  onClose: () => void;
+}
 ```
 
-**Frontend** (`quasar-frontend`):
-
-- Dedicated `/progress` dashboard page
-- Use **Chart.js** (load from CDN). Render:
-  1. **Line chart** — Overall score over time (x = session date, y = 0–10)
-  2. **Multi-line chart** — Each STAR dimension as a separate line across sessions
-  3. **Bar chart** — Filler word rate per session (lower = better, colour accordingly)
-  4. **Single stat cards** — Current confidence avg, strongest dimension, weakest dimension, total sessions
-- All charts responsive, respect dark mode via Chart.js theming
+**Design:**
+```
+╔═════════════════════════════════════════╗
+║  ⚡ +80 XP earned      Level 5  →  6 ✓ ║
+║  ──────────────────────────────────     ║
+║  🏆 Badge Unlocked: Week Warrior ⚡     ║
+║  📈 Badge Unlocked: First Step  🎯     ║
+╚═════════════════════════════════════════╝
+```
+- Slide in from bottom-right
+- Each XP breakdown shows on hover/expand (collapsible)
+- Level-up gets a special animation: golden shimmer border
+- Multiple badges: stack with small delay between each
 
 ---
 
-## 7. ADAPTIVE DIFFICULTY ENGINE
+### 3.5 `StatsPage` — full gamification dashboard
+**Route:** `/stats`  
+**Nav link:** Add `📊 Stats` link in TopNav (alongside Progress, Resume Check)
 
-**Backend** (`quasar-backend`):
+**Layout:**
 
-Implement a `skill_vectors` table per user:
 ```
-userId, skill (varchar), score (float, 0–10), lastUpdated, attemptCount
+┌─────── Header: XP card ──────────────────────┐
+│  [XPBar large]   [StreakWidget]  [Sessions]   │
+└───────────────────────────────────────────────┘
+┌─────── Tabs ──────────────────────────────────┐
+│  [ Overview ]  [ Badges ]  [ Activity ]       │
+└───────────────────────────────────────────────┘
+Tab: Overview
+  ┌──────── Key Stats ────────────────────────┐
+  │  Total Sessions  Domains  JDs Parsed  etc │
+  └───────────────────────────────────────────┘
+  ┌──────── Recent Badges ────────────────────┐
+  │  last 4 unlocked badges, small cards      │
+  └───────────────────────────────────────────┘
+
+Tab: Badges
+  <BadgeGrid> — all 25 badges
+
+Tab: Activity
+  Reuse existing ProgressDashboard session list
 ```
 
-Skills tracked: `communication`, `technical_depth`, `leadership`, `problem_structuring`, `result_orientation`, `culture_fit`
-
-After each session answer is scored:
-- `POST /api/users/:userId/skill-vector/update` — accepts `{ sessionId, starScores, categoryScores }`
-- Update each skill using exponential moving average: `newScore = 0.7 * oldScore + 0.3 * latestScore`
-- Map STAR dimensions → skills: Result → `result_orientation`, Task → `problem_structuring`, etc.
-
-Question selection logic (`GET /api/sessions/:sessionId/next-question`):
-- Fetch user's skill vector
-- Find the 2 lowest-scoring skills
-- Filter question bank for questions targeting those skills
-- Apply spaced repetition: questions with `lastAttempted` > 3 sessions ago AND score < 6 get priority boost
-- Return the top-priority question with `{ question, difficulty, targetSkill, reason }`
+**Data fetching:** `GET /api/users/${user.id}/stats` and `GET /api/users/${user.id}/badges`
 
 ---
 
+### 3.6 `LevelUpModal` — celebratory overlay
+**Triggered when:** `gamification.levelUp === true` in evaluate response
 
+```
+╔═══════════════════════════════════╗
+║         ⭐ LEVEL UP! ⭐            ║
+║                                   ║
+║     You reached Level 6           ║
+║                                   ║
+║    [ Continue Practicing ]        ║
+╚═══════════════════════════════════╝
+```
+- Full-screen overlay with particle/confetti animation
+- Auto-dismiss after 5s or on button click
+- Golden gradient border, pulsing glow
 
-## 8. PDF REPORT CARD EXPORT
+---
 
-**Backend** (`quasar-backend`):
+## 4. Integration Points in Existing Code
 
-- Install `pdfkit` (not iText — this is Node.js)
-- `GET /api/sessions/:sessionId/report` — generates and streams a PDF report
+### 4.1 `App.tsx`
+Add to TopNav (after Resume Check link):
+```tsx
+<Link to="/stats" className="topnav__link">
+  <svg>...</svg>
+  Stats
+</Link>
+```
 
-The PDF must include (in order):
-1. **Header**: Platform name "Quasar Interview" + candidate name + date + session duration + persona used
-2. **Overall Score**: Large number (e.g. 7.4/10) + pass/fail verdict based on threshold (≥6.5 = Pass)
-3. **STAR Breakdown table**: 7 rows (Situation, Task, Action, Result, Clarity, Conciseness, Domain Knowledge), each with score bar (filled rectangle proportional to score/10)
-4. **Speech Analysis section**: Total filler words, filler rate/min, words per minute, top 3 most used fillers
-5. **Confidence Analysis section**: Average confidence score, peak confidence moment (timestamp), lowest confidence moment
-6. **Session Transcript**: Full transcript in monospace font, with filler words visually marked (prefix with [*])
-7. **Personalised Action Plan**: 3 bullet points generated by calling Gemini API with the session scores — "Based on your scores, focus on: ..."
-8. **Footer**: "Generated by Quasar Interview Platform" + timestamp
+Add protected route:
+```tsx
+<Route path="/stats" element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
+```
 
-Stream the PDF directly as response with `Content-Type: application/pdf` and `Content-Disposition: attachment; filename="interview-report-{sessionId}.pdf"`
+Add compact `XPBar` to the TopNav user section (next to avatar, only when authenticated):
+```tsx
+{user && <XPBar compact xp={stats.xp} level={stats.level} xpToNext={stats.xpToNextLevel} />}
+```
+Fetch stats once in `App.tsx` via a `useGamificationStats()` hook and pass down via context to avoid per-component fetching.
 
-**Frontend** (`quasar-frontend`):
+---
 
-- On the post-session results page, add a "Download Report" button
-- On click, hit the `/api/sessions/:sessionId/report` endpoint and trigger browser file download
+### 4.2 `InterviewRoom.tsx` / Evaluate flow
+After the evaluate API call resolves, check:
+```ts
+if (result.data.gamification) {
+  setGamification(result.data.gamification);  // triggers GamificationToast
+  if (result.data.gamification.levelUp) setShowLevelUp(true);
+}
+```
 
+---
 
-A few things I deliberately did in this prompt that matter:
-The PDF section switches from iText/PDFBox to pdfkit because this is Node.js, not Java — that correction matters or you'd get broken code. The Gemini API is used consistently throughout (not Claude) since that's your existing integration. Auth is specified at the implementation level — cookie strategy, rotation logic, rate limits — not just "add JWT auth." And the question packs are fully written out so the AI doesn't invent them, it just seeds them.
+### 4.3 `ResumeComparePage.tsx`
+After compare resolves:
+```ts
+if (json.data.newBadge) {
+  // show a small badge-unlock toast
+}
+```
+
+---
+
+### 4.4 `ProgressDashboard.tsx`
+Add a `StreakWidget` and compact `XPBar` at the top of the dashboard above the chart.
+
+---
+
+## 5. New Hook: `useGamificationStats`
+
+```ts
+// src/hooks/useGamificationStats.ts
+export function useGamificationStats(userId: string | undefined) {
+  const [stats, setStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    const res = await fetch(`/api/users/${userId}/stats`, { credentials: 'include' });
+    const json = await res.json();
+    if (json.success) setStats(json.data);
+    setLoading(false);
+  }, [userId]);
+
+  useEffect(() => { refresh(); }, [refresh]);
+
+  return { stats, loading, refresh };
+}
+```
+
+Call `refresh()` after evaluate completes to update TopNav XP bar.
+
+---
+
+## 6. CSS Design Tokens (add to `index.css`)
+
+No new CSS variables needed — use existing tokens:
+- `--c-accent` (#f97316 orange) → XP bar, streak
+- `--c-user` (#3b82f6 blue) → session milestones
+- `--c-success` (#22c55e) → score badges
+- `--c-purple` → domain badges
+- `--c-error` (#ef4444) → locked state indicators
+
+New animations to add:
+```css
+/* XP Bar fill */
+@keyframes xp-fill { from { width: 0%; } to { width: var(--xp-pct); } }
+
+/* Streak pulse */
+@keyframes streak-pulse {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.15); }
+}
+
+/* Toast slide-in */
+@keyframes toast-slide-in {
+  from { transform: translateX(120%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* Level-up shimmer */
+@keyframes level-shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+```
+
+---
+
+## 7. Level → Colour Map (for XPBar pill)
+
+```ts
+const LEVEL_COLORS: Record<number, string> = {
+  1: '#6b7280', 2: '#6b7280', 3: '#6b7280',  // grey
+  4: '#3b82f6', 5: '#3b82f6', 6: '#3b82f6',  // blue
+  7: '#f97316', 8: '#f97316', 9: '#f97316',  // orange
+  10: '#fbbf24',                              // gold
+};
+```
+
+---
+
+## 8. XP Level Progress Table (for StatsPage display)
+
+| Level | XP Required | XP to Next |
+|-------|------------|------------|
+| 1 | 0 | 100 |
+| 2 | 100 | 150 |
+| 3 | 250 | 250 |
+| 4 | 500 | 400 |
+| 5 | 900 | 500 |
+| 6 | 1,400 | 600 |
+| 7 | 2,000 | 800 |
+| 8 | 2,800 | 1,000 |
+| 9 | 3,800 | 1,200 |
+| 10 | 5,000 | — |
+
+---
+
+## 9. Badge Category Map (25 badges)
+
+```ts
+const BADGE_CATEGORY: Record<string, string> = {
+  first_session: 'milestone', ten_sessions: 'milestone',
+  fifty_sessions: 'milestone', century: 'milestone',
+  first_pass: 'score', high_achiever: 'score',
+  perfect_ten: 'score', comeback_kid: 'score',
+  streak_3: 'streak', streak_7: 'streak',
+  streak_14: 'streak', streak_30: 'streak',
+  domain_explorer: 'domain', polymath: 'domain',
+  persona_collector: 'persona',
+  no_fillers: 'speech', speed_demon: 'speech', slow_and_steady: 'speech',
+  level_5: 'level', level_10: 'level', xp_500: 'level',
+  night_owl: 'special', early_bird: 'special',
+  resume_checker: 'feature', jd_parser: 'feature',
+};
+```
+
+---
+
+## 10. File Checklist
+
+| File | Action |
+|------|--------|
+| `src/hooks/useGamificationStats.ts` | Create |
+| `src/components/XPBar.tsx` | Create |
+| `src/components/StreakWidget.tsx` | Create |
+| `src/components/BadgeGrid.tsx` | Create |
+| `src/components/GamificationToast.tsx` | Create |
+| `src/components/LevelUpModal.tsx` | Create |
+| `src/components/StatsPage.tsx` | Create |
+| `src/App.tsx` | Add /stats route + nav link + compact XPBar in TopNav |
+| `src/components/InterviewRoom.tsx` | Consume `gamification` from evaluate response |
+| `src/components/ResumeComparePage.tsx` | Consume `newBadge` from compare response |
+| `src/components/ProgressDashboard.tsx` | Add StreakWidget + compact XPBar at top |
+| `src/index.css` | Add XP/toast/streak/level-up animations + stats page styles |
