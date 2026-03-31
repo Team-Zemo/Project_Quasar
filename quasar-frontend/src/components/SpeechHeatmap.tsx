@@ -1,3 +1,5 @@
+import { motion } from 'framer-motion';
+
 interface FillerBucket {
   t: number;
   count: number;
@@ -11,8 +13,8 @@ interface SpeechHeatmapProps {
 export function SpeechHeatmap({ buckets }: SpeechHeatmapProps) {
   if (!buckets || buckets.length === 0) {
     return (
-      <div className="speech-heatmap speech-heatmap--empty">
-        <p>No speech data available</p>
+      <div className="flex flex-col items-center justify-center p-8 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] text-[var(--c-text-dim)]">
+        <p className="m-0 text-[14px]">No speech data available</p>
       </div>
     );
   }
@@ -32,51 +34,50 @@ export function SpeechHeatmap({ buckets }: SpeechHeatmapProps) {
   const peakThreshold = maxCount * 0.7;
 
   return (
-    <div className="speech-heatmap">
-      <h4 className="speech-heatmap__title">Filler Word Heatmap</h4>
-      <p className="speech-heatmap__subtitle">10-second segments • Darker = more fillers</p>
+    <div className="flex flex-col gap-4 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px]" style={{ padding: '24px' }}>
+      <div className="flex flex-col mb-2">
+        <h4 className="text-[14px] font-bold text-[var(--c-text)] tracking-wide uppercase m-0">Filler Word Heatmap</h4>
+        <p className="text-[12px] text-[var(--c-text-dim)] m-0 mt-1">10-second segments • Darker = more fillers</p>
+      </div>
 
-      <div className="heatmap-bar">
+      <div className="flex items-end gap-1 overflow-x-auto pb-4 scrollbar-hidden">
         {buckets.map((bucket, i) => {
           const isPeak = bucket.count >= peakThreshold && bucket.count > 0;
           return (
-            <div key={i} className="heatmap-segment-wrapper">
-              <div
-                className={`heatmap-segment ${isPeak ? 'heatmap-segment--peak' : ''}`}
-                style={{ backgroundColor: getColor(bucket.count) }}
-                title={`${bucket.t}s–${bucket.t + 10}s: ${bucket.count} fillers`}
-              >
-                {bucket.count > 0 && (
-                  <span className="heatmap-segment__count">{bucket.count}</span>
-                )}
-              </div>
+            <div key={i} className="flex flex-col items-center gap-2 group min-w-[32px] shrink-0">
               {isPeak && bucket.words && bucket.words.length > 0 && (
-                <div className="heatmap-peak-label">
+                <div className="text-[10px] font-bold text-[var(--c-text-dim)] uppercase tracking-wider text-center rotate-[-45deg] origin-bottom-left max-w-[40px] truncate">
                   {[...new Set(bucket.words)].slice(0, 2).join(', ')}
                 </div>
               )}
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: isPeak ? 48 : 32 }}
+                title={`${bucket.t}s–${bucket.t + 10}s: ${bucket.count} fillers`}
+                className={`w-full rounded-sm flex items-center justify-center transition-all duration-300 ${isPeak ? 'ring-2 ring-red-500/50 shadow-[0_4px_12px_rgba(220,38,38,0.2)]' : 'opacity-80 hover:opacity-100 hover:scale-y-110'}`}
+                style={{ backgroundColor: getColor(bucket.count), transformOrigin: 'bottom' }}
+              >
+                {bucket.count > 0 && (
+                  <span className="text-[10px] font-bold text-white drop-shadow-md">{bucket.count}</span>
+                )}
+              </motion.div>
             </div>
           );
         })}
       </div>
 
-      <div className="heatmap-legend">
-        <span className="heatmap-legend__item">
-          <span className="heatmap-legend__color" style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)' }} />
-          None
-        </span>
-        <span className="heatmap-legend__item">
-          <span className="heatmap-legend__color" style={{ backgroundColor: 'rgba(251, 191, 36, 0.3)' }} />
-          Low
-        </span>
-        <span className="heatmap-legend__item">
-          <span className="heatmap-legend__color" style={{ backgroundColor: 'rgba(245, 158, 11, 0.6)' }} />
-          Medium
-        </span>
-        <span className="heatmap-legend__item">
-          <span className="heatmap-legend__color" style={{ backgroundColor: 'rgba(220, 38, 38, 0.9)' }} />
-          High
-        </span>
+      <div className="flex items-center gap-4 mt-2 pt-4 border-t border-[var(--c-border)]">
+        {[
+          { label: 'None', color: 'rgba(255, 255, 255, 0.05)' },
+          { label: 'Low', color: 'rgba(251, 191, 36, 0.3)' },
+          { label: 'Medium', color: 'rgba(245, 158, 11, 0.6)' },
+          { label: 'High', color: 'rgba(220, 38, 38, 0.9)' }
+        ].map((legend, i) => (
+          <span key={i} className="flex items-center gap-1.5 text-[11px] font-medium text-[var(--c-text-dim)] tracking-wide uppercase">
+            <span className="block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: legend.color }} />
+            {legend.label}
+          </span>
+        ))}
       </div>
     </div>
   );

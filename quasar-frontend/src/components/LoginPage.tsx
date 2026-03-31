@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../lib/auth';
+import { motion } from 'framer-motion';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -28,63 +30,73 @@ export function LoginPage() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-card__header">
-          <div className="topnav__logo" style={{ width: 48, height: 48, fontSize: 14 }}>AI</div>
-          <h1 className="auth-card__title">Welcome Back</h1>
-          <p className="auth-card__subtitle">Sign in to continue your interview practice</p>
+    <div className="flex items-center justify-center min-h-screen bg-[var(--c-bg)]" style={{ padding: '16px' }}>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        className="w-full max-w-[440px] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-lg flex flex-col"
+        style={{ padding: '40px' }}
+      >
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="w-[48px] h-[48px] flex items-center justify-center rounded-[14px] bg-[var(--c-accent-dim)] border border-[var(--c-accent-glow)] text-[var(--c-accent)] font-black text-[15px] mb-5 tracking-tight shadow-sm">
+            AI
+          </div>
+          <h1 className="text-[24px] font-extrabold text-[var(--c-text)] m-0 mb-2 tracking-tight">Welcome Back</h1>
+          <p className="text-[14px] text-[var(--c-text-dim)] m-0">Sign in to continue your interview practice</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="login-email" className="form-label">Email</label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="login-email" className="text-[13px] font-semibold text-[var(--c-text)]">Email</label>
             <input
               id="login-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="form-input"
+              className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
+              style={{ padding: '14px 16px' }}
               placeholder="you@example.com"
               required
               autoFocus
             />
           </div>
 
-          <div className="form-group">
-            <div className="form-label-row">
-              <label htmlFor="login-password" className="form-label">Password</label>
-              <Link to="/forgot-password" className="auth-link auth-link--small">Forgot password?</Link>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <label htmlFor="login-password" className="text-[13px] font-semibold text-[var(--c-text)]">Password</label>
+              <Link to="/forgot-password" className="text-[12px] font-semibold text-[var(--c-accent)] hover:underline transition-all">Forgot password?</Link>
             </div>
             <input
               id="login-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="form-input"
+              className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
+              style={{ padding: '14px 16px' }}
               placeholder="••••••••"
               required
             />
           </div>
 
           {error && (
-            <div className="error-box" role="alert">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
+            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[13px] font-semibold rounded-[12px]" style={{ padding: '12px 16px' }} role="alert">
+              <AlertCircle size={16} strokeWidth={2.5} className="shrink-0" />
               {error}
             </div>
           )}
 
-          <button type="submit" id="login-submit" className="btn-primary btn-full" disabled={loading}>
-            {loading ? <><div className="spinner" />Signing in…</> : 'Sign In'}
+          <button type="submit" id="login-submit" className="flex items-center justify-center gap-2 w-full bg-[var(--c-text)] hover:bg-white text-[var(--c-bg)] font-bold text-[15px] rounded-[14px] transition-all cursor-pointer mt-1" style={{ padding: '14px 24px' }} disabled={loading}>
+            {loading ? <><Loader2 size={18} className="animate-spin" /> Signing in…</> : 'Sign In'}
           </button>
         </form>
 
-        <div className="auth-divider"><span>or continue with</span></div>
+        <div className="flex items-center gap-4 my-7 before:content-[''] before:flex-1 before:h-[1px] before:bg-[var(--c-border)] after:content-[''] after:flex-1 after:h-[1px] after:bg-[var(--c-border)] text-[11px] font-semibold text-[var(--c-text-mute)] uppercase tracking-widest px-2">
+          <span>or continue with</span>
+        </div>
 
-        <div className="oauth-buttons">
-          <a href="/auth/google" className="btn-oauth btn-oauth--google">
+        <div className="grid grid-cols-2 gap-3 w-full">
+          <a href="/auth/google" className="flex items-center justify-center gap-2.5 rounded-[14px] text-[14px] font-semibold tracking-wide border border-[var(--c-border)] bg-[var(--c-surface)] text-[var(--c-text)] hover:bg-white/5 hover:border-white/20 active:scale-[0.98] transition-all cursor-pointer no-underline" style={{ padding: '12px 16px' }}>
             <svg width="18" height="18" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -93,7 +105,7 @@ export function LoginPage() {
             </svg>
             Google
           </a>
-          <a href="/auth/github" className="btn-oauth btn-oauth--github">
+          <a href="/auth/github" className="flex items-center justify-center gap-2.5 rounded-[14px] text-[14px] font-semibold tracking-wide border border-[var(--c-border)] bg-[var(--c-surface)] text-[var(--c-text)] hover:bg-white/5 hover:border-white/20 active:scale-[0.98] transition-all cursor-pointer no-underline" style={{ padding: '12px 16px' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
             </svg>
@@ -101,10 +113,10 @@ export function LoginPage() {
           </a>
         </div>
 
-        <p className="auth-footer-text">
-          Don't have an account? <Link to="/register" className="auth-link">Create one</Link>
+        <p className="text-center mt-8 mb-0 text-[13px] text-[var(--c-text-mute)] font-medium">
+          Don't have an account? <Link to="/register" className="text-[var(--c-text)] font-bold hover:underline">Create one</Link>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

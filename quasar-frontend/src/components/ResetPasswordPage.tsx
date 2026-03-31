@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { resetPassword } from '../lib/auth';
+import { motion } from 'framer-motion';
+import { AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -15,7 +18,7 @@ export function ResetPasswordPage() {
   // Derive token validity without a side-effect
   const tokenError = !token ? 'Invalid or missing reset token. Please request a new reset link.' : '';
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
 
@@ -44,101 +47,131 @@ export function ResetPasswordPage() {
     }
   };
 
+  const containerStyle = { padding: '16px' };
+  const cardStyle = { padding: '40px' };
+  const inputStyle = { padding: '14px 16px' };
+  const alertStyle = { padding: '12px 16px' };
+  const buttonStyle = { padding: '14px 24px' };
+
   if (submitStatus === 'success') {
     return (
-      <div className="auth-page">
-        <div className="auth-card">
-          <div className="auth-success-state">
-            <div className="auth-success-icon auth-success-icon--green">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="20 6 9 17 4 12"/>
-              </svg>
-            </div>
-            <h2 className="auth-success-title">Password reset!</h2>
-            <p className="auth-success-text">Your password has been updated. Redirecting you to sign in…</p>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen bg-[var(--c-bg)]" style={containerStyle}>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-[440px] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-lg flex flex-col items-center text-center"
+          style={cardStyle}
+        >
+          <motion.div 
+            initial={{ scale: 0.9 }}
+            animate={{ scale: 1 }}
+            className="w-[64px] h-[64px] rounded-full bg-[var(--c-success-dim)] border border-green-500/20 text-[var(--c-success)] flex items-center justify-center mb-5"
+          >
+            <CheckCircle2 size={32} strokeWidth={2.5} />
+          </motion.div>
+          <h2 className="text-[20px] font-bold text-[var(--c-text)] mb-3 m-0">Password reset!</h2>
+          <p className="text-[14px] text-[var(--c-text-dim)] leading-relaxed m-0 pb-4">
+            Your password has been updated. Redirecting you to sign in…
+          </p>
+        </motion.div>
       </div>
     );
   }
 
   if (tokenError) {
     return (
-      <div className="auth-page">
-        <div className="auth-card">
-          <div className="auth-card__header">
-            <div className="topnav__logo" style={{ width: 48, height: 48, fontSize: 14 }}>AI</div>
-            <h1 className="auth-card__title">Invalid Link</h1>
+      <div className="flex items-center justify-center min-h-screen bg-[var(--c-bg)]" style={containerStyle}>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-[440px] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-lg flex flex-col"
+          style={cardStyle}
+        >
+          <div className="flex flex-col items-center text-center mb-8">
+            <div className="w-[48px] h-[48px] flex items-center justify-center rounded-[14px] bg-[var(--c-accent-dim)] border border-[var(--c-accent-glow)] text-[var(--c-accent)] font-black text-[15px] mb-5 shadow-sm">
+              AI
+            </div>
+            <h1 className="text-[24px] font-extrabold text-[var(--c-text)] m-0 mb-2">Invalid Link</h1>
           </div>
-          <div className="error-box" role="alert" style={{ marginBottom: 20 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            {tokenError}
+          
+          <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[13px] font-semibold rounded-[12px] mb-8" style={alertStyle} role="alert">
+            <AlertCircle size={16} strokeWidth={2.5} className="shrink-0 mt-0.5" />
+            <span className="leading-relaxed">{tokenError}</span>
           </div>
-          <Link to="/forgot-password" className="btn-primary btn-full" style={{ display: 'block', textAlign: 'center' }}>
+          
+          <Link to="/forgot-password" className="flex items-center justify-center gap-2 w-full bg-[var(--c-text)] hover:bg-white text-[var(--c-bg)] font-bold text-[15px] rounded-[14px] transition-all cursor-pointer no-underline" style={buttonStyle}>
             Request New Link
           </Link>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-card__header">
-          <div className="topnav__logo" style={{ width: 48, height: 48, fontSize: 14 }}>AI</div>
-          <h1 className="auth-card__title">Set New Password</h1>
-          <p className="auth-card__subtitle">Choose a strong password for your account</p>
+    <div className="flex items-center justify-center min-h-screen bg-[var(--c-bg)]" style={containerStyle}>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+        className="w-full max-w-[440px] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-lg flex flex-col"
+        style={cardStyle}
+      >
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="w-[48px] h-[48px] flex items-center justify-center rounded-[14px] bg-[var(--c-accent-dim)] border border-[var(--c-accent-glow)] text-[var(--c-accent)] font-black text-[15px] mb-5 tracking-tight shadow-sm">
+            AI
+          </div>
+          <h1 className="text-[24px] font-extrabold text-[var(--c-text)] m-0 mb-2 tracking-tight">Set New Password</h1>
+          <p className="text-[14px] text-[var(--c-text-dim)] m-0">Choose a strong password for your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <div className="form-group">
-            <label htmlFor="reset-password" className="form-label">New Password</label>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full">
+          <div className="flex flex-col gap-2">
+            <label htmlFor="reset-password" className="text-[13px] font-semibold text-[var(--c-text)]">New Password</label>
             <input
               id="reset-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="form-input"
+              className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
+              style={inputStyle}
               placeholder="Min. 8 characters"
               required
               autoFocus
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="reset-confirm" className="form-label">Confirm Password</label>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="reset-confirm" className="text-[13px] font-semibold text-[var(--c-text)]">Confirm Password</label>
             <input
               id="reset-confirm"
               type="password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="form-input"
+              className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
+              style={inputStyle}
               placeholder="Repeat new password"
               required
             />
           </div>
 
           {error && (
-            <div className="error-box" role="alert">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-              </svg>
+            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[13px] font-semibold rounded-[12px]" style={alertStyle} role="alert">
+              <AlertCircle size={16} strokeWidth={2.5} className="shrink-0" />
               {error}
             </div>
           )}
 
-          <button type="submit" id="reset-submit" className="btn-primary btn-full" disabled={submitStatus === 'loading'}>
-            {submitStatus === 'loading' ? <><div className="spinner" />Resetting…</> : 'Reset Password'}
+          <button type="submit" id="reset-submit" className="flex items-center justify-center gap-2 w-full bg-[var(--c-text)] hover:bg-white text-[var(--c-bg)] font-bold text-[15px] rounded-[14px] transition-all cursor-pointer mt-1" style={buttonStyle} disabled={submitStatus === 'loading'}>
+            {submitStatus === 'loading' ? <><Loader2 size={18} className="animate-spin" /> Resetting…</> : 'Reset Password'}
           </button>
 
-          <p className="auth-footer-text" style={{ marginTop: 16 }}>
-            <Link to="/login" className="auth-link">Back to Sign In</Link>
+          <p className="text-center mt-6 mb-0">
+            <Link to="/login" className="text-[13px] text-[var(--c-text-mute)] font-medium hover:text-[var(--c-text)] hover:underline transition-colors">
+              Back to Sign In
+            </Link>
           </p>
         </form>
-      </div>
+      </motion.div>
     </div>
   );
 }

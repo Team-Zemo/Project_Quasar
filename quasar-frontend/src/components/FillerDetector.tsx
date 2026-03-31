@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { MicOff, Target } from 'lucide-react';
 
 interface FillerBucket {
   t: number;
@@ -29,7 +30,6 @@ export function FillerDetector({ isActive, onUpdate }: FillerDetectorProps) {
   const fillerCountRef = useRef(0);
   const bucketsRef = useRef<FillerBucket[]>([]);
   const currentBucketRef = useRef<FillerBucket>({ t: 0, count: 0, words: [] });
-  const bucketTimerRef = useRef<number | null>(null);
 
   const countFillers = useCallback((text: string): { count: number; words: string[] } => {
     const matches = text.match(FILLERS) || [];
@@ -65,7 +65,7 @@ export function FillerDetector({ isActive, onUpdate }: FillerDetectorProps) {
       transcriptRef.current = fullTranscript;
 
       // Count total fillers
-      const { count, words } = countFillers(fullTranscript);
+      const { count } = countFillers(fullTranscript);
       fillerCountRef.current = count;
       setTotalFillers(count);
 
@@ -161,22 +161,20 @@ export function FillerDetector({ isActive, onUpdate }: FillerDetectorProps) {
 
   if (!supported) {
     return (
-      <div className="filler-detector filler-detector--unsupported">
-        <span className="filler-detector__icon">🎤</span>
+      <div className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 text-[13px] font-medium text-red-500 rounded-full shadow-sm">
+        <MicOff size={16} strokeWidth={2.5} />
         <span>Speech detection not supported in this browser</span>
       </div>
     );
   }
 
   return (
-    <div className="filler-detector">
-      <div className="filler-counter">
-        <span className="filler-counter__icon">🎯</span>
-        <span className="filler-counter__text">
-          Fillers: <strong>{totalFillers}</strong>
-          {fillerRate > 0 && <span className="filler-counter__rate"> ({fillerRate}/min)</span>}
-        </span>
-      </div>
+    <div className="flex items-center gap-2 px-4 py-2 bg-[var(--c-surface)] border border-[var(--c-border)] text-[13px] font-medium text-[var(--c-text)] rounded-full shadow-sm">
+      <Target size={16} strokeWidth={2.5} className="text-[var(--c-accent)]" />
+      <span>
+        Fillers: <strong className="font-bold text-[var(--c-text)]">{totalFillers}</strong>
+        {fillerRate > 0 && <span className="text-[var(--c-text-mute)] ml-1 font-bold">({fillerRate}/min)</span>}
+      </span>
     </div>
   );
 }

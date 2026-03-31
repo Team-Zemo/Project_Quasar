@@ -6,7 +6,9 @@ import { EmotionAnalyzer } from './EmotionAnalyzer';
 import { FillerDetector } from './FillerDetector';
 import { PostSessionResults } from './PostSessionResults';
 import { CodeEditor } from './CodeEditor';
-import { apiPost } from '../lib/api';
+import { apiPost, apiFetchRaw } from '../lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Square, Mic, MessageSquare, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 
 const logger = (...args: unknown[]) => console.log('[InterviewRoom]', ...args);
 
@@ -125,9 +127,7 @@ export function InterviewRoom({
     setReportDownloading(true);
 
     try {
-      const response = await fetch(`/api/sessions/${sessionId}/report`, {
-        credentials: 'include',
-      });
+      const response = await apiFetchRaw(`/api/sessions/${sessionId}/report`);
 
       if (!response.ok) throw new Error('Failed to generate report');
 
@@ -148,25 +148,31 @@ export function InterviewRoom({
   };
 
   return (
-    <div className={`interview-room ${!isEnded ? 'interview-room--with-cam' : ''}`}>
+    <div className={`flex flex-col w-full h-full max-h-[100vh] overflow-hidden ${!isEnded ? 'max-w-6xl mx-auto' : 'max-w-4xl mx-auto'}`}>
       {/* Header bar */}
-      <header className="room-header">
-        <div className="room-header__info">
-          <div className={`status-dot ${isRecording ? 'status-dot--live' : 'status-dot--idle'}`} />
-          <div>
-            <p className="room-header__domain">{domain}</p>
-            <p className="room-header__status">
-          {status === 'active' && activeCodingQuestion && 'Write your code solution — microphone paused'}
-              {status === 'active' && !activeCodingQuestion && isRecording && 'Session active — speak to respond'}
-              {status === 'active' && !activeCodingQuestion && !isRecording && 'Connecting audio…'}
-              {status === 'connecting' && 'Connecting to Gemini…'}
-              {status === 'ended' && 'Session completed — reviewing performance'}
-              {status === 'error' && 'Connection error'}
+      <header className="flex items-center justify-between shrink-0 p-4 lg:p-6 bg-[var(--c-surface)] border-b border-[var(--c-border)] z-10 sticky top-0 shadow-sm backdrop-blur-md bg-opacity-90">
+        <div className="flex flex-col justify-center">
+          <div className="flex items-center gap-2.5">
+            <div className="relative flex items-center justify-center w-2.5 h-2.5">
+              <div className={`absolute inset-0 rounded-full transition-colors ${
+                isRecording ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-[pulse-dot_1.5s_infinite]' : 'bg-[var(--c-text-mute)]'
+              }`} />
+            </div>
+            <p className="text-[16px] font-bold tracking-tight text-[var(--c-text)] m-0 leading-tight">
+              {domain}
             </p>
           </div>
+          <p className="text-[12px] font-medium text-[var(--c-text-dim)] m-0 mt-0.5 ml-5 max-w-[300px] truncate">
+            {status === 'active' && activeCodingQuestion && 'Write your code solution — microphone paused'}
+            {status === 'active' && !activeCodingQuestion && isRecording && 'Session active — speak to respond'}
+            {status === 'active' && !activeCodingQuestion && !isRecording && 'Connecting audio…'}
+            {status === 'connecting' && 'Connecting to Gemini…'}
+            {status === 'ended' && 'Session completed — reviewing performance'}
+            {status === 'error' && 'Connection error'}
+          </p>
         </div>
 
-        <div className="room-header__right">
+        <div className="flex items-center gap-4">
           {/* Filler counter inline in header */}
           <FillerDetector
             isActive={status === 'active' && isRecording}
@@ -174,10 +180,12 @@ export function InterviewRoom({
           />
 
           {!isEnded && (
-            <button id="end-session-btn" onClick={onEnd} className="btn-danger">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="3" y="3" width="18" height="18" rx="2"/>
-              </svg>
+            <button 
+              id="end-session-btn" 
+              onClick={onEnd} 
+              className="flex items-center gap-2 px-4 py-2 font-bold text-[13px] bg-red-500 hover:bg-red-600 text-white border border-red-500/20 rounded-xl transition-all shadow-[0_2px_10px_rgba(239,68,68,0.2)] active:scale-95"
+            >
+              <Square size={14} fill="currentColor" />
               End Session
             </button>
           )}
@@ -185,94 +193,131 @@ export function InterviewRoom({
       </header>
 
       {/* Main content: webcam sidebar + transcript */}
-      <div className="room-body">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden h-full">
         {/* Webcam + Emotion sidebar — visible during active session */}
-        {!isEnded && (
-          <aside className="room-sidebar">
-            <EmotionAnalyzer
-              isActive={status === 'active' && isRecording}
-              onSnapshot={handleEmotionSnapshot}
-            />
+        <AnimatePresence>
+          {!isEnded && (
+            <motion.aside 
+              initial={{ opacity: 0, x: -20, width: 0 }}
+              animate={{ opacity: 1, x: 0, width: '280px' }}
+              exit={{ opacity: 0, x: -20, width: 0 }}
+              className="flex flex-col shrink-0 w-full md:w-[280px] border-r border-[var(--c-border)] bg-[var(--c-surface-2)] overflow-y-auto hidden md:flex custom-scrollbar"
+            >
+              <div className="p-4 flex flex-col gap-4 sticky top-0">
+                <EmotionAnalyzer
+                  isActive={status === 'active' && isRecording}
+                  onSnapshot={handleEmotionSnapshot}
+                />
 
-            {/* Session info below webcam */}
-            <div className="sidebar-info">
-              <AudioVisualizer isActive={isRecording} size={48} />
-              <div className="sidebar-info__text">
-                <p className="sidebar-info__label">Microphone</p>
-                <p className="sidebar-info__value">{isRecording ? 'Listening…' : 'Connecting…'}</p>
+                {/* Session info below webcam */}
+                <div className="flex items-center gap-4 p-3.5 bg-[var(--c-surface-3)] border border-[var(--c-border)] rounded-2xl shadow-sm">
+                  <div className="shrink-0 flex items-center justify-center p-2 rounded-xl bg-[var(--c-surface)] text-[var(--c-text)]">
+                    <AudioVisualizer isActive={isRecording} size={32} />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] m-0">Microphone</p>
+                    <p className="text-[13px] font-semibold text-[var(--c-text)] m-0 mt-0.5 truncate">
+                      {isRecording ? 'Listening…' : 'Connecting…'}
+                    </p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </aside>
-        )}
+            </motion.aside>
+          )}
+        </AnimatePresence>
 
         {/* Transcript / Results area */}
-        <div className="transcript-area">
-          {/* Live interview transcript */}
-          {messages.length === 0 && !isEnded && (
-            <div className="transcript-empty">
-              <div className="transcript-empty__icon">
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
-              </div>
-              <p>Waiting for the interviewer to speak…</p>
-              <span>Make sure your microphone is enabled</span>
-            </div>
-          )}
-
-          {messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
-          ))}
-
-          {/* Post-session: saving metrics indicator */}
-          {isEnded && sessionId && !metricsReady && (
-            <div className="post-session">
-              <div className="eval-loading">
-                <div className="eval-loading__spinner">
-                  <div className="spinner spinner--large" />
+        <div className="flex-1 flex flex-col min-w-0 bg-[var(--c-surface)] relative">
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-8 flex flex-col gap-6">
+            {/* Live interview transcript */}
+            {messages.length === 0 && !isEnded && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center justify-center m-auto text-center gap-3 mt-20"
+              >
+                <div className="flex items-center justify-center w-16 h-16 rounded-[20px] bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-inner">
+                  <MessageSquare size={32} strokeWidth={2} />
                 </div>
-                <h3>Saving session data…</h3>
-                <p>Preparing your responses for evaluation</p>
-              </div>
-            </div>
-          )}
+                <p className="text-[15px] font-medium text-[var(--c-text)] m-0 mt-2">Waiting for the interviewer to speak…</p>
+                <span className="flex items-center gap-1.5 text-[13px] text-[var(--c-text-dim)] bg-[var(--c-surface-2)] px-3 py-1.5 border border-[var(--c-border)] rounded-full">
+                  <Mic size={14} className="text-orange-400" />
+                  Make sure your microphone is enabled
+                </span>
+              </motion.div>
+            )}
 
-          {/* Post-session: full evaluation results (only after metrics are saved) */}
-          {isEnded && sessionId && metricsReady && (
-            <PostSessionResults
-              sessionId={sessionId}
-              fillerBuckets={fillerData?.fillerBuckets || []}
-              onDownloadReport={handleDownloadReport}
-              reportDownloading={reportDownloading}
-              onNewInterview={onNewInterview}
-            />
-          )}
+            {messages.map((msg) => (
+              <MessageBubble key={msg.id} message={msg} />
+            ))}
 
-          {/* Fallback if no sessionId */}
-          {isEnded && !sessionId && (
-            <div className="session-ended-card">
-              <div className="session-ended-card__icon">✓</div>
-              <h3>Interview Complete</h3>
-              <p>Session ended.</p>
-              <div className="session-ended-actions">
-                <button id="new-interview-btn" onClick={onNewInterview} className="btn-secondary">
+            {/* Post-session: saving metrics indicator */}
+            {isEnded && sessionId && !metricsReady && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-20 gap-5 text-center m-auto"
+              >
+                <div className="flex items-center justify-center w-16 h-16 rounded-[20px] bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                  <Loader2 size={32} className="animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-[20px] font-bold text-[var(--c-text)] m-0 mb-2">Saving session data…</h3>
+                  <p className="text-[14px] text-[var(--c-text-dim)] m-0">Preparing your responses for evaluation</p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Post-session: full evaluation results (only after metrics are saved) */}
+            {isEnded && sessionId && metricsReady && (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <PostSessionResults
+                  sessionId={sessionId}
+                  fillerBuckets={fillerData?.fillerBuckets || []}
+                  onDownloadReport={handleDownloadReport}
+                  reportDownloading={reportDownloading}
+                  onNewInterview={onNewInterview}
+                />
+              </motion.div>
+            )}
+
+            {/* Fallback if no sessionId */}
+            {isEnded && !sessionId && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center text-center p-8 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-[24px] max-w-sm mx-auto shadow-sm mt-10"
+              >
+                <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[var(--c-success-dim)] text-[var(--c-success)] text-[28px] font-bold mb-4">
+                  <CheckCircle2 size={32} />
+                </div>
+                <h3 className="text-[20px] font-bold text-[var(--c-text)] mb-2">Interview Complete</h3>
+                <p className="text-[14px] text-[var(--c-text-dim)] mb-6">Session successfully ended.</p>
+                <button 
+                  id="new-interview-btn" 
+                  onClick={onNewInterview} 
+                  className="flex items-center justify-center gap-2 px-6 py-2.5 font-bold text-[14px] bg-[var(--c-surface)] hover:bg-[var(--c-surface-3)] text-[var(--c-text)] border border-[var(--c-border-2)] rounded-xl transition-colors shadow-sm w-full active:scale-95"
+                >
+                  <RefreshCw size={16} />
                   Start New Interview
                 </button>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
 
-          <div ref={bottomRef} />
+            <div ref={bottomRef} className="h-8" />
+          </div>
         </div>
       </div>
 
       {/* Code editor overlay — shown when AI presents a coding question */}
-      {activeCodingQuestion && (
-        <CodeEditor
-          question={activeCodingQuestion}
-          onSubmit={onSubmitCode}
-        />
-      )}
+      <AnimatePresence>
+        {activeCodingQuestion && (
+          <CodeEditor
+            question={activeCodingQuestion}
+            onSubmit={onSubmitCode}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
