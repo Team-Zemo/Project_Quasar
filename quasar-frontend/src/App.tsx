@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css';
+import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { DomainSelector } from './components/DomainSelector';
 import { InterviewRoom } from './components/InterviewRoom';
 import { LoginPage } from './components/LoginPage';
@@ -9,6 +11,7 @@ import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { SettingsPage } from './components/SettingsPage';
 import { ResumeComparePage } from './components/ResumeComparePage';
+import { LandingPage } from './landing/LandingPage';
 import { useInterviewSession } from './hooks/useInterviewSession';
 import { useAuth } from './hooks/useAuth';
 import { logout } from './lib/auth';
@@ -73,13 +76,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function App() {
+/** The app shell with topnav, blobs, and footer — wraps authenticated pages */
+function AppShell() {
   const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate('/');
   };
 
   return (
@@ -101,6 +105,15 @@ export default function App() {
         <div className="topnav__right">
           {isAuthenticated && (
             <>
+              <Link to="/interview" className="topnav__link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                  <line x1="8" y1="23" x2="16" y2="23" />
+                </svg>
+                Interview
+              </Link>
               <Link to="/progress" className="topnav__link">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -143,14 +156,15 @@ export default function App() {
       {/* Main content */}
       <main className="app__main">
         <Routes>
-          <Route path="/login" element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />} />
-          <Route path="/register" element={isAuthenticated ? <Navigate to="/" replace /> : <RegisterPage />} />
-          <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/" replace /> : <ForgotPasswordPage />} />
+          <Route path="/login" element={isAuthenticated ? <Navigate to="/interview" replace /> : <LoginPage />} />
+          <Route path="/register" element={isAuthenticated ? <Navigate to="/interview" replace /> : <RegisterPage />} />
+          <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/interview" replace /> : <ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/progress" element={<ProtectedRoute><ProgressDashboard /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/resume-compare" element={<ProtectedRoute><ResumeComparePage /></ProtectedRoute>} />
-          <Route path="/" element={<ProtectedRoute><InterviewPage /></ProtectedRoute>} />
+          <Route path="/interview" element={<ProtectedRoute><InterviewPage /></ProtectedRoute>} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
@@ -163,4 +177,28 @@ export default function App() {
       </footer>
     </div>
   );
+}
+
+export default function App() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const lenis = new Lenis({
+      autoRaf: true,
+      lerp: 0.05, // Slower, smoother lerping
+      wheelMultiplier: 1, // Standard scroll speed multiplier
+    });
+
+    return () => {
+      lenis.destroy();
+    };
+  }, []);
+
+  // Landing page gets its own full-page layout (no app shell)
+  if (location.pathname === '/') {
+    return <LandingPage />;
+  }
+
+  // All other routes use the app shell with topnav
+  return <AppShell />;
 }

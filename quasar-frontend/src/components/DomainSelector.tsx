@@ -1,4 +1,4 @@
-import { useState, KeyboardEvent } from 'react';
+import { useState, type KeyboardEvent } from 'react';
 import type { SessionStatus, SessionConfig } from '../types/interview';
 import { PersonaSelector } from './PersonaSelector';
 import { JDParser } from './JDParser';
