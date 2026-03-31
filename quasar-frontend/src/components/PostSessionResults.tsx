@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { apiPost } from '../lib/api';
 import { SpeechHeatmap } from './SpeechHeatmap';
+import { GamificationToast } from './GamificationToast';
+import { LevelUpModal } from './LevelUpModal';
+import type { GamificationResult } from '../hooks/useGamificationStats';
 
 interface EvalData {
   overallScore: number;
@@ -11,6 +14,7 @@ interface EvalData {
   improvements: string[];
   summary: string;
   passed: boolean;
+  gamification?: GamificationResult | null;
 }
 
 interface PostSessionResultsProps {
@@ -31,21 +35,32 @@ export function PostSessionResults({
   const [evalData, setEvalData] = useState<EvalData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [gamification, setGamification] = useState<GamificationResult | null>(null);
+  const [showLevelUp, setShowLevelUp] = useState(false);
 
   useEffect(() => {
     if (!sessionId) return;
 
-    setLoading(true);
-    apiPost<EvalData>(`/api/sessions/${sessionId}/evaluate`, {})
-      .then(res => {
-        if (res.success) {
-          setEvalData(res.data);
-        } else {
-          setError(res.message || 'Evaluation failed');
-        }
-      })
-      .catch(() => setError('Failed to evaluate session'))
-      .finally(() => setLoading(false));
+    // Small delay to ensure transcript saves have flushed to MongoDB
+    const timer = setTimeout(() => {
+      setLoading(true);
+      apiPost<EvalData>(`/api/sessions/${sessionId}/evaluate`, {})
+        .then(res => {
+          if (res.success) {
+            setEvalData(res.data);
+            if (res.data.gamification) {
+              setGamification(res.data.gamification);
+              if (res.data.gamification.levelUp) setShowLevelUp(true);
+            }
+          } else {
+            setError(res.message || 'Evaluation failed');
+          }
+        })
+        .catch(() => setError('Failed to evaluate session'))
+        .finally(() => setLoading(false));
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [sessionId]);
 
   if (loading) {
@@ -227,6 +242,15 @@ export function PostSessionResults({
           Start New Interview
         </button>
       </div>
+      {/* Gamification Toast */}
+      {gamification && (
+        <GamificationToast gamification={gamification} onClose={() => setGamification(null)} />
+      )}
+
+      {/* Level Up Modal */}
+      {showLevelUp && gamification && (
+        <LevelUpModal level={gamification.level} onClose={() => setShowLevelUp(false)} />
+      )}
     </div>
   );
 }

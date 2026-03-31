@@ -11,6 +11,7 @@ import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { SettingsPage } from './components/SettingsPage';
 import { ResumeComparePage } from './components/ResumeComparePage';
+import { StatsPage } from './components/StatsPage';
 import { LandingPage } from './landing/LandingPage';
 import { useInterviewSession } from './hooks/useInterviewSession';
 import { useAuth } from './hooks/useAuth';
@@ -128,6 +129,14 @@ function AppShell() {
                 </svg>
                 Resume Check
               </Link>
+              <Link to="/stats" className="topnav__link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="20" x2="18" y2="10"/>
+                  <line x1="12" y1="20" x2="12" y2="4"/>
+                  <line x1="6" y1="20" x2="6" y2="14"/>
+                </svg>
+                Stats
+              </Link>
               <Link to="/settings" className="topnav__link" title="Settings">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="3"/>
@@ -163,6 +172,7 @@ function AppShell() {
           <Route path="/progress" element={<ProtectedRoute><ProgressDashboard /></ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/resume-compare" element={<ProtectedRoute><ResumeComparePage /></ProtectedRoute>} />
+          <Route path="/stats" element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute><InterviewPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

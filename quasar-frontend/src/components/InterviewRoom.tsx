@@ -86,8 +86,8 @@ export function InterviewRoom({
         );
       }
 
-      // Save speech metrics (includes transcript)
-      const transcript = fillerData?.transcript || getTranscript();
+      // Save speech metrics (include FULL conversation transcript, not just browser speech-recognition)
+      const transcript = getTranscript();
       promises.push(
         apiPost(`/api/sessions/${sessionId}/speech-metrics`, {
           transcript,

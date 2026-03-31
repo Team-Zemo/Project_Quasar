@@ -10,7 +10,7 @@ const config = {
   // JWT
   jwtAccessSecret: process.env.JWT_ACCESS_SECRET || 'quasar-access-secret-change-in-prod',
   jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'quasar-refresh-secret-change-in-prod',
-  jwtAccessExpiry: '15m',
+  jwtAccessExpiry: '190m',
   jwtRefreshExpiry: '7d',
 
   // MongoDB

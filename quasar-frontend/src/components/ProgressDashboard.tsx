@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { apiGet } from '../lib/api';
 import { SessionHistory } from './SessionHistory';
+import { XPBar } from './XPBar';
+import { StreakWidget } from './StreakWidget';
+import { useGamificationStats } from '../hooks/useGamificationStats';
 
 interface ProgressSession {
   sessionId: string;
@@ -30,6 +33,7 @@ export function ProgressDashboard() {
   const [skillVector, setSkillVector] = useState<{skill: string; score: number; attempt_count: number}[]>([]);
   const [loading, setLoading] = useState(true);
   const chartsRendered = useRef(false);
+  const { stats: gStats } = useGamificationStats(user?.id);
 
   const overallChartRef = useRef<HTMLCanvasElement>(null);
   const starChartRef = useRef<HTMLCanvasElement>(null);
@@ -221,6 +225,18 @@ export function ProgressDashboard() {
         <h1 className="progress-header__title">Progress Dashboard</h1>
         <p className="progress-header__subtitle">{data.totalSessions} sessions completed</p>
       </div>
+
+      {/* Gamification summary bar */}
+      {gStats && (
+        <div className="progress-gamification-row">
+          <XPBar compact xp={gStats.xp} level={gStats.level} xpToNext={gStats.xpToNextLevel} />
+          <StreakWidget
+            currentStreak={gStats.currentStreak}
+            longestStreak={gStats.longestStreak}
+            lastPracticeDate={gStats.lastPracticeDate}
+          />
+        </div>
+      )}
 
       {/* Stat Cards */}
       <div className="stat-cards">
