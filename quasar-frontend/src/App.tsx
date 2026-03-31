@@ -12,6 +12,7 @@ import { ResetPasswordPage } from './components/ResetPasswordPage';
 import { SettingsPage } from './components/SettingsPage';
 import { ResumeComparePage } from './components/ResumeComparePage';
 import { StatsPage } from './components/StatsPage';
+import { CoachChat } from './components/CoachChat';
 import { LandingPage } from './landing/LandingPage';
 import { useInterviewSession } from './hooks/useInterviewSession';
 import { useAuth } from './hooks/useAuth';
@@ -137,6 +138,12 @@ function AppShell() {
                 </svg>
                 Stats
               </Link>
+              <Link to="/coach" className="topnav__link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                Coach
+              </Link>
               <Link to="/settings" className="topnav__link" title="Settings">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <circle cx="12" cy="12" r="3"/>
@@ -173,6 +180,7 @@ function AppShell() {
           <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/resume-compare" element={<ProtectedRoute><ResumeComparePage /></ProtectedRoute>} />
           <Route path="/stats" element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
+          <Route path="/coach" element={<ProtectedRoute><CoachChat /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute><InterviewPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

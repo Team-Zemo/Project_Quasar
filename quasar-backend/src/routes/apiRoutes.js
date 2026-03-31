@@ -12,6 +12,7 @@ const reportController       = require('../controllers/reportController');
 const evaluationController   = require('../controllers/evaluationController');
 const resumeCompareController = require('../controllers/resumeCompareController');
 const gamificationController = require('../controllers/gamificationController');
+const coachController        = require('../controllers/coachController');
 
 const router = express.Router();
 
@@ -58,6 +59,9 @@ router.get('/users/:userId/badges',  requireAuth, gamificationController.getUser
 router.post('/users/:userId/skill-vector/update', requireAuth, skillController.updateSkillVector);
 router.get('/users/:userId/skill-vector',         requireAuth, skillController.getSkillVector);
 router.get('/sessions/:sessionId/next-question',  requireAuth, skillController.getNextQuestion);
+
+// ── AI Career Coach (streaming) ───────────────────────────
+router.post('/coach/chat', requireAuth, coachController.chat);
 
 // ── PDF Report ────────────────────────────────────────────
 router.get('/sessions/:sessionId/report', requireAuth, reportController.generateReport);
