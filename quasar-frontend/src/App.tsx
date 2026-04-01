@@ -83,6 +83,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppShell() {
   const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isInterview = location.pathname === '/interview';
 
   const handleLogout = async () => {
     await logout();
@@ -90,11 +92,13 @@ function AppShell() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen relative overflow-x-hidden">
+    <div className={`flex flex-col relative overflow-x-hidden ${
+      isInterview ? 'h-screen overflow-hidden' : 'min-h-screen'
+    }`}>
       {/* Ambient background blobs */}
       <div className="bg-blob bg-blob--1" aria-hidden="true" />
       <div className="bg-blob bg-blob--2" aria-hidden="true" />
-      <div className="bg-blob bg-blob--3" aria-hidden="true" />
+      {!isInterview && <div className="bg-blob bg-blob--3" aria-hidden="true" />}
 
       {/* Top nav */}
       <nav className="fixed top-0 inset-x-0 h-[64px] border-b border-[var(--c-border)] backdrop-blur-md bg-[var(--bg-app)]/80 z-40 flex items-center justify-between px-6 transition-all">
@@ -133,14 +137,14 @@ function AppShell() {
               <Link to="/settings" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors" title="Settings">
                 <Settings size={16} strokeWidth={2.5} />
               </Link>
-              
+
               <div className="flex items-center gap-2.5 ml-2 pl-4 border-l border-[var(--c-border)]">
                 <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full bg-[var(--c-surface-3)] text-[12px] font-bold border border-[var(--c-border-2)] text-[var(--c-text)] uppercase tracking-wider">
                   {user?.name?.charAt(0).toUpperCase()}
                 </div>
                 <span className="text-[13px] font-bold text-[var(--c-text)] hidden md:block">{user?.name}</span>
               </div>
-              
+
               <button onClick={handleLogout} className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--c-text-mute)] hover:text-[var(--c-error)] hover:bg-red-500/10 transition-colors ml-1" title="Sign out">
                 <LogOut size={16} strokeWidth={2.5} />
               </button>
@@ -153,7 +157,11 @@ function AppShell() {
       </nav>
 
       {/* Main content */}
-      <main className="flex-1 flex flex-col items-center w-full px-4 md:px-8 pb-8 relative z-10 pt-[80px]">
+      <main className={`flex-1 flex flex-col w-full relative z-10 pt-[64px] ${
+        isInterview
+          ? 'overflow-hidden p-0 items-stretch'
+          : 'items-center px-4 md:px-8 pb-8 pt-[80px]'
+      }`}>
         <Routes>
           <Route path="/login" element={isAuthenticated ? <Navigate to="/interview" replace /> : <LoginPage />} />
           <Route path="/register" element={isAuthenticated ? <Navigate to="/interview" replace /> : <RegisterPage />} />
@@ -169,13 +177,15 @@ function AppShell() {
         </Routes>
       </main>
 
-      {/* Footer */}
-      <footer className="flex items-center justify-center gap-2 mb-4 p-4 text-[11px] uppercase tracking-wider font-bold text-[var(--c-text-mute)] z-10 relative mt-auto border-t border-[var(--c-border)] backdrop-blur-sm bg-black/20">
-        <span>Powered by</span>
-        <span className="text-[var(--c-accent)] text-shadow-sm shadow-orange-500/20">Gemini Live API</span>
-        <span className="opacity-50">•</span>
-        <span>Node.js + React</span>
-      </footer>
+      {/* Footer — hidden during interview */}
+      {!isInterview && (
+        <footer className="flex items-center justify-center gap-2 mb-4 p-4 text-[11px] uppercase tracking-wider font-bold text-[var(--c-text-mute)] z-10 relative mt-auto border-t border-[var(--c-border)] backdrop-blur-sm bg-black/20">
+          <span>Powered by</span>
+          <span className="text-[var(--c-accent)] text-shadow-sm shadow-orange-500/20">Gemini Live API</span>
+          <span className="opacity-50">•</span>
+          <span>Node.js + React</span>
+        </footer>
+      )}
     </div>
   );
 }

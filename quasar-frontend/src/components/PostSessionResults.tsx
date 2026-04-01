@@ -145,7 +145,7 @@ export function PostSessionResults({
   return (
     <motion.div 
       variants={containerVariants} initial="hidden" animate="show"
-      className="flex flex-col gap-6 w-full max-w-[800px] mx-auto min-h-full"
+      className="flex flex-col gap-6 w-full max-w-[800px] mx-auto"
       style={{ padding: '32px 24px 64px 24px' }}
     >
       {/* Overall Score Hero */}

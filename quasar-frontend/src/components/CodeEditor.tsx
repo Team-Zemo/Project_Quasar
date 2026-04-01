@@ -50,37 +50,35 @@ export function CodeEditor({ question, onSubmit }: CodeEditorProps) {
   }, [code, selectedLang, onSubmit]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+    <div className="fixed inset-x-4 bottom-4 z-50" style={{ top: '72px' }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: "spring", damping: 25, stiffness: 300 }}
-        className="flex flex-col w-full max-w-[1200px] h-[90vh] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl overflow-hidden shadow-2xl"
+        exit={{ opacity: 0, scale: 0.98, y: 12 }}
+        transition={{ type: "spring", damping: 28, stiffness: 320 }}
+        className="flex flex-col w-full h-full bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl overflow-hidden shadow-2xl"
       >
-        {/* Header */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 lg:p-6 bg-[var(--c-surface-2)] border-b border-[var(--c-border)]">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-bold uppercase tracking-widest rounded-full">
-                <Code2 size={12} strokeWidth={2.5} />
-                Coding Challenge
-              </span>
-            </div>
-            <h2 className="text-[20px] font-bold text-[var(--c-text)] m-0 tracking-tight leading-tight">
+        {/* Header — two rows: title row + language tabs row */}
+        <div className="flex flex-col shrink-0 bg-[var(--c-surface-2)] border-b border-[var(--c-border)]">
+          {/* Row 1: badge + title */}
+          <div className="flex items-center gap-3 px-5 pt-4 pb-3">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-bold uppercase tracking-widest rounded-full shrink-0">
+              <Code2 size={12} strokeWidth={2.5} />
+              Coding Challenge
+            </span>
+            <h2 className="text-[18px] font-bold text-[var(--c-text)] m-0 tracking-tight leading-tight truncate">
               {question.title}
             </h2>
           </div>
-          
-          <div className="flex items-center gap-1.5 p-1 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-lg overflow-x-auto max-w-full">
+          {/* Row 2: language selector tabs */}
+          <div className="flex items-center gap-1 px-4 pb-3 overflow-x-auto custom-scrollbar">
             {LANGUAGES.map(lang => (
               <button
                 key={lang.value}
-                className={`px-3 py-1.5 text-[12px] font-bold rounded-md transition-all whitespace-nowrap ${
-                  selectedLang === lang.value 
-                    ? 'bg-[var(--c-accent)] text-white shadow-sm' 
+                className={`px-3 py-1.5 text-[12px] font-bold rounded-md transition-all whitespace-nowrap shrink-0 ${selectedLang === lang.value
+                    ? 'bg-[var(--c-accent)] text-white shadow-sm'
                     : 'text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-3)]'
-                }`}
+                  }`}
                 onClick={() => handleLangChange(lang.value)}
               >
                 {lang.label}
@@ -148,11 +146,10 @@ export function CodeEditor({ question, onSubmit }: CodeEditorProps) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
                   id="code-submit-btn"
-                  className={`flex items-center justify-center gap-2 px-6 py-2.5 font-bold text-[14px] rounded-xl transition-all shadow-sm ${
-                    !code.trim() 
+                  className={`flex items-center justify-center gap-2 px-6 py-2.5 font-bold text-[14px] rounded-xl transition-all shadow-sm ${!code.trim()
                       ? 'bg-[var(--c-surface-3)] text-[var(--c-text-mute)] cursor-not-allowed'
                       : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white shadow-[0_4px_12px_rgba(249,115,22,0.3)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] active:scale-95'
-                  }`}
+                    }`}
                   onClick={() => setConfirming(true)}
                   disabled={!code.trim()}
                 >
@@ -168,15 +165,15 @@ export function CodeEditor({ question, onSubmit }: CodeEditorProps) {
                   className="flex items-center gap-3 bg-[var(--c-surface)] p-1.5 pr-2 rounded-xl border border-[var(--c-border)] shadow-md"
                 >
                   <span className="text-[13px] font-bold text-[var(--c-text)] pl-3 pr-2 hidden sm:inline-block">Submit code?</span>
-                  <button 
-                    className="px-4 py-1.5 text-[13px] font-semibold rounded-lg bg-[var(--c-surface-2)] hover:bg-[var(--c-surface-3)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors" 
+                  <button
+                    className="px-4 py-1.5 text-[13px] font-semibold rounded-lg bg-[var(--c-surface-2)] hover:bg-[var(--c-surface-3)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
                     onClick={() => setConfirming(false)}
                   >
                     Cancel
                   </button>
-                  <button 
-                    id="code-confirm-submit-btn" 
-                    className="flex items-center gap-1.5 px-4 py-1.5 text-[13px] font-bold rounded-lg bg-[var(--c-success)] hover:bg-[#22c55e] text-white shadow-[0_2px_8px_rgba(34,197,94,0.3)] transition-colors active:scale-95" 
+                  <button
+                    id="code-confirm-submit-btn"
+                    className="flex items-center gap-1.5 px-4 py-1.5 text-[13px] font-bold rounded-lg bg-[var(--c-success)] hover:bg-[#22c55e] text-white shadow-[0_2px_8px_rgba(34,197,94,0.3)] transition-colors active:scale-95"
                     onClick={handleSubmit}
                   >
                     <CheckCircle2 size={14} strokeWidth={2.5} />
