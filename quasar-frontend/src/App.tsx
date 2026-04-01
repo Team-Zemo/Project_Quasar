@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mic, TrendingUp, FileText, BarChart2, MessageSquare, Settings, LogOut, BookOpenCheck } from 'lucide-react';
+import { Mic, TrendingUp, FileText, BarChart2, MessageSquare, Settings, LogOut, BookOpenCheck, Menu, X } from 'lucide-react';
 import { DomainSelector } from './components/DomainSelector';
 import { InterviewRoom } from './components/InterviewRoom';
 import { LoginPage } from './components/LoginPage';
@@ -86,6 +86,14 @@ function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const isInterview = location.pathname === '/interview';
+  const isCoach = location.pathname === '/coach';
+  const isFullScreenApp = isInterview;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -94,12 +102,12 @@ function AppShell() {
 
   return (
     <div className={`flex flex-col relative overflow-x-hidden ${
-      isInterview ? 'h-screen overflow-hidden' : 'min-h-screen'
+      isFullScreenApp ? 'h-screen overflow-hidden' : 'min-h-screen'
     }`}>
       {/* Ambient background blobs */}
       <div className="bg-blob bg-blob--1" aria-hidden="true" />
       <div className="bg-blob bg-blob--2" aria-hidden="true" />
-      {!isInterview && <div className="bg-blob bg-blob--3" aria-hidden="true" />}
+      {!isFullScreenApp && <div className="bg-blob bg-blob--3" aria-hidden="true" />}
 
       {/* Top nav */}
       <nav className="fixed top-0 inset-x-0 h-[64px] border-b border-[var(--c-border)] backdrop-blur-md bg-[var(--bg-app)]/80 z-40 flex items-center justify-between px-6 transition-all">
@@ -112,7 +120,24 @@ function AppShell() {
           </span>
         </Link>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 md:hidden">
+          {isAuthenticated && (
+            <div className="flex items-center gap-2 border-r border-[var(--c-border)] pr-4">
+              <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full bg-[var(--c-surface-3)] text-[12px] font-bold border border-[var(--c-border-2)] text-[var(--c-text)] uppercase tracking-wider">
+                {user?.name?.charAt(0).toUpperCase()}
+              </div>
+            </div>
+          )}
+          <button 
+            type="button" 
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)} 
+            className="flex items-center justify-center w-10 h-10 rounded-xl bg-[var(--c-surface-2)] text-[var(--c-text)] border border-[var(--c-border)] hover:bg-[var(--c-surface-3)] transition-colors"
+          >
+            {mobileMenuOpen ? <X size={20} strokeWidth={2.5} /> : <Menu size={20} strokeWidth={2.5} />}
+          </button>
+        </div>
+
+        <div className="hidden md:flex items-center gap-4">
           {isAuthenticated && (
             <>
               <Link to="/interview" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
@@ -147,7 +172,7 @@ function AppShell() {
                 <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full bg-[var(--c-surface-3)] text-[12px] font-bold border border-[var(--c-border-2)] text-[var(--c-text)] uppercase tracking-wider">
                   {user?.name?.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-[13px] font-bold text-[var(--c-text)] hidden md:block">{user?.name}</span>
+                <span className="text-[13px] font-bold text-[var(--c-text)]">{user?.name}</span>
               </div>
 
               <button onClick={handleLogout} className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--c-text-mute)] hover:text-[var(--c-error)] hover:bg-red-500/10 transition-colors ml-1" title="Sign out">
@@ -161,10 +186,58 @@ function AppShell() {
         </div>
       </nav>
 
+      {/* Mobile Drawer Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-x-0 top-[64px] bottom-0 z-30 bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setMobileMenuOpen(false)}>
+          <div className="flex flex-col h-full overflow-y-auto bg-[var(--c-surface)] border-b border-[var(--c-border)] shadow-xl p-4 gap-2 pb-8 max-h-[85vh] rounded-b-3xl" onClick={e => e.stopPropagation()}>
+            <p className="text-[12px] font-black uppercase tracking-widest text-[var(--c-text-mute)] mb-2 mt-2 px-2">Menu</p>
+            {isAuthenticated ? (
+              <>
+                <Link to="/interview" className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors bg-[var(--c-surface-2)]/50">
+                  <Mic size={20} className="text-[var(--c-text-dim)]" strokeWidth={2.5} />
+                  Interview
+                </Link>
+                <Link to="/progress" className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors bg-[var(--c-surface-2)]/50">
+                  <TrendingUp size={20} className="text-[var(--c-text-dim)]" strokeWidth={2.5} />
+                  Progress
+                </Link>
+                <Link to="/resume-compare" className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors bg-[var(--c-surface-2)]/50">
+                  <FileText size={20} className="text-[var(--c-text-dim)]" strokeWidth={2.5} />
+                  Resume Check
+                </Link>
+                <Link to="/stats" className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors bg-[var(--c-surface-2)]/50">
+                  <BarChart2 size={20} className="text-[var(--c-text-dim)]" strokeWidth={2.5} />
+                  Stats
+                </Link>
+                <Link to="/coach" className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors bg-[var(--c-surface-2)]/50">
+                  <MessageSquare size={20} className="text-[var(--c-text-dim)]" strokeWidth={2.5} />
+                  Coach
+                </Link>
+                <Link to="/study-plan" className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors bg-[var(--c-surface-2)]/50">
+                  <BookOpenCheck size={20} className="text-[var(--c-text-dim)]" strokeWidth={2.5} />
+                  Study Plan
+                </Link>
+                <div className="h-px bg-[var(--c-border)] my-2"></div>
+                <Link to="/settings" className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                  <Settings size={20} className="text-[var(--c-text-dim)]" strokeWidth={2.5} />
+                  Settings
+                </Link>
+                <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[#f87171] hover:bg-red-500/10 transition-colors w-full text-left">
+                  <LogOut size={20} strokeWidth={2.5} />
+                  Sign out
+                </button>
+              </>
+            ) : (
+              !loading && <Link to="/login" className="btn-primary mt-2">Sign In</Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Main content */}
       <main className={`flex-1 flex flex-col w-full relative z-10 pt-[64px] ${
-        isInterview
-          ? 'overflow-hidden p-0 items-stretch'
+        isFullScreenApp || isCoach
+          ? 'overflow-hidden p-0 items-stretch min-h-0'
           : 'items-center px-4 md:px-8 pb-8 pt-[80px]'
       }`}>
         <Routes>
@@ -183,8 +256,8 @@ function AppShell() {
         </Routes>
       </main>
 
-      {/* Footer — hidden during interview */}
-      {!isInterview && (
+      {/* Footer — hidden during interview and coach */}
+      {!isInterview && !isCoach && (
         <footer className="flex items-center justify-center gap-2 mb-4 p-4 text-[11px] uppercase tracking-wider font-bold text-[var(--c-text-mute)] z-10 relative mt-auto border-t border-[var(--c-border)] backdrop-blur-sm bg-black/20">
           <span>Powered by</span>
           <span className="text-[var(--c-accent)] text-shadow-sm shadow-orange-500/20">Gemini Live API</span>
