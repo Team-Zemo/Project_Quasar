@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mic, TrendingUp, FileText, BarChart2, MessageSquare, Settings, LogOut } from 'lucide-react';
+import { Mic, TrendingUp, FileText, BarChart2, MessageSquare, Settings, LogOut, BookOpenCheck } from 'lucide-react';
 import { DomainSelector } from './components/DomainSelector';
 import { InterviewRoom } from './components/InterviewRoom';
 import { LoginPage } from './components/LoginPage';
@@ -14,6 +14,7 @@ import { SettingsPage } from './components/SettingsPage';
 import { ResumeComparePage } from './components/ResumeComparePage';
 import { StatsPage } from './components/StatsPage';
 import { CoachChat } from './components/CoachChat';
+import { StudyPlanPage } from './components/StudyPlanPage';
 import { LandingPage } from './landing/LandingPage';
 import { useInterviewSession } from './hooks/useInterviewSession';
 import { useAuth } from './hooks/useAuth';
@@ -134,6 +135,10 @@ function AppShell() {
                 <MessageSquare size={16} strokeWidth={2.5} />
                 Coach
               </Link>
+              <Link to="/study-plan" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                <BookOpenCheck size={16} strokeWidth={2.5} />
+                Study Plan
+              </Link>
               <Link to="/settings" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors" title="Settings">
                 <Settings size={16} strokeWidth={2.5} />
               </Link>
@@ -172,6 +177,7 @@ function AppShell() {
           <Route path="/resume-compare" element={<ProtectedRoute><ResumeComparePage /></ProtectedRoute>} />
           <Route path="/stats" element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
           <Route path="/coach" element={<ProtectedRoute><CoachChat /></ProtectedRoute>} />
+          <Route path="/study-plan" element={<ProtectedRoute><StudyPlanPage /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute><InterviewPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
