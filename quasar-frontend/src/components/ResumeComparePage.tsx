@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import { apiFetch } from '../lib/api';
-import { UploadCloud, FileText, CheckCircle2, ChevronRight, BarChart2, Briefcase, Zap, AlertCircle } from 'lucide-react';
 
 interface SkillMatch {
   skill: string;
