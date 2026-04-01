@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
+import { Mic, TrendingUp, FileText, BarChart2, MessageSquare, Settings, LogOut } from 'lucide-react';
 import { DomainSelector } from './components/DomainSelector';
 import { InterviewRoom } from './components/InterviewRoom';
 import { LoginPage } from './components/LoginPage';
@@ -64,9 +65,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="auth-loading">
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4 text-[var(--c-text-dim)]">
         <div className="spinner" />
-        <p>Loading…</p>
+        <p className="text-[14px] font-medium tracking-wide">Loading…</p>
       </div>
     );
   }
@@ -82,6 +83,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function AppShell() {
   const { user, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isInterview = location.pathname === '/interview';
 
   const handleLogout = async () => {
     await logout();
@@ -89,77 +92,61 @@ function AppShell() {
   };
 
   return (
-    <div className="app">
+    <div className={`flex flex-col relative overflow-x-hidden ${
+      isInterview ? 'h-screen overflow-hidden' : 'min-h-screen'
+    }`}>
       {/* Ambient background blobs */}
       <div className="bg-blob bg-blob--1" aria-hidden="true" />
       <div className="bg-blob bg-blob--2" aria-hidden="true" />
-      <div className="bg-blob bg-blob--3" aria-hidden="true" />
+      {!isInterview && <div className="bg-blob bg-blob--3" aria-hidden="true" />}
 
       {/* Top nav */}
-      <nav className="topnav">
-        <Link to="/" className="topnav__brand">
-          <div className="topnav__logo">AI</div>
-          <span className="topnav__name">
-            Interview <strong>Quasar</strong>
+      <nav className="fixed top-0 inset-x-0 h-[64px] border-b border-[var(--c-border)] backdrop-blur-md bg-[var(--bg-app)]/80 z-40 flex items-center justify-between px-6 transition-all">
+        <Link to="/" className="flex items-center gap-3 no-underline group">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--c-accent)] to-[#fb923c] flex items-center justify-center text-white font-black text-[14px] shadow-sm group-hover:shadow-[0_0_12px_var(--c-accent-glow)] transition-all">
+            AI
+          </div>
+          <span className="text-[17px] tracking-wide text-[var(--c-text-dim)] font-medium">
+            Interview <strong className="font-black text-[var(--c-text)]">Quasar</strong>
           </span>
         </Link>
 
-        <div className="topnav__right">
+        <div className="flex items-center gap-4">
           {isAuthenticated && (
             <>
-              <Link to="/interview" className="topnav__link">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                  <line x1="8" y1="23" x2="16" y2="23" />
-                </svg>
+              <Link to="/interview" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                <Mic size={16} strokeWidth={2.5} />
                 Interview
               </Link>
-              <Link to="/progress" className="topnav__link">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                </svg>
+              <Link to="/progress" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                <TrendingUp size={16} strokeWidth={2.5} />
                 Progress
               </Link>
-              <Link to="/resume-compare" className="topnav__link">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                  <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
-                </svg>
+              <Link to="/resume-compare" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                <FileText size={16} strokeWidth={2.5} />
                 Resume Check
               </Link>
-              <Link to="/stats" className="topnav__link">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <line x1="18" y1="20" x2="18" y2="10"/>
-                  <line x1="12" y1="20" x2="12" y2="4"/>
-                  <line x1="6" y1="20" x2="6" y2="14"/>
-                </svg>
+              <Link to="/stats" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                <BarChart2 size={16} strokeWidth={2.5} />
                 Stats
               </Link>
-              <Link to="/coach" className="topnav__link">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                </svg>
+              <Link to="/coach" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                <MessageSquare size={16} strokeWidth={2.5} />
                 Coach
               </Link>
-              <Link to="/settings" className="topnav__link" title="Settings">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                </svg>
+              <Link to="/settings" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors" title="Settings">
+                <Settings size={16} strokeWidth={2.5} />
               </Link>
-              <div className="topnav__user">
-                <div className="topnav__avatar">{user?.name?.charAt(0).toUpperCase()}</div>
-                <span className="topnav__username">{user?.name}</span>
+
+              <div className="flex items-center gap-2.5 ml-2 pl-4 border-l border-[var(--c-border)]">
+                <div className="flex items-center justify-center w-[30px] h-[30px] rounded-full bg-[var(--c-surface-3)] text-[12px] font-bold border border-[var(--c-border-2)] text-[var(--c-text)] uppercase tracking-wider">
+                  {user?.name?.charAt(0).toUpperCase()}
+                </div>
+                <span className="text-[13px] font-bold text-[var(--c-text)] hidden md:block">{user?.name}</span>
               </div>
-              <button onClick={handleLogout} className="topnav__logout" title="Sign out">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" y1="12" x2="9" y2="12"/>
-                </svg>
+
+              <button onClick={handleLogout} className="flex items-center justify-center w-8 h-8 rounded-lg text-[var(--c-text-mute)] hover:text-[var(--c-error)] hover:bg-red-500/10 transition-colors ml-1" title="Sign out">
+                <LogOut size={16} strokeWidth={2.5} />
               </button>
             </>
           )}
@@ -170,7 +157,11 @@ function AppShell() {
       </nav>
 
       {/* Main content */}
-      <main className="app__main">
+      <main className={`flex-1 flex flex-col w-full relative z-10 pt-[64px] ${
+        isInterview
+          ? 'overflow-hidden p-0 items-stretch'
+          : 'items-center px-4 md:px-8 pb-8 pt-[80px]'
+      }`}>
         <Routes>
           <Route path="/login" element={isAuthenticated ? <Navigate to="/interview" replace /> : <LoginPage />} />
           <Route path="/register" element={isAuthenticated ? <Navigate to="/interview" replace /> : <RegisterPage />} />
@@ -186,13 +177,15 @@ function AppShell() {
         </Routes>
       </main>
 
-      {/* Footer */}
-      <footer className="app__footer">
-        <span>Powered by</span>
-        <span className="text-accent">Gemini Live API</span>
-        <span>•</span>
-        <span>Node.js + React</span>
-      </footer>
+      {/* Footer — hidden during interview */}
+      {!isInterview && (
+        <footer className="flex items-center justify-center gap-2 mb-4 p-4 text-[11px] uppercase tracking-wider font-bold text-[var(--c-text-mute)] z-10 relative mt-auto border-t border-[var(--c-border)] backdrop-blur-sm bg-black/20">
+          <span>Powered by</span>
+          <span className="text-[var(--c-accent)] text-shadow-sm shadow-orange-500/20">Gemini Live API</span>
+          <span className="opacity-50">•</span>
+          <span>Node.js + React</span>
+        </footer>
+      )}
     </div>
   );
 }

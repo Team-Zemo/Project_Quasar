@@ -1,3 +1,6 @@
+import { Star } from 'lucide-react';
+import { motion } from 'framer-motion';
+
 const LEVELS = [0, 100, 250, 500, 900, 1400, 2000, 2800, 3800, 5000];
 
 const LEVEL_COLORS: Record<number, string> = {
@@ -27,14 +30,17 @@ export function XPBar({ xp, level, xpToNext, compact }: XPBarProps) {
 
   if (compact) {
     return (
-      <div className="xpbar xpbar--compact" title={`Level ${level} · ${xp} XP`}>
-        <span className="xpbar__pill" style={{ background: color }}>
+      <div className="flex items-center gap-3 w-full" title={`Level ${level} · ${xp} XP`}>
+        <span className="flex items-center justify-center h-6 px-2 rounded-full text-white text-[11px] font-bold tracking-wider uppercase shrink-0" style={{ background: color }}>
           Lvl {level}
         </span>
-        <div className="xpbar__track xpbar__track--compact">
-          <div
-            className="xpbar__fill"
-            style={{ width: `${pct}%`, background: color, boxShadow: `0 0 8px ${color}55` }}
+        <div className="flex-1 h-2 bg-[var(--c-surface-3)] rounded-full overflow-hidden flex self-center">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ type: 'spring', bounce: 0, duration: 1.5 }}
+            className="h-full rounded-full shrink-0"
+            style={{ background: color, boxShadow: `0 0 8px ${color}55` }}
           />
         </div>
       </div>
@@ -42,27 +48,30 @@ export function XPBar({ xp, level, xpToNext, compact }: XPBarProps) {
   }
 
   return (
-    <div className="xpbar">
-      <div className="xpbar__top">
-        <span className="xpbar__pill" style={{ background: color }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-          </svg>
+    <div className="flex flex-col gap-3 w-full">
+      <div className="flex items-center justify-between pointer-events-none">
+        <span className="flex items-center justify-center gap-1.5 h-7 px-3 rounded-full text-white text-[12px] font-bold tracking-wider uppercase shrink-0" style={{ background: color }}>
+          <Star size={12} strokeWidth={2.5} className="mt-[-1px]" />
           Level {level}
         </span>
-        <span className="xpbar__label">
+        <span className="text-[12px] font-medium text-[var(--c-text-mute)] tracking-wider">
           {isMax ? (
-            <><span className="xpbar__xp-value">{xp.toLocaleString()}</span> XP · <span style={{ color: '#fbbf24' }}>MAX</span></>
+            <><span className="text-[var(--c-text)] font-semibold">{xp.toLocaleString()}</span> XP · <span style={{ color: '#fbbf24' }}>MAX</span></>
           ) : (
-            <><span className="xpbar__xp-value">{xp.toLocaleString()}</span> / {nextLevelThreshold.toLocaleString()} XP</>
+            <><span className="text-[var(--c-text)] font-semibold">{xp.toLocaleString()}</span> / {nextLevelThreshold.toLocaleString()} XP</>
           )}
         </span>
       </div>
-      <div className="xpbar__track">
-        <div
-          className="xpbar__fill"
-          style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}, ${color}cc)`, boxShadow: `0 0 12px ${color}44` }}
-        />
+      <div className="w-full h-3 bg-[var(--c-surface-3)] rounded-full overflow-hidden flex border border-[var(--c-border)] shadow-inner">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ type: 'spring', bounce: 0, duration: 1.5 }}
+          className="h-full rounded-full relative overflow-hidden shrink-0"
+          style={{ background: `linear-gradient(90deg, ${color}, ${color}cc)`, boxShadow: `0 0 12px ${color}44` }}
+        >
+          <div className="absolute inset-0 bg-white/10 opacity-0 animate-[shimmer_2s_infinite]" style={{ transform: 'skewX(-20deg)', width: '30%' }} />
+        </motion.div>
       </div>
     </div>
   );

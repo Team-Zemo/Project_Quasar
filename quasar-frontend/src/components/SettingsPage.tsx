@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { changePassword, fetchProfile } from '../lib/auth';
 import type { User } from '../lib/auth';
+import { motion } from 'framer-motion';
+import type { Variants } from 'framer-motion';
+import { ChevronLeft, User as UserIcon, Lock, CheckCircle2, AlertCircle, Info, Loader2 } from 'lucide-react';
 
 export function SettingsPage() {
   const [profile, setProfile] = useState<User | null>(null);
@@ -64,68 +67,74 @@ export function SettingsPage() {
   const hasGitHub = providers.includes('github');
   const hasPassword = profile?.hasPassword ?? false;
 
-  return (
-    <div className="settings-page">
-      <div className="settings-container">
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+  };
 
+  return (
+    <div className="flex flex-col w-full min-h-screen bg-[var(--c-bg)]" style={{ padding: '64px 20px' }}>
+      <motion.div 
+        variants={containerVariants} initial="hidden" animate="show"
+        className="max-w-[560px] w-full mx-auto flex flex-col gap-6"
+      >
         {/* Header */}
-        <div className="settings-header">
-          <Link to="/" className="settings-back">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
+        <motion.div variants={itemVariants} className="flex flex-col mb-4">
+          <Link to="/" className="inline-flex items-center gap-2 text-[13px] font-medium text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors mb-6">
+            <ChevronLeft size={16} strokeWidth={2.5} />
             Back
           </Link>
-          <h1 className="settings-title">Account Settings</h1>
-          <p className="settings-subtitle">Manage your account security and preferences</p>
-        </div>
+          <h1 className="text-[28px] font-extrabold tracking-tight text-[var(--c-text)] mb-2 m-0">Account Settings</h1>
+          <p className="text-[14px] text-[var(--c-text-dim)] m-0">Manage your account security and preferences</p>
+        </motion.div>
 
         {/* Profile info card */}
-        <div className="settings-card">
-          <div className="settings-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-              <circle cx="12" cy="7" r="4"/>
-            </svg>
+        <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm" style={{ padding: '24px' }}>
+          <div className="w-[48px] h-[48px] rounded-[14px] bg-[var(--c-accent-dim)] border border-[var(--c-accent-glow)] flex items-center justify-center text-[var(--c-accent)] shrink-0">
+            <UserIcon size={24} strokeWidth={2} />
           </div>
-          <div className="settings-card__content">
-            <h2 className="settings-card__title">Profile</h2>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[18px] font-bold text-[var(--c-text)] mb-1 m-0">Profile</h2>
             {profileLoading ? (
-              <div className="settings-profile-loading">
-                <div className="spinner" style={{ width: 16, height: 16 }} />
+              <div className="flex items-center gap-2 text-[13px] text-[var(--c-text-dim)] mt-4">
+                <Loader2 size={16} className="animate-spin text-[var(--c-accent)]" />
                 <span>Loading…</span>
               </div>
             ) : (
-              <div className="settings-profile-info">
-                <div className="settings-profile-row">
-                  <span className="settings-profile-label">Name</span>
-                  <span className="settings-profile-value">{profile?.name ?? '—'}</span>
+              <div className="flex flex-col gap-1 mt-4">
+                <div className="flex items-center gap-3 text-[13px] py-3 border-b border-[var(--c-border)]">
+                  <span className="w-[110px] shrink-0 text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Name</span>
+                  <span className="text-[14px] font-medium text-[var(--c-text)] break-all">{profile?.name ?? '—'}</span>
                 </div>
-                <div className="settings-profile-row">
-                  <span className="settings-profile-label">Email</span>
-                  <span className="settings-profile-value">{profile?.email ?? '—'}</span>
+                <div className="flex items-center gap-3 text-[13px] py-3 border-b border-[var(--c-border)]">
+                  <span className="w-[110px] shrink-0 text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Email</span>
+                  <span className="text-[14px] font-medium text-[var(--c-text)] break-all">{profile?.email ?? '—'}</span>
                 </div>
-                <div className="settings-profile-row">
-                  <span className="settings-profile-label">Password</span>
-                  <span className="settings-profile-value settings-profile-badge-row">
+                <div className="flex items-center gap-3 text-[13px] py-3 border-b border-[var(--c-border)]">
+                  <span className="w-[110px] shrink-0 text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Password</span>
+                  <span className="flex flex-wrap gap-2 items-center text-[14px]">
                     {hasPassword ? (
-                      <span className="settings-badge settings-badge--green">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-                          <polyline points="20 6 9 17 4 12"/>
-                        </svg>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] text-[11px] font-bold tracking-wide bg-[var(--c-success-dim)] border border-green-500/20 text-[var(--c-success)]">
+                        <CheckCircle2 size={12} strokeWidth={3} />
                         Set
                       </span>
                     ) : (
-                      <span className="settings-badge settings-badge--dim">Not set</span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] text-[11px] font-bold tracking-wide bg-white/5 border border-white/10 text-[var(--c-text-mute)]">
+                        Not set
+                      </span>
                     )}
                   </span>
                 </div>
-                <div className="settings-profile-row">
-                  <span className="settings-profile-label">Linked accounts</span>
-                  <span className="settings-profile-value settings-profile-badge-row">
+                <div className="flex items-center gap-3 text-[13px] py-3">
+                  <span className="w-[110px] shrink-0 text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Linked accounts</span>
+                  <span className="flex flex-wrap gap-2 items-center text-[14px]">
                     {hasGoogle && (
-                      <span className="settings-badge settings-badge--provider">
-                        <svg width="12" height="12" viewBox="0 0 24 24">
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] font-semibold tracking-wide bg-white/5 border border-white/10 text-[var(--c-text)]">
+                        <svg width="14" height="14" viewBox="0 0 24 24">
                           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
                           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
@@ -135,49 +144,47 @@ export function SettingsPage() {
                       </span>
                     )}
                     {hasGitHub && (
-                      <span className="settings-badge settings-badge--provider">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] font-semibold tracking-wide bg-white/5 border border-white/10 text-[var(--c-text)]">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
                         </svg>
                         GitHub
                       </span>
                     )}
                     {!hasGoogle && !hasGitHub && (
-                      <span className="settings-badge settings-badge--dim">None</span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] text-[11px] font-bold tracking-wide bg-white/5 border border-white/10 text-[var(--c-text-mute)]">None</span>
                     )}
                   </span>
                 </div>
               </div>
             )}
           </div>
-        </div>
+        </motion.div>
 
         {/* Change Password Card */}
-        <div className="settings-card">
-          <div className="settings-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
+        <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm" style={{ padding: '24px' }}>
+          <div className="w-[48px] h-[48px] rounded-[14px] bg-[var(--c-surface-2)] border border-[var(--c-border)] flex items-center justify-center text-[var(--c-text-mute)] shrink-0">
+            <Lock size={22} strokeWidth={2} />
           </div>
-          <div className="settings-card__content">
-            <h2 className="settings-card__title">Change Password</h2>
-            <p className="settings-card__desc">
+          <div className="flex-1 min-w-0">
+            <h2 className="text-[18px] font-bold text-[var(--c-text)] mb-2 m-0">Change Password</h2>
+            <p className="text-[13px] text-[var(--c-text-dim)] leading-relaxed m-0">
               {hasPassword
                 ? "Update your password. You'll stay signed in on this device."
                 : 'You haven\'t set a password yet. Use the form below or Forgot Password to create one.'}
             </p>
 
-            <form onSubmit={handleSubmit} className="auth-form settings-form">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5 mt-6 w-full">
               {hasPassword && (
-                <div className="form-group">
-                  <label htmlFor="current-password" className="form-label">Current Password</label>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="current-password" className="text-[13px] font-semibold text-[var(--c-text)]">Current Password</label>
                   <input
                     id="current-password"
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="form-input"
+                    className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
+                    style={{ padding: '14px 16px' }}
                     placeholder="Your current password"
                     required
                     autoComplete="current-password"
@@ -185,8 +192,8 @@ export function SettingsPage() {
                 </div>
               )}
 
-              <div className="form-group">
-                <label htmlFor="new-password" className="form-label">
+              <div className="flex flex-col gap-2">
+                <label htmlFor="new-password" className="text-[13px] font-semibold text-[var(--c-text)]">
                   {hasPassword ? 'New Password' : 'Set Password'}
                 </label>
                 <input
@@ -194,21 +201,23 @@ export function SettingsPage() {
                   type="password"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="form-input"
+                  className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
+                  style={{ padding: '14px 16px' }}
                   placeholder="Min. 8 characters"
                   required
                   autoComplete="new-password"
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="confirm-new-password" className="form-label">Confirm Password</label>
+              <div className="flex flex-col gap-2">
+                <label htmlFor="confirm-new-password" className="text-[13px] font-semibold text-[var(--c-text)]">Confirm Password</label>
                 <input
                   id="confirm-new-password"
                   type="password"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="form-input"
+                  className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
+                  style={{ padding: '14px 16px' }}
                   placeholder="Repeat password"
                   required
                   autoComplete="new-password"
@@ -216,40 +225,36 @@ export function SettingsPage() {
               </div>
 
               {error && (
-                <div className="error-box" role="alert">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
+                <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[13px] font-semibold rounded-[12px]" style={{ padding: '12px 16px' }} role="alert">
+                  <AlertCircle size={16} strokeWidth={2.5} className="shrink-0" />
                   {error}
                 </div>
               )}
 
               {success && (
-                <div className="success-box" role="status">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
+                <div className="flex items-center gap-2 bg-[var(--c-success-dim)] border border-green-500/20 text-[var(--c-success)] text-[13px] font-semibold rounded-[12px]" style={{ padding: '12px 16px' }} role="status">
+                  <CheckCircle2 size={16} strokeWidth={2.5} className="shrink-0" />
                   {success}
                 </div>
               )}
 
-              <button type="submit" id="change-password-submit" className="btn-primary" disabled={loading}>
-                {loading ? <><div className="spinner" />Updating…</> : hasPassword ? 'Update Password' : 'Set Password'}
+              <button type="submit" id="change-password-submit" className="flex items-center justify-center gap-2 w-full bg-[var(--c-text)] hover:bg-white text-[var(--c-bg)] font-bold text-[15px] rounded-[14px] transition-all cursor-pointer mt-2" style={{ padding: '14px 24px' }} disabled={loading}>
+                {loading ? <><Loader2 size={18} className="animate-spin" /> Updating…</> : hasPassword ? 'Update Password' : 'Set Password'}
               </button>
             </form>
           </div>
-        </div>
+        </motion.div>
 
         {/* Hint */}
-        <div className="settings-hint">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-          </svg>
-          Alternatively, you can use{' '}
-          <Link to="/forgot-password" className="auth-link">Forgot Password</Link>{' '}
-          to receive a reset link by email.
-        </div>
-      </div>
+        <motion.div variants={itemVariants} className="flex items-start gap-3 text-[12px] text-[var(--c-text-mute)] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] leading-relaxed shadow-sm" style={{ padding: '16px' }}>
+          <Info size={16} strokeWidth={2.5} className="shrink-0 mt-0.5 opacity-60" />
+          <span>
+            Alternatively, you can use{' '}
+            <Link to="/forgot-password" className="text-[var(--c-accent)] font-semibold hover:underline">Forgot Password</Link>{' '}
+            to receive a reset link by email.
+          </span>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

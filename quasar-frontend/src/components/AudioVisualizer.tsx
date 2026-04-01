@@ -1,3 +1,6 @@
+import { motion } from 'framer-motion';
+import { Mic } from 'lucide-react';
+
 interface AudioVisualizerProps {
   isActive: boolean;
   size?: number;
@@ -6,36 +9,54 @@ interface AudioVisualizerProps {
 export function AudioVisualizer({ isActive, size = 72 }: AudioVisualizerProps) {
   return (
     <div
-      className={`audio-viz ${isActive ? 'audio-viz--active' : ''}`}
+      className="relative flex items-center justify-center shrink-0"
       style={{ width: size, height: size }}
       aria-label={isActive ? 'Microphone active' : 'Microphone inactive'}
     >
+      {/* Background container */}
+      <div 
+        className={`absolute inset-0 rounded-full transition-colors duration-500 ease-in-out ${
+          isActive ? 'bg-orange-500/10' : 'bg-[var(--c-surface-3)]'
+        }`}
+      />
+
       {/* Glow ring */}
-      <div className="audio-viz__glow" />
+      {isActive && (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="absolute inset-0 rounded-full bg-orange-500/20 blur-md pointer-events-none"
+        />
+      )}
 
       {/* Mic icon */}
-      <svg
-        width="28"
-        height="28"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="audio-viz__icon"
-      >
-        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-        <line x1="12" y1="19" x2="12" y2="23" />
-        <line x1="8" y1="23" x2="16" y2="23" />
-      </svg>
+      <div className={`relative z-10 transition-colors duration-300 ${
+        isActive ? 'text-orange-500' : 'text-[var(--c-text-dim)]'
+      }`}>
+        <Mic size={size * 0.4} strokeWidth={2} />
+      </div>
 
-      {/* Animated bars (only shown when active) */}
+      {/* Animated bars */}
       {isActive && (
-        <div className="audio-viz__bars" aria-hidden="true">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <span key={i} className={`audio-viz__bar audio-viz__bar--${i}`} />
+        <div className="absolute inset-0 z-20 flex items-center justify-center gap-[3px] pointer-events-none" aria-hidden="true" style={{ padding: '20%' }}>
+          {[
+            { delay: 0.1, duration: 0.8 },
+            { delay: 0.3, duration: 0.6 },
+            { delay: 0, duration: 1.2 },
+            { delay: 0.4, duration: 0.7 },
+            { delay: 0.2, duration: 0.9 },
+          ].map((anim, i) => (
+            <motion.span
+              key={i}
+              className="w-[10%] h-[20%] max-h-full rounded-full bg-orange-500/80"
+              animate={{ height: ['20%', '80%', '20%'] }}
+              transition={{
+                duration: anim.duration,
+                repeat: Infinity,
+                delay: anim.delay,
+                ease: 'easeInOut',
+              }}
+            />
           ))}
         </div>
       )}

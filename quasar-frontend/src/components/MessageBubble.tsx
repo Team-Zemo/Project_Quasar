@@ -1,4 +1,6 @@
 import type { Message } from '../types/interview';
+import { User, LockKeyhole } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 interface MessageBubbleProps {
   message: Message;
@@ -8,24 +10,31 @@ export function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
   return (
-    <div className={`message-row ${isUser ? 'message-row--user' : 'message-row--assistant'}`}>
-      <div className={`avatar ${isUser ? 'avatar--user' : 'avatar--assistant'}`}>
-        {isUser ? (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-          </svg>
-        ) : (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-          </svg>
-        )}
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`flex items-start gap-3 w-full max-w-[800px] mb-6 ${isUser ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
+    >
+      <div className={`flex items-center justify-center w-8 h-8 rounded-full shrink-0 shadow-sm ${
+        isUser 
+          ? 'bg-gradient-to-tr from-orange-400 to-orange-500 text-white' 
+          : 'bg-[var(--c-surface-3)] text-[var(--c-text)] border border-[var(--c-border)]'
+      }`}>
+        {isUser ? <User size={16} strokeWidth={2.5} /> : <LockKeyhole size={16} strokeWidth={2.5} />}
       </div>
-      <div className={`bubble ${isUser ? 'bubble--user' : 'bubble--assistant'}`}>
-        <span className="bubble__role">{isUser ? 'You' : 'Interviewer'}</span>
-        <p className="bubble__text">{message.text}</p>
+      
+      <div className={`flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}`}>
+        <span className="text-[12px] font-bold text-[var(--c-text-dim)] mb-1 px-1">
+          {isUser ? 'You' : 'Interviewer'}
+        </span>
+        <div className={`relative px-4 py-3 leading-relaxed text-[15px] shadow-sm rounded-2xl ${
+          isUser 
+            ? 'bg-[var(--c-surface)] border border-[var(--c-border)] text-[var(--c-text)] rounded-tr-sm' 
+            : 'bg-[var(--c-surface-2)] border border-[var(--c-border-2)] text-[var(--c-text)] rounded-tl-sm'
+        }`}>
+          <p className="m-0 whitespace-pre-wrap">{message.text}</p>
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

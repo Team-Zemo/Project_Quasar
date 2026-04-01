@@ -199,46 +199,50 @@ export function EmotionAnalyzer({ isActive, onSnapshot }: EmotionAnalyzerProps) 
   if (!isActive) return null;
 
   return (
-    <div className="emotion-analyzer">
+    <div className="flex flex-col w-full shrink-0">
       {/* Live webcam feed */}
-      <div className="webcam-container">
+      <div className="relative w-full aspect-video md:aspect-[4/3] bg-black rounded-2xl overflow-hidden shadow-lg border border-[var(--c-border)]">
         <video
           ref={videoRef}
           autoPlay
           muted
           playsInline
-          className="webcam-video"
+          className="absolute inset-0 w-full h-full object-cover scale-[1.05]"
         />
 
         {/* Overlay: eye contact ring */}
-        <div className={`webcam-eye-ring ${eyeContact ? 'webcam-eye-ring--on' : 'webcam-eye-ring--off'}`} />
+        <div className={`absolute inset-0 border-[3px] rounded-2xl transition-colors duration-500 pointer-events-none z-10 ${eyeContact ? 'border-green-500/50 shadow-[inset_0_0_20px_rgba(34,197,94,0.3)]' : 'border-transparent'}`} />
 
         {/* Overlay: status badge */}
-        <div className="webcam-status-badge">
-          <span className={`webcam-status-dot ${streamActive ? 'webcam-status-dot--live' : ''}`} />
-          <span>{streamActive ? 'LIVE' : 'LOADING'}</span>
+        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center gap-2 z-20 shadow-sm border border-white/10">
+          <span className={`w-2 h-2 rounded-full transition-colors ${streamActive ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.8)]' : 'bg-gray-500'}`} />
+          <span className="text-[10px] font-bold text-white tracking-widest uppercase">{streamActive ? 'LIVE' : 'LOADING'}</span>
         </div>
 
         {/* Overlay: confidence bar */}
-        <div className="webcam-confidence-bar">
-          <div className="webcam-confidence-fill" style={{ width: `${confidence}%` }} />
+        <div className="absolute top-0 inset-x-0 h-1 bg-white/10 z-20">
+          <div className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-300" style={{ width: `${confidence}%` }} />
         </div>
 
         {/* Overlay: bottom gauges */}
-        <div className="webcam-gauges">
-          <div className="webcam-gauge">
-            <span className="webcam-gauge__label">Confidence</span>
-            <span className="webcam-gauge__value">{confidence}%</span>
+        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent pt-6 pb-3 px-3 flex justify-between items-end z-20 backdrop-blur-[2px]">
+          <div className="flex flex-col items-center gap-1.5 flex-1">
+            <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest shadow-black drop-shadow-md">Confidence</span>
+            <span className="text-[14px] font-black text-white shadow-black drop-shadow-md">{confidence}%</span>
           </div>
-          <div className="webcam-gauge">
-            <span className="webcam-gauge__label">Nervous</span>
-            <span className={`nervousness-pill nervousness-pill--${getNervousnessLevel()}`}>
+          <div className="flex flex-col items-center gap-1.5 flex-1">
+            <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest shadow-black drop-shadow-md">Nervous</span>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-wider ${
+              getNervousnessLevel() === 'low' ? 'bg-green-500/20 text-green-400 border border-green-500/30' :
+              getNervousnessLevel() === 'medium' ? 'bg-orange-500/20 text-orange-400 border border-orange-500/30' :
+              'bg-red-500/20 text-red-400 border border-red-500/30'
+            }`}>
               {getNervousnessLevel().toUpperCase()}
             </span>
           </div>
-          <div className="webcam-gauge">
-            <span className="webcam-gauge__label">Eye Contact</span>
-            <div className={`eye-contact-dot ${eyeContact ? 'eye-contact-dot--on' : 'eye-contact-dot--off'}`} />
+          <div className="flex flex-col items-center gap-1.5 flex-1">
+            <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest shadow-black drop-shadow-md">Eye Contact</span>
+            <div className={`w-3.5 h-3.5 rounded-full mt-0.5 transition-colors duration-300 ${eyeContact ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-white/20'}`} />
           </div>
         </div>
       </div>

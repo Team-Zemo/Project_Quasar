@@ -1,23 +1,49 @@
-// Centralized API helper with credential-inclusive fetch
+import { refreshSession } from './auth';
+import type { User } from './auth';
 
-export async function apiFetch<T = unknown>(
+let refreshPromise: Promise<User | null> | null = null;
+
+export async function apiFetchRaw(
   url: string,
-  options: RequestInit = {}
-): Promise<{ success: boolean; message: string; data: T }> {
-  const res = await fetch(url, {
+  options: RequestInit & { _retry?: boolean } = {}
+): Promise<Response> {
+  const isFormData = options.body instanceof FormData;
+  const headers: Record<string, string> = {
+    ...(!isFormData && { 'Content-Type': 'application/json' }),
+    ...(options.headers as Record<string, string> || {}),
+  };
+
+  let res = await fetch(url, {
     ...options,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
-    },
+    headers,
   });
+
+  if (res.status === 401 && !options._retry) {
+    if (!refreshPromise) {
+      refreshPromise = refreshSession().finally(() => refreshPromise = null);
+    }
+    const user = await refreshPromise;
+    if (user) {
+      res = await fetch(url, {
+        ...options,
+        _retry: true,
+        credentials: 'include',
+        headers,
+      } as RequestInit);
+    }
+  }
+
+  return res;
+}
+
+export async function apiFetch<T = unknown>(url: string, options?: RequestInit): Promise<{ success: boolean; message: string; data: T }> {
+  const res = await apiFetchRaw(url, options);
 
   if (res.headers.get('content-type')?.includes('application/json')) {
     return res.json();
   }
 
-  // Non-JSON response (e.g., PDF)
   throw new Error(`Unexpected response type: ${res.headers.get('content-type')}`);
 }
 
@@ -42,3 +68,4 @@ export function downloadFile(url: string, filename: string): void {
   link.click();
   document.body.removeChild(link);
 }
+

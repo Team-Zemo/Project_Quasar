@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import type { CodingQuestion } from '../types/interview';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Code2, Info, CheckCircle2, AlertCircle, Sparkles } from 'lucide-react';
 
 interface CodeEditorProps {
   question: CodingQuestion;
@@ -48,25 +50,35 @@ export function CodeEditor({ question, onSubmit }: CodeEditorProps) {
   }, [code, selectedLang, onSubmit]);
 
   return (
-    <div className="code-editor-overlay">
-      <div className="code-editor-panel">
-        {/* Header */}
-        <div className="code-editor-header">
-          <div className="code-editor-header__left">
-            <span className="code-editor-badge">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="16 18 22 12 16 6"/>
-                <polyline points="8 6 2 12 8 18"/>
-              </svg>
+    <div className="fixed inset-x-4 bottom-4 z-50" style={{ top: '72px' }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.98, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.98, y: 12 }}
+        transition={{ type: "spring", damping: 28, stiffness: 320 }}
+        className="flex flex-col w-full h-full bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl overflow-hidden shadow-2xl"
+      >
+        {/* Header — two rows: title row + language tabs row */}
+        <div className="flex flex-col shrink-0 bg-[var(--c-surface-2)] border-b border-[var(--c-border)]">
+          {/* Row 1: badge + title */}
+          <div className="flex items-center gap-3 px-5 pt-4 pb-3">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-bold uppercase tracking-widest rounded-full shrink-0">
+              <Code2 size={12} strokeWidth={2.5} />
               Coding Challenge
             </span>
-            <h2 className="code-editor-title">{question.title}</h2>
+            <h2 className="text-[18px] font-bold text-[var(--c-text)] m-0 tracking-tight leading-tight truncate">
+              {question.title}
+            </h2>
           </div>
-          <div className="code-editor-lang-picker">
+          {/* Row 2: language selector tabs */}
+          <div className="flex items-center gap-1 px-4 pb-3 overflow-x-auto custom-scrollbar">
             {LANGUAGES.map(lang => (
               <button
                 key={lang.value}
-                className={`lang-btn ${selectedLang === lang.value ? 'lang-btn--active' : ''}`}
+                className={`px-3 py-1.5 text-[12px] font-bold rounded-md transition-all whitespace-nowrap shrink-0 ${selectedLang === lang.value
+                    ? 'bg-[var(--c-accent)] text-white shadow-sm'
+                    : 'text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-3)]'
+                  }`}
                 onClick={() => handleLangChange(lang.value)}
               >
                 {lang.label}
@@ -76,27 +88,25 @@ export function CodeEditor({ question, onSubmit }: CodeEditorProps) {
         </div>
 
         {/* Body: problem + editor side by side */}
-        <div className="code-editor-body">
+        <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
           {/* Problem description */}
-          <div className="code-problem">
-            <div className="code-problem__label">Problem Statement</div>
-            <div className="code-problem__text">
+          <div className="flex flex-col w-full lg:w-[400px] flex-shrink-0 p-6 overscroll-contain overflow-y-auto border-b lg:border-b-0 lg:border-r border-[var(--c-border)] bg-[var(--c-surface)] custom-scrollbar">
+            <div className="text-[11px] font-black uppercase tracking-wider text-[var(--c-text-dim)] mb-4">Problem Statement</div>
+            <div className="flex flex-col gap-3 text-[14px] leading-relaxed text-[var(--c-text)] mb-6">
               {question.description.split('\n').map((line, i) => (
-                <p key={i}>{line || <>&nbsp;</>}</p>
+                <p key={i} className="m-0 break-words">{line || <>&nbsp;</>}</p>
               ))}
             </div>
             {question.preferredLanguage && question.preferredLanguage !== 'Any' && (
-              <div className="code-problem__lang-hint">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                Preferred language: <strong>{question.preferredLanguage}</strong>
+              <div className="flex items-center gap-2 mt-auto p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-[13px] text-blue-400 font-medium">
+                <Info size={16} strokeWidth={2.5} className="shrink-0" />
+                <span>Preferred language: <strong>{question.preferredLanguage}</strong></span>
               </div>
             )}
           </div>
 
           {/* Monaco editor */}
-          <div className="code-monaco-wrapper">
+          <div className="flex-1 min-w-0 min-h-0 bg-[#1e1e1e] relative">
             <Editor
               height="100%"
               language={selectedLang}
@@ -122,38 +132,59 @@ export function CodeEditor({ question, onSubmit }: CodeEditorProps) {
         </div>
 
         {/* Footer */}
-        <div className="code-editor-footer">
-          <p className="code-editor-footer__hint">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            No code runner — write a clear, readable implementation. The interviewer will evaluate your approach and logic.
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 lg:p-5 bg-[var(--c-surface-2)] border-t border-[var(--c-border)]">
+          <p className="flex items-center gap-2 text-[12px] text-[var(--c-text-mute)] max-w-[500px] leading-snug m-0">
+            <AlertCircle size={14} strokeWidth={2.5} className="shrink-0 text-orange-500" />
+            No execution environment — write a clear, readable implementation. The interviewer will evaluate your logic.
           </p>
-          <div className="code-editor-footer__actions">
-            {!confirming ? (
-              <button
-                id="code-submit-btn"
-                className="btn-primary"
-                onClick={() => setConfirming(true)}
-                disabled={!code.trim()}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                Submit Solution
-              </button>
-            ) : (
-              <div className="code-confirm-row">
-                <span className="code-confirm-text">Submit and resume interview?</span>
-                <button className="btn-secondary" onClick={() => setConfirming(false)}>Cancel</button>
-                <button id="code-confirm-submit-btn" className="btn-primary" onClick={handleSubmit}>
-                  Confirm Submit
-                </button>
-              </div>
-            )}
+          <div className="flex items-center gap-3 shrink-0">
+            <AnimatePresence mode="wait">
+              {!confirming ? (
+                <motion.button
+                  key="submit"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  id="code-submit-btn"
+                  className={`flex items-center justify-center gap-2 px-6 py-2.5 font-bold text-[14px] rounded-xl transition-all shadow-sm ${!code.trim()
+                      ? 'bg-[var(--c-surface-3)] text-[var(--c-text-mute)] cursor-not-allowed'
+                      : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-400 hover:to-orange-500 text-white shadow-[0_4px_12px_rgba(249,115,22,0.3)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] active:scale-95'
+                    }`}
+                  onClick={() => setConfirming(true)}
+                  disabled={!code.trim()}
+                >
+                  <Sparkles size={16} strokeWidth={2.5} />
+                  Submit Solution
+                </motion.button>
+              ) : (
+                <motion.div
+                  key="confirm"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="flex items-center gap-3 bg-[var(--c-surface)] p-1.5 pr-2 rounded-xl border border-[var(--c-border)] shadow-md"
+                >
+                  <span className="text-[13px] font-bold text-[var(--c-text)] pl-3 pr-2 hidden sm:inline-block">Submit code?</span>
+                  <button
+                    className="px-4 py-1.5 text-[13px] font-semibold rounded-lg bg-[var(--c-surface-2)] hover:bg-[var(--c-surface-3)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
+                    onClick={() => setConfirming(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    id="code-confirm-submit-btn"
+                    className="flex items-center gap-1.5 px-4 py-1.5 text-[13px] font-bold rounded-lg bg-[var(--c-success)] hover:bg-[#22c55e] text-white shadow-[0_2px_8px_rgba(34,197,94,0.3)] transition-colors active:scale-95"
+                    onClick={handleSubmit}
+                  >
+                    <CheckCircle2 size={14} strokeWidth={2.5} />
+                    Confirm
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

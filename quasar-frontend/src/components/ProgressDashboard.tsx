@@ -5,6 +5,9 @@ import { SessionHistory } from './SessionHistory';
 import { XPBar } from './XPBar';
 import { StreakWidget } from './StreakWidget';
 import { useGamificationStats } from '../hooks/useGamificationStats';
+import { motion } from 'framer-motion';
+import type { Variants } from 'framer-motion';
+import { Activity, Trophy, Target, TrendingUp, BarChart3, Loader2 } from 'lucide-react';
 
 interface ProgressSession {
   sessionId: string;
@@ -38,6 +41,16 @@ export function ProgressDashboard() {
   const overallChartRef = useRef<HTMLCanvasElement>(null);
   const starChartRef = useRef<HTMLCanvasElement>(null);
   const fillerChartRef = useRef<HTMLCanvasElement>(null);
+
+  const containerVariants: Variants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.05 } }
+  };
+
+  const itemVariants: Variants = {
+    hidden: { opacity: 0, y: 15 },
+    show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -196,10 +209,10 @@ export function ProgressDashboard() {
 
   if (loading) {
     return (
-      <div className="progress-page">
-        <div className="progress-loading">
-          <div className="spinner" />
-          <p>Loading your progress…</p>
+      <div className="flex flex-col items-center justify-center w-full min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4 text-[var(--c-text-dim)]">
+          <Loader2 className="animate-spin text-[var(--c-accent)]" size={32} />
+          <p className="text-[15px] font-medium">Loading your progress…</p>
         </div>
       </div>
     );
@@ -207,11 +220,14 @@ export function ProgressDashboard() {
 
   if (!data || data.sessions.length === 0) {
     return (
-      <div className="progress-page">
-        <div className="progress-empty">
-          <div className="progress-empty__icon">📊</div>
-          <h2>No Sessions Yet</h2>
-          <p>Complete your first interview to see progress analytics</p>
+      <div className="flex flex-col w-full max-w-[1100px] items-start gap-6 self-start mx-auto" style={{ padding: '16px 24px 64px 24px' }}>
+        <div 
+          className="flex flex-col items-center justify-center gap-4 text-center text-[var(--c-text-dim)] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] w-full shadow-sm"
+          style={{ padding: '64px' }}
+        >
+          <BarChart3 size={48} className="mb-2 text-[var(--c-text-mute)]" strokeWidth={1.5} />
+          <h2 className="text-[24px] font-bold text-[var(--c-text)] m-0">No Sessions Yet</h2>
+          <p className="text-[15px]">Complete your first interview to see progress analytics</p>
         </div>
       </div>
     );
@@ -220,120 +236,174 @@ export function ProgressDashboard() {
   const latestSession = data.sessions[data.sessions.length - 1];
 
   return (
-    <div className="progress-page">
-      <div className="progress-header">
-        <h1 className="progress-header__title">Progress Dashboard</h1>
-        <p className="progress-header__subtitle">{data.totalSessions} sessions completed</p>
-      </div>
+    <motion.div 
+      variants={containerVariants} initial="hidden" animate="show"
+      className="flex flex-col w-full max-w-[1100px] items-start gap-6 self-start mx-auto" 
+      style={{ padding: '16px 24px 64px 24px' }}
+    >
+      <motion.div variants={itemVariants} className="text-center w-full">
+        <h1 className="text-[32px] font-black tracking-tight m-0 text-[var(--c-text)]">Progress Dashboard</h1>
+        <p className="text-[14px] text-[var(--c-text-dim)] mt-2">{data.totalSessions} sessions completed</p>
+      </motion.div>
 
       {/* Gamification summary bar */}
       {gStats && (
-        <div className="progress-gamification-row">
-          <XPBar compact xp={gStats.xp} level={gStats.level} xpToNext={gStats.xpToNextLevel} />
-          <StreakWidget
-            currentStreak={gStats.currentStreak}
-            longestStreak={gStats.longestStreak}
-            lastPracticeDate={gStats.lastPracticeDate}
-          />
-        </div>
+        <motion.div variants={itemVariants} className="w-full">
+          <div 
+            className="flex flex-col md:flex-row items-center gap-4 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
+            style={{ padding: '16px 20px' }}
+          >
+            <div className="flex-1 w-full"><XPBar compact xp={gStats.xp} level={gStats.level} xpToNext={gStats.xpToNextLevel} /></div>
+            <StreakWidget
+              currentStreak={gStats.currentStreak}
+              longestStreak={gStats.longestStreak}
+              lastPracticeDate={gStats.lastPracticeDate}
+            />
+          </div>
+        </motion.div>
       )}
 
       {/* Stat Cards */}
-      <div className="stat-cards">
-        <div className="stat-card">
-          <div className="stat-card__icon">💪</div>
-          <div className="stat-card__content">
-            <span className="stat-card__value">{latestSession.confidenceAvg}%</span>
-            <span className="stat-card__label">Confidence Avg</span>
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+        <div 
+          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm"
+          style={{ padding: '20px' }}
+        >
+          <div className="flex items-center justify-center w-[40px] h-[40px] rounded-xl bg-orange-500/10 text-[var(--c-accent)]">
+            <Activity size={20} strokeWidth={2.5} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[20px] font-extrabold text-[var(--c-text)] tracking-tight">{latestSession.confidenceAvg}%</span>
+            <span className="text-[11px] font-bold text-[var(--c-text-mute)] uppercase tracking-wider">Confidence Avg</span>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-card__icon">🏆</div>
-          <div className="stat-card__content">
-            <span className="stat-card__value" style={{ textTransform: 'capitalize' }}>{data.improvement.strongestDimension}</span>
-            <span className="stat-card__label">Strongest Area</span>
+        <div 
+          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm"
+          style={{ padding: '20px' }}
+        >
+          <div className="flex items-center justify-center w-[40px] h-[40px] rounded-xl bg-blue-500/10 text-blue-500">
+            <Trophy size={20} strokeWidth={2.5} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[20px] font-extrabold text-[var(--c-text)] tracking-tight capitalize">{data.improvement.strongestDimension}</span>
+            <span className="text-[11px] font-bold text-[var(--c-text-mute)] uppercase tracking-wider">Strongest Area</span>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-card__icon">🎯</div>
-          <div className="stat-card__content">
-            <span className="stat-card__value" style={{ textTransform: 'capitalize' }}>{data.improvement.weakestDimension}</span>
-            <span className="stat-card__label">Focus Area</span>
+        <div 
+          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm"
+          style={{ padding: '20px' }}
+        >
+          <div className="flex items-center justify-center w-[40px] h-[40px] rounded-xl bg-red-500/10 text-red-500">
+            <Target size={20} strokeWidth={2.5} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[20px] font-extrabold text-[var(--c-text)] tracking-tight capitalize">{data.improvement.weakestDimension}</span>
+            <span className="text-[11px] font-bold text-[var(--c-text-mute)] uppercase tracking-wider">Focus Area</span>
           </div>
         </div>
 
-        <div className="stat-card">
-          <div className="stat-card__icon">📈</div>
-          <div className="stat-card__content">
-            <span className="stat-card__value">{data.totalSessions}</span>
-            <span className="stat-card__label">Total Sessions</span>
+        <div 
+          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm"
+          style={{ padding: '20px' }}
+        >
+          <div className="flex items-center justify-center w-[40px] h-[40px] rounded-xl bg-green-500/10 text-green-500">
+            <TrendingUp size={20} strokeWidth={2.5} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[20px] font-extrabold text-[var(--c-text)] tracking-tight">{data.totalSessions}</span>
+            <span className="text-[11px] font-bold text-[var(--c-text-mute)] uppercase tracking-wider">Total Sessions</span>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Charts */}
-      <div className="chart-grid">
-        <div className="chart-container">
-          <h3 className="chart-title">Overall Score Trend</h3>
-          <div className="chart-wrapper">
+      <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+        <div 
+          className="flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
+          style={{ padding: '24px' }}
+        >
+          <h3 className="text-[14px] font-bold tracking-wide mb-4 text-[var(--c-text)]">Overall Score Trend</h3>
+          <div className="relative h-[260px] w-full">
             <canvas ref={overallChartRef} />
           </div>
         </div>
 
-        <div className="chart-container">
-          <h3 className="chart-title">STAR Dimensions</h3>
-          <div className="chart-wrapper">
+        <div 
+          className="flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
+          style={{ padding: '24px' }}
+        >
+          <h3 className="text-[14px] font-bold tracking-wide mb-4 text-[var(--c-text)]">STAR Dimensions</h3>
+          <div className="relative h-[260px] w-full">
             <canvas ref={starChartRef} />
           </div>
         </div>
 
-        <div className="chart-container chart-container--full">
-          <h3 className="chart-title">Filler Word Rate (Lower = Better)</h3>
-          <div className="chart-wrapper">
+        <div 
+          className="col-span-1 lg:col-span-2 flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
+          style={{ padding: '24px' }}
+        >
+          <h3 className="text-[14px] font-bold tracking-wide mb-4 text-[var(--c-text)]">Filler Word Rate (Lower = Better)</h3>
+          <div className="relative h-[260px] w-full">
             <canvas ref={fillerChartRef} />
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Improvement insight */}
-      <div className="improvement-card">
-        <h3>Clarity Improvement</h3>
-        <p className="improvement-card__delta">{data.improvement.clarityDelta}</p>
-      </div>
+      <motion.div variants={itemVariants} className="w-full">
+        <div 
+          className="text-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
+          style={{ padding: '24px' }}
+        >
+          <h3 className="text-[14px] font-semibold text-[var(--c-text-dim)] mb-2">Clarity Improvement</h3>
+          <p className="text-[24px] font-extrabold text-[var(--c-success)] tracking-tight m-0">{data.improvement.clarityDelta}</p>
+        </div>
+      </motion.div>
 
       {/* Skill Vector */}
       {skillVector.length > 0 && (
-        <div className="eval-section" style={{ background: 'var(--c-surface)', border: '1px solid var(--c-border)', borderRadius: 'var(--r-xl)', padding: 'var(--space-6)' }}>
-          <h3 className="eval-section__title">Skill Vector (Adaptive Difficulty)</h3>
-          <div className="eval-bars">
-            {skillVector.map(sv => {
-              const score = parseFloat(sv.score as unknown as string) || 0;
-              return (
-              <div key={sv.skill} className="eval-bar-row">
-                <span className="eval-bar-label" style={{ textTransform: 'capitalize' }}>
-                  {sv.skill.replace(/_/g, ' ')}
-                </span>
-                <div className="eval-bar-track">
-                  <div
-                    className="eval-bar-fill eval-bar-fill--purple"
-                    style={{ width: `${(score / 10) * 100}%` }}
-                  />
-                </div>
-                <span className="eval-bar-score">{score.toFixed(1)}</span>
-              </div>
-              );
-            })}
+        <motion.div variants={itemVariants} className="w-full">
+          <div 
+            className="flex flex-col w-full bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm"
+            style={{ padding: '24px' }}
+          >
+            <h3 className="text-[14px] font-bold tracking-wide mb-4 text-[var(--c-text)]">Skill Vector (Adaptive Difficulty)</h3>
+            <div className="flex flex-col gap-4">
+              {skillVector.map(sv => {
+                const score = parseFloat(sv.score as unknown as string) || 0;
+                return (
+                  <div key={sv.skill} className="flex items-center gap-3 w-full">
+                    <span className="w-[140px] text-[12px] font-semibold text-[var(--c-text-dim)] shrink-0 capitalize truncate">
+                      {sv.skill.replace(/_/g, ' ')}
+                    </span>
+                    <div className="flex-1 h-[10px] bg-[var(--c-surface-2)] rounded-full overflow-hidden shrink-1">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${(score / 10) * 100}%` }}
+                        transition={{ duration: 1, ease: 'easeOut' }}
+                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 min-w-[2px]"
+                      />
+                    </div>
+                    <span className="w-[36px] text-right text-[13px] font-extrabold text-[var(--c-text)] shrink-0 tabular-nums">
+                      {score.toFixed(1)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-[11px] font-medium text-[var(--c-text-dim)] mt-5 text-center">
+              Scores update after each evaluated session using Exponential Moving Average
+            </p>
           </div>
-          <p style={{ fontSize: '11px', color: 'var(--c-text-mute)', marginTop: 'var(--space-3)', textAlign: 'center' }}>
-            Scores update after each evaluated session using Exponential Moving Average
-          </p>
-        </div>
+        </motion.div>
       )}
 
       {/* Session History Table */}
-      <SessionHistory />
-    </div>
+      <motion.div variants={itemVariants} className="w-full mt-4">
+        <SessionHistory />
+      </motion.div>
+    </motion.div>
   );
 }

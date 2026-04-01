@@ -1,4 +1,8 @@
 import type { BadgeEntry } from '../hooks/useGamificationStats';
+import { motion } from 'framer-motion';
+import type { Variants } from 'framer-motion';
+import { Lock } from 'lucide-react';
+import { getBadgeLucideIcon } from '../lib/badgeIcons';
 
 const CATEGORY_COLORS: Record<string, string> = {
   milestone: '#3b82f6',
@@ -36,36 +40,67 @@ interface BadgeGridProps {
   badges: BadgeEntry[];
 }
 
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.04 }
+  }
+};
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 15, scale: 0.95 },
+  show: { 
+    opacity: 1, y: 0, scale: 1, 
+    transition: { type: 'spring', stiffness: 350, damping: 25 } 
+  }
+};
+
 export function BadgeGrid({ badges }: BadgeGridProps) {
   return (
-    <div className="badge-grid">
+    <motion.div 
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3"
+    >
       {badges.map((badge) => {
         const color = getCategoryColor(badge.id);
+        const isUnlocked = badge.unlocked;
+
         return (
-          <div
+          <motion.div
+            variants={itemVariants}
             key={badge.id}
-            className={`badge-card ${badge.unlocked ? 'badge-card--unlocked' : 'badge-card--locked'}`}
-            style={badge.unlocked ? { '--badge-color': color } as React.CSSProperties : undefined}
+            className={`flex flex-col items-center gap-1 bg-[var(--c-surface)] border rounded-[16px] text-center transition-all duration-300 ${
+              isUnlocked 
+                ? 'border-[color-mix(in_srgb,var(--badge-color)_40%,transparent)] shadow-[0_0_12px_color-mix(in_srgb,var(--badge-color)_15%,transparent)] hover:-translate-y-[2px] hover:shadow-[0_4px_20px_color-mix(in_srgb,var(--badge-color)_25%,transparent)]' 
+                : 'border-[var(--c-border)] grayscale opacity-[0.45]'
+            }`}
+            style={{ 
+              ...(isUnlocked ? { '--badge-color': color } : {}),
+              padding: '16px 12px' 
+            } as React.CSSProperties}
           >
-            <span className="badge-card__icon">{badge.icon}</span>
-            <span className="badge-card__name">{badge.name}</span>
-            <span className="badge-card__desc">{badge.description}</span>
-            {badge.unlocked && badge.unlockedAt ? (
-              <span className="badge-card__date">
+            <div className="flex items-center justify-center h-[40px] mb-1">
+              {getBadgeLucideIcon(badge.icon, badge.id, 32)}
+            </div>
+            <span className="text-[13px] font-bold text-[var(--c-text)]">{badge.name}</span>
+            <span className="text-[11px] text-[var(--c-text-mute)] leading-snug">{badge.description}</span>
+            {isUnlocked && badge.unlockedAt ? (
+              <span className="text-[10px] text-[var(--c-text-dim)] mt-1 font-medium">
                 {new Date(badge.unlockedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </span>
             ) : (
-              <span className="badge-card__locked">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                </svg>
+              <span className="inline-flex items-center gap-[3px] text-[10px] text-[var(--c-text-mute)] mt-1 font-medium">
+                <Lock size={10} />
                 Locked
               </span>
             )}
-          </div>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
+
