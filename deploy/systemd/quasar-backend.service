@@ -1,0 +1,30 @@
+[Unit]
+Description=Quasar Backend — Node.js API & WebSocket Server
+Documentation=https://github.com/Team-Zemo/Project_Quasar
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/var/www/quasar-backend
+
+# Load production environment variables
+EnvironmentFile=/var/www/quasar-backend/.env
+
+# Start the app
+ExecStart=/usr/bin/node index.js
+
+# Restart policy
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=quasar-backend
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=full
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
