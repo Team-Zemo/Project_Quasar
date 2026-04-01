@@ -50,7 +50,7 @@ export function CodeEditor({ question, onSubmit }: CodeEditorProps) {
   }, [code, selectedLang, onSubmit]);
 
   return (
-    <div className="fixed inset-x-4 bottom-4 z-50" style={{ top: '72px' }}>
+    <div className="fixed inset-x-2 bottom-2 md:inset-x-4 md:bottom-4 z-50" style={{ top: '72px' }}>
       <motion.div
         initial={{ opacity: 0, scale: 0.98, y: 12 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -77,7 +77,7 @@ export function SettingsPage() {
   };
 
   return (
-    <div className="flex flex-col w-full min-h-screen bg-[var(--c-bg)]" style={{ padding: '64px 20px' }}>
+    <div className="flex flex-col w-full min-h-screen bg-[var(--c-bg)] px-5 py-16">
       <motion.div 
         variants={containerVariants} initial="hidden" animate="show"
         className="max-w-[560px] w-full mx-auto flex flex-col gap-6"
@@ -93,7 +93,7 @@ export function SettingsPage() {
         </motion.div>
 
         {/* Profile info card */}
-        <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm" style={{ padding: '24px' }}>
+        <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm p-6">
           <div className="w-[48px] h-[48px] rounded-[14px] bg-[var(--c-accent-dim)] border border-[var(--c-accent-glow)] flex items-center justify-center text-[var(--c-accent)] shrink-0">
             <UserIcon size={24} strokeWidth={2} />
           </div>
@@ -107,15 +107,15 @@ export function SettingsPage() {
             ) : (
               <div className="flex flex-col gap-1 mt-4">
                 <div className="flex items-center gap-3 text-[13px] py-3 border-b border-[var(--c-border)]">
-                  <span className="w-[110px] shrink-0 text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Name</span>
+                  <span className="w-[90px] sm:w-[110px] shrink-0 text-[11px] sm:text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Name</span>
                   <span className="text-[14px] font-medium text-[var(--c-text)] break-all">{profile?.name ?? '—'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-[13px] py-3 border-b border-[var(--c-border)]">
-                  <span className="w-[110px] shrink-0 text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Email</span>
+                  <span className="w-[90px] sm:w-[110px] shrink-0 text-[11px] sm:text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Email</span>
                   <span className="text-[14px] font-medium text-[var(--c-text)] break-all">{profile?.email ?? '—'}</span>
                 </div>
                 <div className="flex items-center gap-3 text-[13px] py-3 border-b border-[var(--c-border)]">
-                  <span className="w-[110px] shrink-0 text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Password</span>
+                  <span className="w-[90px] sm:w-[110px] shrink-0 text-[11px] sm:text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Password</span>
                   <span className="flex flex-wrap gap-2 items-center text-[14px]">
                     {hasPassword ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[8px] text-[11px] font-bold tracking-wide bg-[var(--c-success-dim)] border border-green-500/20 text-[var(--c-success)]">
@@ -130,7 +130,7 @@ export function SettingsPage() {
                   </span>
                 </div>
                 <div className="flex items-center gap-3 text-[13px] py-3">
-                  <span className="w-[110px] shrink-0 text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Linked accounts</span>
+                  <span className="w-[90px] sm:w-[110px] shrink-0 text-[11px] sm:text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)]">Linked accounts</span>
                   <span className="flex flex-wrap gap-2 items-center text-[14px]">
                     {hasGoogle && (
                       <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-[8px] text-[12px] font-semibold tracking-wide bg-white/5 border border-white/10 text-[var(--c-text)]">
@@ -162,7 +162,7 @@ export function SettingsPage() {
         </motion.div>
 
         {/* Change Password Card */}
-        <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm" style={{ padding: '24px' }}>
+        <motion.div variants={itemVariants} className="flex flex-col md:flex-row gap-5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm p-6">
           <div className="w-[48px] h-[48px] rounded-[14px] bg-[var(--c-surface-2)] border border-[var(--c-border)] flex items-center justify-center text-[var(--c-text-mute)] shrink-0">
             <Lock size={22} strokeWidth={2} />
           </div>

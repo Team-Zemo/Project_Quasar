@@ -150,18 +150,18 @@ export function InterviewRoom({
   return (
     <div className={`flex flex-col w-full h-full overflow-hidden ${isEnded ? 'max-w-4xl mx-auto' : ''}`}>
       {/* Header bar */}
-      <header className="flex items-center justify-between shrink-0 p-4 lg:p-6 bg-[var(--c-surface)] border-b border-[var(--c-border)] z-10 sticky top-0 shadow-sm backdrop-blur-md bg-opacity-90">
-        <div className="flex flex-col justify-center">
+      <header className="flex items-center justify-between shrink-0 p-3 sm:p-4 lg:p-6 bg-[var(--c-surface)] border-b border-[var(--c-border)] z-10 sticky top-0 shadow-sm backdrop-blur-md bg-opacity-90 gap-2">
+        <div className="flex flex-col justify-center flex-1 min-w-0 pr-2">
           <div className="flex items-center gap-2.5">
-            <div className="relative flex items-center justify-center w-2.5 h-2.5">
+            <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
               <div className={`absolute inset-0 rounded-full transition-colors ${isRecording ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-[pulse-dot_1.5s_infinite]' : 'bg-[var(--c-text-mute)]'
                 }`} />
             </div>
-            <p className="text-[16px] font-bold tracking-tight text-[var(--c-text)] m-0 leading-tight">
+            <p className="text-[15px] sm:text-[16px] font-bold tracking-tight text-[var(--c-text)] m-0 leading-tight truncate">
               {domain}
             </p>
           </div>
-          <p className="text-[12px] font-medium text-[var(--c-text-dim)] m-0 mt-0.5 ml-5 max-w-[300px] truncate">
+          <p className="text-[11px] sm:text-[12px] font-medium text-[var(--c-text-dim)] m-0 mt-0.5 ml-5 truncate max-w-full sm:max-w-[300px]">
             {status === 'active' && activeCodingQuestion && 'Write your code solution — microphone paused'}
             {status === 'active' && !activeCodingQuestion && isRecording && 'Session active — speak to respond'}
             {status === 'active' && !activeCodingQuestion && !isRecording && 'Connecting audio…'}
@@ -171,7 +171,7 @@ export function InterviewRoom({
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {/* Filler counter inline in header */}
           <FillerDetector
             isActive={status === 'active' && isRecording}
@@ -182,10 +182,11 @@ export function InterviewRoom({
             <button
               id="end-session-btn"
               onClick={onEnd}
-              className="flex items-center gap-2 px-4 py-2 font-bold text-[13px] bg-red-500 hover:bg-red-600 text-white border border-red-500/20 rounded-xl transition-all shadow-[0_2px_10px_rgba(239,68,68,0.2)] active:scale-95"
+              className="flex items-center justify-center gap-1 sm:gap-2 w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 font-bold text-[13px] bg-red-500 hover:bg-red-600 text-white border border-red-500/20 rounded-xl transition-all shadow-[0_2px_10px_rgba(239,68,68,0.2)] active:scale-95"
+              title="End Session"
             >
               <Square size={14} fill="currentColor" />
-              End Session
+              <span className="hidden sm:inline">End Session</span>
             </button>
           )}
         </div>
@@ -197,10 +198,10 @@ export function InterviewRoom({
         <AnimatePresence>
           {!isEnded && (
             <motion.aside
-              initial={{ opacity: 0, x: -20, width: 0 }}
-              animate={{ opacity: 1, x: 0, width: '280px' }}
-              exit={{ opacity: 0, x: -20, width: 0 }}
-              className="flex flex-col shrink-0 w-full md:w-[280px] border-r border-[var(--c-border)] bg-[var(--c-surface-2)] overflow-y-auto hidden md:flex custom-scrollbar"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="flex flex-col shrink-0 w-full md:w-[280px] border-b md:border-b-0 md:border-r border-[var(--c-border)] bg-[var(--c-surface-2)] overflow-y-auto md:flex custom-scrollbar max-h-[30vh] md:max-h-none"
             >
               <div className="p-4 flex flex-col gap-4 sticky top-0">
                 <EmotionAnalyzer

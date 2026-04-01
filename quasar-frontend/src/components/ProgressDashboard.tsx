@@ -220,10 +220,9 @@ export function ProgressDashboard() {
 
   if (!data || data.sessions.length === 0) {
     return (
-      <div className="flex flex-col w-full max-w-[1100px] items-start gap-6 self-start mx-auto" style={{ padding: '16px 24px 64px 24px' }}>
+      <div className="flex flex-col w-full max-w-[1100px] items-start gap-6 self-start mx-auto py-4 px-4 md:px-6 pb-16">
         <div 
-          className="flex flex-col items-center justify-center gap-4 text-center text-[var(--c-text-dim)] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] w-full shadow-sm"
-          style={{ padding: '64px' }}
+          className="flex flex-col items-center justify-center gap-4 text-center text-[var(--c-text-dim)] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] w-full shadow-sm p-8 sm:p-16"
         >
           <BarChart3 size={48} className="mb-2 text-[var(--c-text-mute)]" strokeWidth={1.5} />
           <h2 className="text-[24px] font-bold text-[var(--c-text)] m-0">No Sessions Yet</h2>
@@ -238,9 +237,8 @@ export function ProgressDashboard() {
   return (
     <motion.div 
       variants={containerVariants} initial="hidden" animate="show"
-      className="flex flex-col w-full max-w-[1100px] items-start gap-6 self-start mx-auto" 
-      style={{ padding: '16px 24px 64px 24px' }}
-    >
+      className="flex flex-col w-full max-w-[1100px] items-start gap-6 self-start mx-auto py-4 px-4 md:px-6 pb-16"
+      >
       <motion.div variants={itemVariants} className="text-center w-full">
         <h1 className="text-[32px] font-black tracking-tight m-0 text-[var(--c-text)]">Progress Dashboard</h1>
         <p className="text-[14px] text-[var(--c-text-dim)] mt-2">{data.totalSessions} sessions completed</p>
@@ -250,8 +248,7 @@ export function ProgressDashboard() {
       {gStats && (
         <motion.div variants={itemVariants} className="w-full">
           <div 
-            className="flex flex-col md:flex-row items-center gap-4 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
-            style={{ padding: '16px 20px' }}
+            className="flex flex-col md:flex-row items-center gap-4 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full px-5 py-4"
           >
             <div className="flex-1 w-full"><XPBar compact xp={gStats.xp} level={gStats.level} xpToNext={gStats.xpToNextLevel} /></div>
             <StreakWidget
@@ -266,8 +263,7 @@ export function ProgressDashboard() {
       {/* Stat Cards */}
       <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4 w-full">
         <div 
-          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm"
-          style={{ padding: '20px' }}
+          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm p-5"
         >
           <div className="flex items-center justify-center w-[40px] h-[40px] rounded-xl bg-orange-500/10 text-[var(--c-accent)]">
             <Activity size={20} strokeWidth={2.5} />
@@ -279,8 +275,7 @@ export function ProgressDashboard() {
         </div>
 
         <div 
-          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm"
-          style={{ padding: '20px' }}
+          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm p-5"
         >
           <div className="flex items-center justify-center w-[40px] h-[40px] rounded-xl bg-blue-500/10 text-blue-500">
             <Trophy size={20} strokeWidth={2.5} />
@@ -292,8 +287,7 @@ export function ProgressDashboard() {
         </div>
 
         <div 
-          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm"
-          style={{ padding: '20px' }}
+          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm p-5"
         >
           <div className="flex items-center justify-center w-[40px] h-[40px] rounded-xl bg-red-500/10 text-red-500">
             <Target size={20} strokeWidth={2.5} />
@@ -305,8 +299,7 @@ export function ProgressDashboard() {
         </div>
 
         <div 
-          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm"
-          style={{ padding: '20px' }}
+          className="flex flex-col gap-3 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[20px] shadow-sm p-5"
         >
           <div className="flex items-center justify-center w-[40px] h-[40px] rounded-xl bg-green-500/10 text-green-500">
             <TrendingUp size={20} strokeWidth={2.5} />
@@ -321,8 +314,7 @@ export function ProgressDashboard() {
       {/* Charts */}
       <motion.div variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
         <div 
-          className="flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
-          style={{ padding: '24px' }}
+          className="flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full p-5 md:p-6"
         >
           <h3 className="text-[14px] font-bold tracking-wide mb-4 text-[var(--c-text)]">Overall Score Trend</h3>
           <div className="relative h-[260px] w-full">
@@ -331,8 +323,7 @@ export function ProgressDashboard() {
         </div>
 
         <div 
-          className="flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
-          style={{ padding: '24px' }}
+          className="flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full p-5 md:p-6"
         >
           <h3 className="text-[14px] font-bold tracking-wide mb-4 text-[var(--c-text)]">STAR Dimensions</h3>
           <div className="relative h-[260px] w-full">
@@ -341,8 +332,7 @@ export function ProgressDashboard() {
         </div>
 
         <div 
-          className="col-span-1 lg:col-span-2 flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
-          style={{ padding: '24px' }}
+          className="col-span-1 lg:col-span-2 flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full p-5 md:p-6"
         >
           <h3 className="text-[14px] font-bold tracking-wide mb-4 text-[var(--c-text)]">Filler Word Rate (Lower = Better)</h3>
           <div className="relative h-[260px] w-full">
@@ -354,8 +344,7 @@ export function ProgressDashboard() {
       {/* Improvement insight */}
       <motion.div variants={itemVariants} className="w-full">
         <div 
-          className="text-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full"
-          style={{ padding: '24px' }}
+          className="text-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm w-full p-5 md:p-6"
         >
           <h3 className="text-[14px] font-semibold text-[var(--c-text-dim)] mb-2">Clarity Improvement</h3>
           <p className="text-[24px] font-extrabold text-[var(--c-success)] tracking-tight m-0">{data.improvement.clarityDelta}</p>
@@ -366,8 +355,7 @@ export function ProgressDashboard() {
       {skillVector.length > 0 && (
         <motion.div variants={itemVariants} className="w-full">
           <div 
-            className="flex flex-col w-full bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm"
-            style={{ padding: '24px' }}
+            className="flex flex-col w-full bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm p-5 md:p-6"
           >
             <h3 className="text-[14px] font-bold tracking-wide mb-4 text-[var(--c-text)]">Skill Vector (Adaptive Difficulty)</h3>
             <div className="flex flex-col gap-4">

@@ -174,9 +174,9 @@ export function CoachChat() {
   const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex flex-col mx-auto w-full max-w-[860px] h-[calc(100vh-56px-40px)] max-sm:h-[calc(100vh-56px-36px)]">
+    <div className="flex flex-col mx-auto w-full max-w-[860px] flex-1 min-h-0">
       {/* Chat area */}
-      <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--c-surface-3)_transparent]" style={{ paddingTop: '24px', paddingLeft: '24px', paddingRight: '24px', paddingBottom: '8px' }}>
+      <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--c-surface-3)_transparent] px-4 pt-6 pb-2 md:px-6">
         <AnimatePresence mode="wait">
           {isEmpty ? (
             <motion.div 
@@ -184,14 +184,13 @@ export function CoachChat() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="flex flex-col items-center justify-center min-h-full text-center gap-3"
-              style={{ paddingTop: '16px', paddingBottom: '32px', paddingLeft: '16px', paddingRight: '16px' }}
+              className="flex flex-col items-center justify-center min-h-full text-center gap-3 py-4 px-4 sm:py-8"
             >
               <div className="flex items-center justify-center w-20 h-20 bg-orange-500/10 text-orange-500 rounded-[24px] mb-2 shadow-inner">
                 <Target size={40} strokeWidth={2.5} />
               </div>
               <h1 className="text-[32px] max-sm:text-[24px] font-black tracking-tight text-[var(--c-text)]">Quasar Coach</h1>
-              <p className="text-[15px] text-[var(--c-text-dim)] max-w-[480px] leading-relaxed">
+              <p className="text-[14px] sm:text-[15px] text-[var(--c-text-dim)] max-w-[480px] leading-relaxed">
                 Your AI career coach — personalized interview prep, time management, and career planning
               </p>
 
@@ -230,8 +229,7 @@ export function CoachChat() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ ease: "easeOut" }}
                   key={msg.id} 
-                  className="flex gap-4 max-sm:gap-3"
-                  style={{ padding: '8px 8px' }}
+                  className="flex gap-4 max-sm:gap-3 p-2"
                 >
                   <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold shrink-0 shadow-sm ${msg.role === 'assistant' ? 'bg-gradient-to-br from-orange-400 to-orange-600 text-white' : 'bg-[var(--c-surface-3)] text-[var(--c-text)]'}`}>
                     {msg.role === 'assistant' ? <Bot size={22} className="text-white" /> : user?.name?.charAt(0).toUpperCase() || '?'}
@@ -240,7 +238,7 @@ export function CoachChat() {
                     <span className={`block text-[13px] font-bold mb-1.5 ${msg.role === 'assistant' ? 'text-orange-500' : 'text-[var(--c-text-dim)]'}`}>
                       {msg.role === 'assistant' ? 'Quasar Coach' : user?.name || 'You'}
                     </span>
-                    <div className="text-[15px] leading-relaxed [&_p]:mb-4 [&_p:last-child]:mb-0 [&_h1]:text-[20px] [&_h1]:font-extrabold [&_h1]:mb-4 [&_h2]:text-[17px] [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:mt-6 [&_h3]:text-[15px] [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:mt-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1 [&_li::marker]:text-[var(--c-text-mute)] [&_strong]:font-bold [&_strong]:text-[var(--c-text)] [&_a]:text-orange-500 [&_a]:underline [&_a:hover]:text-orange-400 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--c-border-2)] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-[var(--c-text-dim)] [&_code]:font-mono [&_code]:text-[13px] [&_code]:bg-[var(--c-surface-3)] [&_code]:text-orange-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_pre]:bg-[#0d0d12] [&_pre]:p-4 [&_pre]:rounded-xl [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre]:border [&_pre]:border-[var(--c-border)] [&_pre_code]:bg-transparent [&_pre_code]:px-0 [&_pre_code]:py-0 [&_pre_code]:text-[var(--c-text-dim)] [&_table]:w-full [&_table]:mb-4 [&_table]:border-collapse [&_th]:text-left [&_th]:border-b [&_th]:border-[var(--c-border-2)] [&_th]:p-2 [&_th]:text-[var(--c-text)] [&_td]:border-b [&_td]:border-[var(--c-border-2)] [&_td]:p-2 [&_td]:text-[var(--c-text-dim)] [&_hr]:border-none [&_hr]:border-t [&_hr]:border-[var(--c-border-2)] [&_hr]:my-6">
+                    <div className="text-[14px] sm:text-[15px] leading-relaxed [&_p]:mb-4 [&_p:last-child]:mb-0 [&_h1]:text-[18px] sm:[&_h1]:text-[20px] [&_h1]:font-extrabold [&_h1]:mb-4 [&_h2]:text-[16px] sm:[&_h2]:text-[17px] [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:mt-6 [&_h3]:text-[14px] sm:[&_h3]:text-[15px] [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:mt-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1 [&_li::marker]:text-[var(--c-text-mute)] [&_strong]:font-bold [&_strong]:text-[var(--c-text)] [&_a]:text-orange-500 [&_a]:underline [&_a:hover]:text-orange-400 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--c-border-2)] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-[var(--c-text-dim)] [&_code]:font-mono [&_code]:text-[13px] [&_code]:bg-[var(--c-surface-3)] [&_code]:text-orange-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_pre]:bg-[#0d0d12] [&_pre]:p-4 [&_pre]:rounded-xl [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre]:border [&_pre]:border-[var(--c-border)] [&_pre_code]:bg-transparent [&_pre_code]:px-0 [&_pre_code]:py-0 [&_pre_code]:text-[var(--c-text-dim)] [&_table]:w-full [&_table]:mb-4 [&_table]:border-collapse [&_th]:text-left [&_th]:border-b [&_th]:border-[var(--c-border-2)] [&_th]:p-2 [&_th]:text-[var(--c-text)] [&_td]:border-b [&_td]:border-[var(--c-border-2)] [&_td]:p-2 [&_td]:text-[var(--c-text-dim)] [&_hr]:border-none [&_hr]:border-t [&_hr]:border-[var(--c-border-2)] [&_hr]:my-6">
                       {msg.role === 'assistant' ? (
                         msg.content ? (
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -267,12 +265,11 @@ export function CoachChat() {
       </div>
 
       {/* Input bar */}
-      <div className="border-t border-[var(--c-border)] bg-[var(--c-surface)] shrink-0 w-full" style={{ paddingTop: '16px', paddingBottom: '16px', paddingLeft: '24px', paddingRight: '24px' }}>
-        <form className="flex items-end gap-3 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-[18px] transition-colors duration-200 focus-within:border-orange-500/50 focus-within:ring-2 focus-within:ring-orange-500/10 shadow-sm" style={{ padding: '8px 12px' }} onSubmit={handleSubmit}>
+      <div className="border-t border-[var(--c-border)] bg-[var(--c-surface)] shrink-0 w-full px-4 py-3 md:px-6 md:py-4">
+        <form className="flex items-end gap-3 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-[18px] transition-colors duration-200 focus-within:border-orange-500/50 focus-within:ring-2 focus-within:ring-orange-500/10 shadow-sm p-1.5 px-3 md:p-2 md:px-3" onSubmit={handleSubmit}>
           <textarea
             ref={inputRef}
-            className="flex-1 bg-transparent border-none outline-none text-[var(--c-text)] text-[15px] font-inherit resize-none min-h-[36px] max-h-[160px] leading-relaxed placeholder:text-[var(--c-text-mute)]"
-            style={{ padding: '8px' }}
+            className="flex-1 bg-transparent border-none outline-none text-[var(--c-text)] text-[15px] font-inherit resize-none min-h-[36px] max-h-[160px] leading-relaxed placeholder:text-[var(--c-text-mute)] py-1.5 md:py-2 px-1 md:px-2"
             value={input}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}

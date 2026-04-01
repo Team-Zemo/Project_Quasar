@@ -49,8 +49,7 @@ export function RegisterPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        className="w-full max-w-[440px] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-lg flex flex-col"
-        style={{ padding: '40px' }}
+        className="w-full max-w-[440px] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-lg flex flex-col p-6 sm:p-10"
       >
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-[48px] h-[48px] flex items-center justify-center rounded-[14px] bg-[var(--c-accent-dim)] border border-[var(--c-accent-glow)] text-[var(--c-accent)] font-black text-[15px] mb-5 tracking-tight shadow-sm">

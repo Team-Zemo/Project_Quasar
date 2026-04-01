@@ -65,8 +65,7 @@ export function JDParser({ onParsed, onSkip }: JDParserProps) {
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="flex flex-col gap-6 w-full max-w-[800px] mx-auto bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm"
-        style={{ padding: '32px' }}
+        className="flex flex-col gap-6 w-full max-w-[800px] mx-auto bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm p-5 md:p-8"
       >
         <div className="flex items-center gap-3 border-b border-[var(--c-border)] pb-4">
           <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500">
@@ -148,7 +147,7 @@ export function JDParser({ onParsed, onSkip }: JDParserProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mt-2 pt-4 border-t border-[var(--c-border)]">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-2 pt-4 border-t border-[var(--c-border)]">
           <button className="flex items-center justify-center gap-2 flex-1 py-3 px-4 bg-[var(--c-accent)] hover:bg-[var(--c-accent-hover)] text-white font-bold text-[14px] rounded-xl transition-all active:scale-[0.98] shadow-[0_4px_12px_rgba(249,115,22,0.3)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]" onClick={handleConfirm}>
             <Check size={18} strokeWidth={2.5} />
             Use These Questions
@@ -162,7 +161,7 @@ export function JDParser({ onParsed, onSkip }: JDParserProps) {
   }
 
   return (
-    <div className="flex flex-col w-full max-w-[800px] mx-auto bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm" style={{ padding: '32px' }}>
+    <div className="flex flex-col w-full max-w-[800px] mx-auto bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-sm p-5 md:p-8">
       <div className="flex flex-col mb-6">
         <h3 className="text-[24px] font-black text-[var(--c-text)] m-0 tracking-tight flex items-center gap-2">
           <FileText size={24} className="text-[var(--c-accent)]" strokeWidth={2.5} />
@@ -266,7 +265,7 @@ export function JDParser({ onParsed, onSkip }: JDParserProps) {
         )}
       </AnimatePresence>
 
-      <div className="flex items-center gap-3 mt-6 pt-6 border-t border-[var(--c-border)]">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-6 pt-6 border-t border-[var(--c-border)]">
         <button
           className={`flex items-center justify-center gap-2 flex-1 py-3 px-4 rounded-xl font-bold text-[14px] transition-all relative overflow-hidden ${
             (loading || (mode === 'text' ? jdText.trim().length < 50 : !pdfFile))

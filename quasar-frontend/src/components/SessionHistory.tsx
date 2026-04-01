@@ -47,8 +47,7 @@ export function SessionHistory() {
       <div className="flex flex-col gap-5 w-full">
         <h3 className="text-[18px] font-extrabold text-[var(--c-text)] m-0">Session History</h3>
         <div 
-          className="flex flex-col items-center justify-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] shadow-sm w-full"
-          style={{ padding: '64px' }}
+          className="flex flex-col items-center justify-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] shadow-sm w-full p-8 sm:p-16"
         >
           <Loader2 className="animate-spin text-[var(--c-accent)] mb-3" size={32} />
           <p className="text-[14px] font-medium text-[var(--c-text-dim)]">Loading history...</p>
@@ -62,8 +61,7 @@ export function SessionHistory() {
       <div className="flex flex-col gap-5 w-full">
         <h3 className="text-[18px] font-extrabold text-[var(--c-text)] m-0">Session History</h3>
         <div 
-          className="flex flex-col items-center justify-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] shadow-sm w-full"
-          style={{ padding: '64px' }}
+          className="flex flex-col items-center justify-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] shadow-sm w-full p-8 sm:p-16"
         >
           <p className="text-[14px] font-medium text-[var(--c-text-dim)] text-center">No sessions yet.<br />Start an interview to see your history here.</p>
         </div>

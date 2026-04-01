@@ -68,7 +68,7 @@ export function DomainSelector({ onStart, status, error }: DomainSelectorProps) 
   const stepIndex = step === 'domain' ? 0 : step === 'persona' ? 1 : 2;
 
   return (
-    <div className="flex flex-col items-center w-full max-w-[900px] mx-auto pt-8 pb-16">
+    <div className="flex flex-col items-center w-full max-w-[900px] mx-auto pt-8 pb-16 px-4 md:px-8 overflow-y-auto overflow-x-hidden">
       {/* Step indicator */}
       <div className="flex items-center gap-3 w-full max-w-[600px] mx-auto mb-12">
         {steps.map((label, i) => {
@@ -131,7 +131,7 @@ export function DomainSelector({ onStart, status, error }: DomainSelectorProps) 
                     onChange={(e) => setDomain(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="e.g. Senior Frontend Engineer, Product Manager..."
-                    className="w-full h-[64px] pl-14 pr-6 bg-[var(--c-surface-2)] border-2 border-[var(--c-border)] rounded-l-2xl text-[16px] font-medium text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus:outline-none focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] transition-all flex-1"
+                    className="w-full h-[56px] sm:h-[64px] pl-14 pr-6 bg-[var(--c-surface-2)] border-2 border-[var(--c-border)] rounded-l-2xl text-[15px] sm:text-[16px] font-medium text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus:outline-none focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] transition-all flex-1"
                     disabled={isConnecting}
                     autoFocus
                   />
@@ -139,7 +139,7 @@ export function DomainSelector({ onStart, status, error }: DomainSelectorProps) 
                     id="next-step-btn"
                     onClick={handleDomainNext}
                     disabled={isConnecting || !domain.trim()}
-                    className={`flex items-center justify-center gap-2 h-[64px] px-8 font-bold text-[16px] rounded-r-2xl transition-all cursor-pointer border-y-2 border-r-2 ${
+                    className={`flex items-center justify-center gap-2 h-[56px] sm:h-[64px] px-4 sm:px-8 font-bold text-[14px] sm:text-[16px] rounded-r-2xl transition-all cursor-pointer border-y-2 border-r-2 ${
                       isConnecting || !domain.trim() 
                         ? 'bg-[var(--c-surface-3)] text-[var(--c-text-mute)] border-[var(--c-border)] cursor-not-allowed' 
                         : 'bg-[var(--c-accent)] hover:bg-[var(--c-accent-hover)] text-white border-[var(--c-accent)] shadow-[0_4px_16px_rgba(249,115,22,0.3)] shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] active:scale-[0.98]'
