@@ -12,14 +12,14 @@ const groq = new Groq({ apiKey: config.groqApiKey });
  * @param {string} systemPrompt  – system message (role instructions)
  * @param {string} userPrompt    – user message (data / request)
  * @param {object} [opts]
- * @param {string} [opts.model]  – Groq model id (default: llama-3.3-70b-versatile)
+ * @param {string} [opts.model]  – Groq model id
  * @param {number} [opts.temperature] – sampling temperature (default: 0.3)
  * @param {number} [opts.maxTokens]   – max tokens (default: 4096)
  * @returns {Promise<string>}
  */
 async function chatCompletion(systemPrompt, userPrompt, opts = {}) {
   const {
-    model = 'llama-3.3-70b-versatile',
+    model = 'openai/gpt-oss-120b',
     temperature = 0.3,
     maxTokens = 4096,
   } = opts;

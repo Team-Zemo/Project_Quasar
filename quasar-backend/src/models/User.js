@@ -10,11 +10,32 @@ const userSchema = new mongoose.Schema({
   },
   passwordHash: { type: String, default: null },
   name: { type: String, required: true, trim: true },
-  googleId: { type: String, unique: true, sparse: true, default: null },
-  githubId: { type: String, unique: true, sparse: true, default: null },
+  googleId: { type: String, unique: true, sparse: true },
+  githubId: { type: String, unique: true, sparse: true },
   avatarUrl: { type: String, default: null },
   passwordResetToken: { type: String, default: null },
   passwordResetExpires: { type: Date, default: null },
+
+  // ── Role-based fields ───────────────────────────────────────────
+  role: {
+    type: String,
+    enum: ['candidate', 'recruiter'],
+    default: null,
+  },
+  profileComplete: { type: Boolean, default: false },
+  phone: { type: String, default: null, trim: true },
+  headline: { type: String, default: null, trim: true },
+  location: { type: String, default: null, trim: true },
+
+  // ── Candidate-specific fields ───────────────────────────────────
+  resumeUrl: { type: String, default: null },
+  resumeText: { type: String, default: null },
+  resumeParsed: { type: mongoose.Schema.Types.Mixed, default: null },
+  skills: { type: [String], default: [] },
+  experience: { type: Number, default: null },
+
+  // ── Recruiter-specific fields ───────────────────────────────────
+  company: { type: String, default: null, trim: true },
 }, {
   timestamps: true,
 });

@@ -7,6 +7,14 @@ export interface User {
   avatarUrl?: string | null;
   hasPassword?: boolean;
   linkedProviders?: string[];
+  role?: 'candidate' | 'recruiter' | null;
+  profileComplete?: boolean;
+  phone?: string | null;
+  headline?: string | null;
+  location?: string | null;
+  company?: string | null;
+  skills?: string[];
+  experience?: number | null;
 }
 
 type AuthListener = (user: User | null) => void;

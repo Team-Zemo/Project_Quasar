@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mic, TrendingUp, FileText, BarChart2, MessageSquare, Settings, LogOut, BookOpenCheck, Menu, X } from 'lucide-react';
+import { Mic, TrendingUp, FileText, BarChart2, MessageSquare, Settings, LogOut, BookOpenCheck, Menu, X, Briefcase, FolderOpen } from 'lucide-react';
 import { DomainSelector } from './components/DomainSelector';
 import { InterviewRoom } from './components/InterviewRoom';
 import { LoginPage } from './components/LoginPage';
@@ -16,6 +16,15 @@ import { StatsPage } from './components/StatsPage';
 import { CoachChat } from './components/CoachChat';
 import { StudyPlanPage } from './components/StudyPlanPage';
 import { LandingPage } from './landing/LandingPage';
+import { RoleSelectionPage } from './components/RoleSelectionPage';
+import { CandidateOnboarding } from './components/CandidateOnboarding';
+import { RecruiterOnboarding } from './components/RecruiterOnboarding';
+import { RecruiterShell } from './components/RecruiterShell';
+import { JobBrowser } from './components/candidate/JobBrowser';
+import { JobDetail } from './components/candidate/JobDetail';
+import { MyApplications } from './components/candidate/MyApplications';
+import { McqTestPage } from './components/candidate/McqTestPage';
+import { PipelineInterviewPage } from './components/candidate/PipelineInterviewPage';
 import { useInterviewSession } from './hooks/useInterviewSession';
 import { useAuth } from './hooks/useAuth';
 import { logout } from './lib/auth';
@@ -61,6 +70,77 @@ function InterviewPage() {
   );
 }
 
+function JobBrowserPage() {
+  const [viewingJobId, setViewingJobId] = useState<string | null>(null);
+
+  if (viewingJobId) {
+    return <JobDetail jobId={viewingJobId} onBack={() => setViewingJobId(null)} />;
+  }
+
+  return <JobBrowser onViewJob={(id) => setViewingJobId(id)} />;
+}
+
+/**
+ * ApplicationsPage — manages the full pipeline journey:
+ * List → Pipeline Tracker → MCQ Test or Live Interview (Tech/HR)
+ */
+function ApplicationsPage() {
+  const navigate = useNavigate();
+  const [view, setView] = useState<
+    | { type: 'list' }
+    | { type: 'mcq'; appId: string }
+    | { type: 'interview'; appId: string; mode: 'tech' | 'hr'; round: number; domain: string; duration: number; jdContext: string; jobTitle: string; company: string; alreadyStarted?: boolean }
+  >({ type: 'list' });
+  const [activeAppId, setActiveAppId] = useState<string | null>(null);
+
+  if (view.type === 'mcq') {
+    return <McqTestPage appId={view.appId} onComplete={() => { setActiveAppId(view.appId); setView({ type: 'list' }); }} onBack={() => setView({ type: 'list' })} />;
+  }
+
+  if (view.type === 'interview') {
+    return (
+      <div className="fixed inset-0 z-50 bg-[var(--c-bg)] flex flex-col overflow-hidden" style={{ top: '64px' }}>
+        <PipelineInterviewPage
+          appId={view.appId}
+          mode={view.mode}
+          roundNumber={view.round}
+          domain={view.domain}
+          durationMinutes={view.duration}
+          jdContext={view.jdContext}
+          jobTitle={view.jobTitle}
+          company={view.company}
+          alreadyStarted={view.alreadyStarted}
+          onBack={() => { setActiveAppId(view.appId); setView({ type: 'list' }); }}
+          onComplete={() => { setActiveAppId(view.appId); setView({ type: 'list' }); }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <MyApplications
+      activeAppId={activeAppId}
+      onClearActiveApp={() => setActiveAppId(null)}
+      onStartMcq={(appId) => setView({ type: 'mcq', appId })}
+      onStartTechInterview={(appId, round, config, jdContext, alreadyStarted) => {
+        setView({
+          type: 'interview', appId, mode: 'tech', round,
+          domain: config?.domain || 'Technical', duration: config?.durationMinutes || 30,
+          jdContext, jobTitle: config?.title || 'Technical Interview', company: '',
+          alreadyStarted,
+        });
+      }}
+      onStartHrInterview={(appId, jdContext, alreadyStarted) => {
+        setView({
+          type: 'interview', appId, mode: 'hr', round: 1,
+          domain: 'HR', duration: 30, jdContext, jobTitle: 'HR Interview', company: '',
+          alreadyStarted,
+        });
+      }}
+    />
+  );
+}
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
 
@@ -87,7 +167,7 @@ function AppShell() {
   const location = useLocation();
   const isInterview = location.pathname === '/interview';
   const isCoach = location.pathname === '/coach';
-  const isFullScreenApp = isInterview;
+  const isFullScreenApp = isInterview || location.pathname.startsWith('/pipeline-interview');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes
@@ -164,6 +244,18 @@ function AppShell() {
                 <BookOpenCheck size={16} strokeWidth={2.5} />
                 Study Plan
               </Link>
+              {user?.role === 'candidate' && (
+                <>
+                  <Link to="/jobs" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                    <Briefcase size={16} strokeWidth={2.5} />
+                    Jobs
+                  </Link>
+                  <Link to="/my-applications" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                    <FolderOpen size={16} strokeWidth={2.5} />
+                    Applications
+                  </Link>
+                </>
+              )}
               <Link to="/settings" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors" title="Settings">
                 <Settings size={16} strokeWidth={2.5} />
               </Link>
@@ -252,6 +344,9 @@ function AppShell() {
           <Route path="/coach" element={<ProtectedRoute><CoachChat /></ProtectedRoute>} />
           <Route path="/study-plan" element={<ProtectedRoute><StudyPlanPage /></ProtectedRoute>} />
           <Route path="/interview" element={<ProtectedRoute><InterviewPage /></ProtectedRoute>} />
+          {/* Candidate job routes */}
+          <Route path="/jobs" element={<ProtectedRoute><JobBrowserPage /></ProtectedRoute>} />
+          <Route path="/my-applications" element={<ProtectedRoute><ApplicationsPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
@@ -271,12 +366,13 @@ function AppShell() {
 
 export default function App() {
   const location = useLocation();
+  const { user, isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
     const lenis = new Lenis({
       autoRaf: true,
-      lerp: 0.05, // Slower, smoother lerping
-      wheelMultiplier: 1, // Standard scroll speed multiplier
+      lerp: 0.05,
+      wheelMultiplier: 1,
     });
 
     return () => {
@@ -289,6 +385,41 @@ export default function App() {
     return <LandingPage />;
   }
 
-  // All other routes use the app shell with topnav
+  // Public auth routes — no onboarding gate needed
+  const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+  if (publicPaths.includes(location.pathname)) {
+    return <AppShell />;
+  }
+
+  // Everything below requires auth — show spinner while loading
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-[var(--c-bg)]">
+        <div className="bg-blob bg-blob--1" aria-hidden="true" />
+        <div className="bg-blob bg-blob--2" aria-hidden="true" />
+        <div className="spinner !w-8 !h-8 !border-[var(--c-accent)] !border-t-transparent !border-[3px]" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // ── Onboarding gates (render standalone, NO navbar) ──────────
+  if (!user?.role) {
+    return <RoleSelectionPage />;
+  }
+
+  if (!user?.profileComplete) {
+    return user.role === 'candidate' ? <CandidateOnboarding /> : <RecruiterOnboarding />;
+  }
+
+  // ── Recruiter shell (separate layout) ────────────────────────
+  if (user.role === 'recruiter') {
+    return <RecruiterShell />;
+  }
+
+  // ── Candidate: standard app shell with topnav ────────────────
   return <AppShell />;
 }

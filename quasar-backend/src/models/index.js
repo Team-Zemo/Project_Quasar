@@ -7,6 +7,9 @@ const JdSession = require('./JdSession');
 const JdQuestion = require('./JdQuestion');
 const SkillVector = require('./SkillVector');
 const UserStats = require('./UserStats');
+const JobPosting = require('./JobPosting');
+const McqQuestion = require('./McqQuestion');
+const Application = require('./Application');
 const logger = require('../utils/logger');
 
 /**
@@ -76,5 +79,8 @@ module.exports = {
   JdQuestion,
   SkillVector,
   UserStats,
+  JobPosting,
+  McqQuestion,
+  Application,
   seedPersonas,
 };

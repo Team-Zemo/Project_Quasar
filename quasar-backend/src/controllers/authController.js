@@ -8,6 +8,33 @@ const SkillVector = require('../models/SkillVector');
 const { sendPasswordReset } = require('../services/emailService');
 const logger = require('../utils/logger');
 
+/**
+ * Build a consistent user payload for auth responses.
+ * Every auth endpoint (register, login, refresh) should return the same shape.
+ */
+function buildUserPayload(user) {
+  const linkedProviders = [];
+  if (user.googleId) linkedProviders.push('google');
+  if (user.githubId) linkedProviders.push('github');
+
+  return {
+    id: user._id,
+    email: user.email,
+    name: user.name,
+    avatarUrl: user.avatarUrl || null,
+    hasPassword: !!user.passwordHash,
+    linkedProviders,
+    role: user.role || null,
+    profileComplete: user.profileComplete || false,
+    phone: user.phone || null,
+    headline: user.headline || null,
+    location: user.location || null,
+    company: user.company || null,
+    skills: user.skills || [],
+    experience: user.experience || null,
+  };
+}
+
 const BCRYPT_ROUNDS = 12;
 
 // ── Token helpers ───────────────────────────────────────────────────
@@ -116,7 +143,7 @@ async function register(req, res) {
     return res.status(201).json({
       success: true,
       message: 'Registration successful',
-      data: { id: user._id, email: user.email, name: user.name },
+      data: buildUserPayload(user),
     });
   } catch (err) {
     logger.error('Registration error', { err: err.message });
@@ -157,7 +184,7 @@ async function login(req, res) {
     return res.json({
       success: true,
       message: 'Login successful',
-      data: { id: user._id, email: user.email, name: user.name },
+      data: buildUserPayload(user),
     });
   } catch (err) {
     logger.error('Login error', { err: err.message });
@@ -191,7 +218,7 @@ async function refresh(req, res) {
 
     await revokeRefreshToken(oldHash);
 
-    const user = await User.findById(decoded.sub).select('email name');
+    const user = await User.findById(decoded.sub);
     if (!user) {
       clearAuthCookies(res);
       return res.status(401).json({ success: false, message: 'User not found', data: null });
@@ -202,7 +229,7 @@ async function refresh(req, res) {
     return res.json({
       success: true,
       message: 'Token refreshed',
-      data: { id: user._id, email: user.email, name: user.name },
+      data: buildUserPayload(user),
     });
   } catch (err) {
     logger.error('Token refresh error', { err: err.message });
@@ -229,7 +256,7 @@ async function me(req, res) {
   try {
     // Fetch full user record to return provider info and password status
     const user = await User.findById(req.user?.id || req.user?._id)
-      .select('email name avatarUrl googleId githubId passwordHash');
+      .select('email name avatarUrl googleId githubId passwordHash role profileComplete phone headline location company skills experience');
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found', data: null });
@@ -249,6 +276,14 @@ async function me(req, res) {
         avatarUrl: user.avatarUrl || null,
         hasPassword: !!user.passwordHash,
         linkedProviders,
+        role: user.role || null,
+        profileComplete: user.profileComplete || false,
+        phone: user.phone || null,
+        headline: user.headline || null,
+        location: user.location || null,
+        company: user.company || null,
+        skills: user.skills || [],
+        experience: user.experience || null,
       },
     });
   } catch (err) {
