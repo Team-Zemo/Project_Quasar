@@ -49,14 +49,13 @@ public class SecurityConfig {
                 .requestMatchers("/auth/register", "/auth/login",
                                  "/auth/refresh", "/auth/logout").permitAll()
                 .requestMatchers("/auth/forgot-password", "/auth/reset-password").permitAll()
-                .requestMatchers("/auth/google", "/auth/google/callback").permitAll()
-                .requestMatchers("/auth/github", "/auth/github/callback").permitAll()
+                .requestMatchers("/auth/oauth2/**", "/auth/google/callback", "/auth/github/callback").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/personas", "/api/personas/**").permitAll()
                 // Everything else requires authentication
                 .anyRequest().authenticated()
             )
             .oauth2Login(oauth2 -> oauth2
-                .authorizationEndpoint(ae -> ae.baseUri("/auth"))
+                .authorizationEndpoint(ae -> ae.baseUri("/auth/oauth2"))
                 .redirectionEndpoint(re -> re.baseUri("/auth/*/callback"))
                 .userInfoEndpoint(ui -> ui.userService(oAuth2UserService))
                 .successHandler(oAuth2SuccessHandler)

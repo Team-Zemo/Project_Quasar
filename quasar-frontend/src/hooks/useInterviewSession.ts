@@ -1,11 +1,59 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import type { Session } from '@google/genai';
 import type { Message, SessionStatus, SessionConfig, CodingQuestion } from '../types/interview';
 import { useAudioProcessor } from './useAudioProcessor';
 
-const GEMINI_MODEL = 'gemini-2.0-flash-live-001';
+const GEMINI_MODEL = 'gemini-3.1-flash-live-preview';
 const AUDIO_MIME   = 'audio/pcm;rate=16000';
+
+const INTERVIEW_TOOLS = {
+  functionDeclarations: [
+    {
+      name: 'end_interview',
+      description:
+        'Call this function when the interview is complete. ' +
+        'Use it after delivering your closing remarks and thanking the candidate. ' +
+        'This will gracefully end the session on the client side.',
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          closing_remark: {
+            type: Type.STRING,
+            description: 'A short, warm closing message to the candidate summarising the session.',
+          },
+        },
+        required: ['closing_remark'],
+      },
+    },
+    {
+      name: 'present_coding_question',
+      description:
+        'Call this function when you want to present a coding challenge to the candidate. ' +
+        "Say the question out loud first, then immediately call this function. " +
+        'The system will pause audio capture and show the candidate a code editor. ' +
+        "You must wait silently -- do NOT speak again until you receive the candidate's code submission.",
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          question_title: {
+            type: Type.STRING,
+            description: 'Short title of the coding question, e.g. "Reverse a Linked List".',
+          },
+          question_description: {
+            type: Type.STRING,
+            description: 'Full problem statement including constraints and examples.',
+          },
+          preferred_language: {
+            type: Type.STRING,
+            description: 'Preferred programming language, e.g. "Python", "JavaScript", "Any".',
+          },
+        },
+        required: ['question_title', 'question_description', 'preferred_language'],
+      },
+    },
+  ],
+};
 
 /**
  * Central hook that manages the entire interview session.
@@ -14,9 +62,6 @@ const AUDIO_MIME   = 'audio/pcm;rate=16000';
  *   1. POST /api/sessions          → create session in DB
  *   2. POST /api/session/token     → fetch ephemeral token + systemPrompt from Spring Boot
  *   3. GoogleGenAI({ apiKey: token }) + ai.live.connect() → direct Gemini Live API
- *
- * No WebSocket proxy is needed — the frontend talks directly to Gemini
- * using the short-lived ephemeral token issued by the backend.
  */
 export function useInterviewSession() {
   const [status, setStatus]     = useState<SessionStatus>('idle');
@@ -29,6 +74,9 @@ export function useInterviewSession() {
   const geminiSessionRef = useRef<Session | null>(null);
   // A status ref avoids stale closure in Gemini callbacks
   const statusRef = useRef<SessionStatus>('idle');
+  
+  // Track pending coding call so we can resolve the sync function call
+  const pendingCodingCallRef = useRef<{ id: string; name: string } | null>(null);
 
   const { startRecording, stopRecording, playChunk, clearQueue, destroy } = useAudioProcessor();
 
@@ -53,8 +101,8 @@ export function useInterviewSession() {
     if (!text.trim()) return;
     setMessages((prev) => {
       const last = prev[prev.length - 1];
-      // Merge streaming chunks from same role within 3 seconds
-      if (last?.role === role && Date.now() - last.timestamp < 3000) {
+      // Merge streaming chunks from same role continuously
+      if (last?.role === role) {
         return [...prev.slice(0, -1), { ...last, text: last.text + text }];
       }
       return [...prev, { id: `${Date.now()}-${Math.random()}`, role, text, timestamp: Date.now() }];
@@ -73,6 +121,7 @@ export function useInterviewSession() {
 
     setError(null);
     setMessages([]);
+    pendingCodingCallRef.current = null;
     updateStatus('connecting');
 
     try {
@@ -116,11 +165,18 @@ export function useInterviewSession() {
 
       // ── Step 3: Build system instruction ───────────────────────────
       const defaultSystemPrompt =
-        `You are a professional senior technical interviewer conducting a rigorous yet fair ${config.domain} interview. ` +
-        `Open by introducing yourself briefly, then ask the first question. Follow up deeply on every answer — probe for depth, tradeoffs, and concrete examples. ` +
-        `Stay in character at all times. Do not provide answers or hints. ` +
-        `Vary question difficulty based on answer quality. ` +
-        `After 8–12 exchanges, conclude the interview gracefully and thank the candidate.`;
+        `You are a senior, highly experienced technical interviewer at a top-tier tech company conducting a rigorous ${config.domain} interview. ` +
+        `Your style is professional, warm, and highly focused. You conduct real-world, realistic interviews. NEVER break character. You are the interviewer, NOT an AI assistant.\n\n` +
+        `CRITICAL INSTRUCTIONS FOR INTERVIEW FLOW:\n` +
+        `1. PHASE 1: Introduction. Briefly introduce yourself and ask the candidate to briefly introduce their background.\n` +
+        `2. PHASE 2: Deep Dive. Ask targeted, escalating questions. Probe deeply into tradeoff decisions, architecture, and constraints. Do NOT accept superficial answers. Ask follow-up questions to test their limits.\n` +
+        `3. PHASE 3: Coding Challenge. Mid-way through, you MUST use the present_coding_question tool to test algorithmic thinking.\n` +
+        `4. PHASE 4: Conclusion. Wrap up gracefully, thank them, and IMMEDIATELY call the end_interview tool.\n\n` +
+        `STRICT RULES:\n` +
+        `- Keep your conversational turns CONCISE. Ask exactly ONE question at a time. Do not overwhelm the candidate with multiple questions at once.\n` +
+        `- DO NOT provide answers, hints, or complete code for them. Let them struggle if necessary.\n` +
+        `- If the candidate is vague, actively interrupt their line of reasoning and ask for a concrete real-world example.\n` +
+        `- Use "Any" for preferred_language in coding tools if not specified.`;
 
       const finalSystemInstruction =
         (serverSystemPrompt && serverSystemPrompt.trim().length > 0)
@@ -128,17 +184,21 @@ export function useInterviewSession() {
           : (config.customSystemPrompt || defaultSystemPrompt);
 
       // ── Step 4: Connect directly to Gemini Live API ─────────────────
-      const ai = new GoogleGenAI({ apiKey: ephemeralToken });
+      const ai = new GoogleGenAI({ 
+        apiKey: ephemeralToken,
+        httpOptions: { apiVersion: 'v1alpha' }
+      });
 
       const session = await ai.live.connect({
         model: GEMINI_MODEL,
         config: {
-          responseModalities: ['AUDIO'],
+          responseModalities: ['AUDIO'] as any,
           systemInstruction: {
             parts: [{ text: finalSystemInstruction }],
           },
           outputAudioTranscription: {},
           inputAudioTranscription:  {},
+          tools: [INTERVIEW_TOOLS as any],
           speechConfig: {
             voiceConfig: {
               prebuiltVoiceConfig: { voiceName: 'Charon' },
@@ -165,6 +225,54 @@ export function useInterviewSession() {
           },
 
           onmessage: (response) => {
+            // Check for tool calls first!
+            if (response.toolCall) {
+              const functionResponses: any[] = [];
+              for (const fc of response.toolCall.functionCalls ?? []) {
+                console.log('[Gemini Live] Tool call:', fc.name, fc.args);
+                
+                if (fc.name === 'end_interview') {
+                  functionResponses.push({
+                    id: fc.id,
+                    name: fc.name,
+                    response: { result: 'interview_ended' },
+                  });
+                  // Trigger end session flow
+                  stopRecording();
+                  setIsRecording(false);
+                  updateStatus('ended');
+                  
+                } else if (fc.name === 'present_coding_question') {
+                  const args = fc.args as any;
+                  // Store pending call so we can resolve when code is submitted
+                  pendingCodingCallRef.current = { id: fc.id || '', name: fc.name || '' };
+                  
+                  stopRecording(); // Pause mic while typing
+                  setIsRecording(false);
+                  
+                  setActiveCodingQuestion({
+                    title: args.question_title || 'Coding Challenge',
+                    description: args.question_description || '',
+                    preferredLanguage: args.preferred_language || 'Any',
+                  });
+                  // Do NOT add to functionResponses yet -- we will respond when they submit
+                } else {
+                  functionResponses.push({
+                    id: fc.id,
+                    name: fc.name,
+                    response: { result: 'unknown_tool' },
+                  });
+                }
+              }
+              
+              if (functionResponses.length > 0) {
+                try {
+                   // Cast to any since standard typescript definitions for sendToolResponse might vary
+                   (session as any).sendToolResponse({ functionResponses });
+                } catch (e) { console.error('Failed to send tool response', e); }
+              }
+            }
+
             const content = response.serverContent;
             if (!content) return;
 
@@ -188,11 +296,6 @@ export function useInterviewSession() {
             // ── Interruption → clear audio queue ─────────────────────
             if (content.interrupted) {
               clearQueue();
-            }
-
-            // ── Generation complete ───────────────────────────────────
-            if (content.generationComplete) {
-              // no-op: voice continues, nothing to do
             }
           },
 
@@ -227,7 +330,7 @@ export function useInterviewSession() {
   }, [updateStatus, startRecording, stopRecording, playChunk, clearQueue, addMessage]);
 
   // ──────────────────────────────────────────────────────────────────
-  // End interview
+  // End interview manually
   // ──────────────────────────────────────────────────────────────────
 
   const endInterview = useCallback(() => {
@@ -256,6 +359,7 @@ export function useInterviewSession() {
   const resetSession = useCallback(() => {
     try { geminiSessionRef.current?.close(); } catch { /* ignore */ }
     geminiSessionRef.current = null;
+    pendingCodingCallRef.current = null;
     destroy();
     updateStatus('idle');
     setMessages([]);
@@ -266,16 +370,31 @@ export function useInterviewSession() {
   }, [destroy, updateStatus]);
 
   // ──────────────────────────────────────────────────────────────────
-  // Code submission (sends code as text to Gemini for evaluation)
+  // Code submission (Resolves the pending tool call)
   // ──────────────────────────────────────────────────────────────────
 
   const submitCode = useCallback((code: string, language: string) => {
-    const codeMessage =
-      `[CODE SUBMISSION – ${language}]\n\`\`\`${language}\n${code}\n\`\`\`\nPlease evaluate this solution.`;
-
-    try {
-      geminiSessionRef.current?.sendRealtimeInput({ text: codeMessage });
-    } catch { /* session may be closed */ }
+    if (pendingCodingCallRef.current) {
+        // Resolve the outstanding tool call!
+        try {
+            (geminiSessionRef.current as any)?.sendToolResponse({
+                functionResponses: [{
+                    id: pendingCodingCallRef.current.id,
+                    name: pendingCodingCallRef.current.name,
+                    response: { result: 'code_submitted', language, code }
+                }]
+            });
+        } catch (e) {
+            console.error('Failed to send code tool response', e);
+        }
+        pendingCodingCallRef.current = null;
+    } else {
+        // Fallback if no pending tool call -- just inject as text
+        const codeMessage = `[CODE SUBMISSION – ${language}]\n\`\`\`${language}\n${code}\n\`\`\`\nPlease evaluate this solution.`;
+        try {
+            geminiSessionRef.current?.sendRealtimeInput({ text: codeMessage });
+        } catch { /* ignore */ }
+    }
 
     setActiveCodingQuestion(null);
     setIsRecording(true);

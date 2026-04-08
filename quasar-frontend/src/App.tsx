@@ -54,7 +54,6 @@ function InterviewPage() {
           onEnd={endInterview}
           onNewInterview={handleNewInterview}
           onSubmitCode={submitCode}
-          getTranscript={getTranscript}
         />
       )}
     </>

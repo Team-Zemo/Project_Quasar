@@ -22,7 +22,6 @@ interface InterviewRoomProps {
   onEnd: () => void;
   onNewInterview: () => void;
   onSubmitCode: (code: string, language: string) => void;
-  getTranscript: () => string;
 }
 
 export function InterviewRoom({
@@ -35,7 +34,6 @@ export function InterviewRoom({
   onEnd,
   onNewInterview,
   onSubmitCode,
-  getTranscript,
 }: InterviewRoomProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const isEnded = status === 'ended' || status === 'error';
@@ -88,11 +86,14 @@ export function InterviewRoom({
         );
       }
 
-      // Save speech metrics (include FULL conversation transcript, not just browser speech-recognition)
-      const transcript = getTranscript();
+      // Compute fresh transcript from the latest messages array closure
+      const freshTranscript = messages
+        .map(m => `[${m.role === 'user' ? 'You' : 'Interviewer'}]: ${m.text}`)
+        .join('\n');
+
       promises.push(
         apiPost(`/api/sessions/${sessionId}/speech-metrics`, {
-          transcript,
+          transcript: freshTranscript,
           fillerBuckets: fillerData?.fillerBuckets || [],
           totalFillers: fillerData?.totalFillers || 0,
           wordsPerMinute: 0,
@@ -103,10 +104,10 @@ export function InterviewRoom({
 
       // Also save the transcript directly to the session as a fallback,
       // so the evaluator always has access to it
-      if (transcript) {
+      if (freshTranscript) {
         promises.push(
           apiPost(`/api/sessions/${sessionId}/end`, {
-            transcript,
+            transcript: freshTranscript,
             durationSeconds: 0, // will be recalculated by evaluator
           })
             .then(() => logger('Session transcript persisted'))
@@ -120,7 +121,7 @@ export function InterviewRoom({
     };
 
     saveAllMetrics();
-  }, [isEnded, sessionId]);
+  }, [isEnded, sessionId, messages, fillerData?.fillerBuckets, fillerData?.totalFillers, emotionSnapshots]);
 
   const handleDownloadReport = async () => {
     if (!sessionId) return;
