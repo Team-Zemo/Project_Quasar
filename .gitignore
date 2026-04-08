@@ -40,3 +40,4 @@ coverage/
 tmp/
 .tmp/
 script.txt
+backend/src/main/resources/application.yaml

@@ -1,257 +1,301 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import type { Message, ServerMessage, BrowserMessage, SessionStatus, SessionConfig, CodingQuestion } from '../types/interview';
+import { GoogleGenAI } from '@google/genai';
+import type { Session } from '@google/genai';
+import type { Message, SessionStatus, SessionConfig, CodingQuestion } from '../types/interview';
 import { useAudioProcessor } from './useAudioProcessor';
 
-const WS_PROTOCOL = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-const WS_URL = `${WS_PROTOCOL}//${window.location.host}/ws/interview`;
+const GEMINI_MODEL = 'gemini-2.0-flash-live-001';
+const AUDIO_MIME   = 'audio/pcm;rate=16000';
 
 /**
- * Central hook that manages the entire interview session:
- * - WebSocket connection to backend
- * - Audio capture & playback via useAudioProcessor
- * - Message state (transcript log)
- * - Session status machine
+ * Central hook that manages the entire interview session.
+ *
+ * NEW ARCHITECTURE (Spring Boot backend + ephemeral tokens):
+ *   1. POST /api/sessions          → create session in DB
+ *   2. POST /api/session/token     → fetch ephemeral token + systemPrompt from Spring Boot
+ *   3. GoogleGenAI({ apiKey: token }) + ai.live.connect() → direct Gemini Live API
+ *
+ * No WebSocket proxy is needed — the frontend talks directly to Gemini
+ * using the short-lived ephemeral token issued by the backend.
  */
 export function useInterviewSession() {
-  const [status, setStatus] = useState<SessionStatus>('idle');
+  const [status, setStatus]     = useState<SessionStatus>('idle');
   const [messages, setMessages] = useState<Message[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]       = useState<string | null>(null);
   const [isRecording, setIsRecording] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionId, setSessionId]     = useState<string | null>(null);
   const [activeCodingQuestion, setActiveCodingQuestion] = useState<CodingQuestion | null>(null);
 
-  const wsRef = useRef<WebSocket | null>(null);
+  const geminiSessionRef = useRef<Session | null>(null);
+  // A status ref avoids stale closure in Gemini callbacks
+  const statusRef = useRef<SessionStatus>('idle');
+
   const { startRecording, stopRecording, playChunk, clearQueue, destroy } = useAudioProcessor();
+
+  const updateStatus = useCallback((s: SessionStatus) => {
+    statusRef.current = s;
+    setStatus(s);
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      wsRef.current?.close();
+      try { geminiSessionRef.current?.close(); } catch { /* ignore */ }
       destroy();
     };
   }, [destroy]);
 
-  // ─────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────
   // Helpers
-  // ─────────────────────────────────────────────────────────────────
-
-  const sendWsMessage = useCallback((msg: BrowserMessage) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(msg));
-    }
-  }, []);
+  // ──────────────────────────────────────────────────────────────────
 
   const addMessage = useCallback((role: 'user' | 'assistant', text: string) => {
+    if (!text.trim()) return;
     setMessages((prev) => {
       const last = prev[prev.length - 1];
-      // Append to last message of same role (streaming transcription chunks)
-      if (last?.role === role) {
-        return [
-          ...prev.slice(0, -1),
-          { ...last, text: last.text + text },
-        ];
+      // Merge streaming chunks from same role within 3 seconds
+      if (last?.role === role && Date.now() - last.timestamp < 3000) {
+        return [...prev.slice(0, -1), { ...last, text: last.text + text }];
       }
-      return [
-        ...prev,
-        { id: `${Date.now()}-${Math.random()}`, role, text, timestamp: Date.now() },
-      ];
+      return [...prev, { id: `${Date.now()}-${Math.random()}`, role, text, timestamp: Date.now() }];
     });
   }, []);
 
-  // ─────────────────────────────────────────────────────────────────
-  // Incoming message router
-  // ─────────────────────────────────────────────────────────────────
+  // ──────────────────────────────────────────────────────────────────
+  // Start interview — fetch token → connect to Gemini Live directly
+  // ──────────────────────────────────────────────────────────────────
 
-  const handleServerMessage = useCallback(
-    (msg: ServerMessage) => {
-      switch (msg.type) {
-        case 'connected':
-          break;
+  const startInterview = useCallback(async (config: SessionConfig) => {
+    if (!config.domain.trim()) {
+      setError('Please enter an interview domain first.');
+      return;
+    }
 
-        case 'session_ready':
-          setStatus('active');
-          setIsRecording(true);
-          startRecording((base64) => {
-            sendWsMessage({ type: 'audio', data: base64 });
-          }).catch((err) => {
-            setError('Microphone access denied: ' + err.message);
-            setStatus('error');
-          });
-          break;
+    setError(null);
+    setMessages([]);
+    updateStatus('connecting');
 
-        case 'audio':
-          if (msg.data) playChunk(msg.data);
-          break;
-
-        case 'interrupted':
-          clearQueue();
-          break;
-
-        case 'transcript_user':
-          if (msg.text) addMessage('user', msg.text);
-          break;
-
-        case 'transcript_model':
-          if (msg.text) addMessage('assistant', msg.text);
-          break;
-
-        case 'interview_ended_by_ai':
-          // AI gracefully concluded — stop mic immediately, let final audio finish
-          setIsRecording(false);
-          stopRecording();
-          // session_ended will arrive ~3.5s later from backend to fully close out
-          break;
-
-        case 'coding_question':
-          // AI is presenting a coding challenge — pause mic, surface the code editor
-          setIsRecording(false);
-          stopRecording();
-          setActiveCodingQuestion({
-            title: msg.questionTitle ?? 'Coding Challenge',
-            description: msg.questionDescription ?? '',
-            preferredLanguage: msg.preferredLanguage ?? 'Any',
-          });
-          break;
-
-        case 'session_ended':
-          setStatus('ended');
-          setIsRecording(false);
-          setActiveCodingQuestion(null);
-          stopRecording();
-          break;
-
-        case 'error':
-          setError(msg.message ?? 'An unknown error occurred.');
-          setStatus('error');
-          setIsRecording(false);
-          stopRecording();
-          break;
-      }
-    },
-    [startRecording, stopRecording, playChunk, clearQueue, addMessage, sendWsMessage]
-  );
-
-  // ─────────────────────────────────────────────────────────────────
-  // Public API
-  // ─────────────────────────────────────────────────────────────────
-
-  const startInterview = useCallback(
-    (config: SessionConfig) => {
-      if (!config.domain.trim()) {
-        setError('Please enter a domain first.');
-        return;
-      }
-
-      setError(null);
-      setMessages([]);
-      setStatus('connecting');
-
-      // Create session in DB
+    try {
+      // ── Step 1: Create session record in the Spring Boot database ──
       fetch('/api/sessions', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          domain: config.domain,
-          personaId: config.personaId,
+          domain:      config.domain,
+          personaId:   config.personaId,
           jdSessionId: config.jdSessionId,
         }),
       })
-        .then(res => res.json())
-        .then(json => {
-          if (json.success && json.data) {
-            setSessionId(json.data.id);
-          }
-        })
-        .catch(() => {});
+        .then(r => r.json())
+        .then(json => { if (json.success && json.data?.id) setSessionId(json.data.id); })
+        .catch(() => { /* non-fatal — evaluation still works */ });
 
-      const ws = new WebSocket(WS_URL);
-      wsRef.current = ws;
-
-      ws.onopen = () => {
-        sendWsMessage({
-          type: 'setup',
-          domain: config.domain,
-          personaId: config.personaId,
+      // ── Step 2: Fetch ephemeral token + persona system prompt ──
+      const tokenRes = await fetch('/api/session/token', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          domain:            config.domain,
+          personaId:         config.personaId,
           customSystemPrompt: config.customSystemPrompt,
-        });
-      };
+        }),
+      });
 
-      ws.onmessage = (event) => {
-        try {
-          const msg: ServerMessage = JSON.parse(event.data);
-          handleServerMessage(msg);
-        } catch {
-          console.error('Failed to parse server message:', event.data);
-        }
-      };
+      if (!tokenRes.ok) {
+        const err = await tokenRes.json().catch(() => ({ message: 'Token request failed' }));
+        throw new Error(err.message || `Token request failed (${tokenRes.status})`);
+      }
 
-      ws.onclose = () => {
-        if (status !== 'ended') {
-          setStatus('idle');
-          setIsRecording(false);
-          stopRecording();
-        }
-      };
+      const tokenJson = await tokenRes.json();
+      const ephemeralToken: string = tokenJson.data?.token;
+      const serverSystemPrompt: string | undefined = tokenJson.data?.systemPrompt;
 
-      ws.onerror = () => {
-        setError('WebSocket connection failed. Is the backend running on port 8080?');
-        setStatus('error');
-        setIsRecording(false);
-        stopRecording();
-      };
-    },
-    [sendWsMessage, handleServerMessage, stopRecording, status]
-  );
+      if (!ephemeralToken) throw new Error('No ephemeral token received from server');
+
+      // ── Step 3: Build system instruction ───────────────────────────
+      const defaultSystemPrompt =
+        `You are a professional senior technical interviewer conducting a rigorous yet fair ${config.domain} interview. ` +
+        `Open by introducing yourself briefly, then ask the first question. Follow up deeply on every answer — probe for depth, tradeoffs, and concrete examples. ` +
+        `Stay in character at all times. Do not provide answers or hints. ` +
+        `Vary question difficulty based on answer quality. ` +
+        `After 8–12 exchanges, conclude the interview gracefully and thank the candidate.`;
+
+      const finalSystemInstruction =
+        (serverSystemPrompt && serverSystemPrompt.trim().length > 0)
+          ? serverSystemPrompt
+          : (config.customSystemPrompt || defaultSystemPrompt);
+
+      // ── Step 4: Connect directly to Gemini Live API ─────────────────
+      const ai = new GoogleGenAI({ apiKey: ephemeralToken });
+
+      const session = await ai.live.connect({
+        model: GEMINI_MODEL,
+        config: {
+          responseModalities: ['AUDIO'],
+          systemInstruction: {
+            parts: [{ text: finalSystemInstruction }],
+          },
+          outputAudioTranscription: {},
+          inputAudioTranscription:  {},
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: 'Charon' },
+            },
+          },
+        },
+        callbacks: {
+          onopen: () => {
+            console.log('[Gemini Live] Connected');
+            updateStatus('active');
+            setIsRecording(true);
+
+            // Start mic → stream 16kHz PCM to Gemini in real time
+            startRecording((base64: string) => {
+              try {
+                session.sendRealtimeInput({
+                  audio: { data: base64, mimeType: AUDIO_MIME },
+                });
+              } catch { /* session may be closing */ }
+            }).catch((err: Error) => {
+              setError('Microphone access denied: ' + err.message);
+              updateStatus('error');
+            });
+          },
+
+          onmessage: (response) => {
+            const content = response.serverContent;
+            if (!content) return;
+
+            // ── Audio output from Gemini ──────────────────────────────
+            if (content.modelTurn?.parts) {
+              for (const part of content.modelTurn.parts) {
+                if (part.inlineData?.data) {
+                  playChunk(part.inlineData.data);
+                }
+              }
+            }
+
+            // ── Text transcripts ─────────────────────────────────────
+            if (content.outputTranscription?.text) {
+              addMessage('assistant', content.outputTranscription.text);
+            }
+            if (content.inputTranscription?.text) {
+              addMessage('user', content.inputTranscription.text);
+            }
+
+            // ── Interruption → clear audio queue ─────────────────────
+            if (content.interrupted) {
+              clearQueue();
+            }
+
+            // ── Generation complete ───────────────────────────────────
+            if (content.generationComplete) {
+              // no-op: voice continues, nothing to do
+            }
+          },
+
+          onerror: (event: ErrorEvent) => {
+            console.error('[Gemini Live] Error:', event);
+            setError('Live API error: ' + (event.message || 'Unknown error'));
+            updateStatus('error');
+            setIsRecording(false);
+            stopRecording();
+          },
+
+          onclose: () => {
+            console.log('[Gemini Live] Session closed');
+            const current = statusRef.current;
+            if (current !== 'ended' && current !== 'error') {
+              updateStatus('ended');
+            }
+            setIsRecording(false);
+            stopRecording();
+          },
+        },
+      });
+
+      geminiSessionRef.current = session;
+
+    } catch (err) {
+      console.error('[Interview] Failed to start:', err);
+      setError(err instanceof Error ? err.message : 'Failed to start interview session');
+      updateStatus('error');
+      setIsRecording(false);
+    }
+  }, [updateStatus, startRecording, stopRecording, playChunk, clearQueue, addMessage]);
+
+  // ──────────────────────────────────────────────────────────────────
+  // End interview
+  // ──────────────────────────────────────────────────────────────────
 
   const endInterview = useCallback(() => {
-    sendWsMessage({ type: 'end' });
+    try {
+      // Signal audio stream end so Gemini flushes cached audio buffers
+      geminiSessionRef.current?.sendRealtimeInput({ audioStreamEnd: true });
+    } catch { /* already closed */ }
+
     stopRecording();
     setIsRecording(false);
-    setStatus('ended');
-    // Give the 'end' message time to flush before closing the socket
-    const ws = wsRef.current;
-    wsRef.current = null;
+    updateStatus('ended');
+    setActiveCodingQuestion(null);
+
+    // Give 500ms for final audio to drain, then close
+    const session = geminiSessionRef.current;
+    geminiSessionRef.current = null;
     setTimeout(() => {
-      ws?.close();
-    }, 200);
-  }, [sendWsMessage, stopRecording]);
+      try { session?.close(); } catch { /* ignore */ }
+    }, 500);
+  }, [stopRecording, updateStatus]);
+
+  // ──────────────────────────────────────────────────────────────────
+  // Reset
+  // ──────────────────────────────────────────────────────────────────
 
   const resetSession = useCallback(() => {
+    try { geminiSessionRef.current?.close(); } catch { /* ignore */ }
+    geminiSessionRef.current = null;
     destroy();
-    setStatus('idle');
+    updateStatus('idle');
     setMessages([]);
     setError(null);
     setIsRecording(false);
     setSessionId(null);
     setActiveCodingQuestion(null);
-  }, [destroy]);
+  }, [destroy, updateStatus]);
 
-  /**
-   * Submit the candidate's code. Sends it to the backend which closes the
-   * pending present_coding_question tool call so Gemini can evaluate it.
-   */
+  // ──────────────────────────────────────────────────────────────────
+  // Code submission (sends code as text to Gemini for evaluation)
+  // ──────────────────────────────────────────────────────────────────
+
   const submitCode = useCallback((code: string, language: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({
-        type: 'code_submission',
-        code,
-        language,
-      } satisfies BrowserMessage));
-    }
-    // Close the editor and resume voice capture
+    const codeMessage =
+      `[CODE SUBMISSION – ${language}]\n\`\`\`${language}\n${code}\n\`\`\`\nPlease evaluate this solution.`;
+
+    try {
+      geminiSessionRef.current?.sendRealtimeInput({ text: codeMessage });
+    } catch { /* session may be closed */ }
+
     setActiveCodingQuestion(null);
     setIsRecording(true);
-    startRecording((base64) => {
-      sendWsMessage({ type: 'audio', data: base64 });
+    startRecording((base64: string) => {
+      try {
+        geminiSessionRef.current?.sendRealtimeInput({
+          audio: { data: base64, mimeType: AUDIO_MIME },
+        });
+      } catch { /* ignore */ }
     }).catch(() => {});
-  }, [sendWsMessage, startRecording]);
+  }, [startRecording]);
 
-  /**
-   * Get the full transcript from current messages
-   */
+  // ──────────────────────────────────────────────────────────────────
+  // Transcript helper
+  // ──────────────────────────────────────────────────────────────────
+
   const getTranscript = useCallback(() => {
-    return messages.map(m => `[${m.role === 'user' ? 'You' : 'Interviewer'}]: ${m.text}`).join('\n');
+    return messages
+      .map(m => `[${m.role === 'user' ? 'You' : 'Interviewer'}]: ${m.text}`)
+      .join('\n');
   }, [messages]);
 
   return {
