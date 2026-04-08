@@ -170,7 +170,7 @@ async function completeTechRound(req, res) {
 
     // Fetch session and its evaluation
     const techResult = application.techResults.find(r => r.roundNumber === roundNumber);
-    if (!techResult || !techResult.sessionId) {
+    if (!techResult) {
       return res.status(400).json({
         success: false,
         message: `No active session found for tech round ${roundNumber}`,
@@ -178,7 +178,35 @@ async function completeTechRound(req, res) {
       });
     }
 
-    const session = await Session.findById(techResult.sessionId).lean();
+    // Try the stored session first, then fall back to the one provided in the request body
+    const storedSessionId = techResult.sessionId;
+    const bodySessionId = req.body.sessionId;
+    let session = null;
+
+    if (storedSessionId) {
+      session = await Session.findById(storedSessionId).lean();
+    }
+
+    // If the stored session isn't completed but the caller provided a different session
+    // that IS completed (e.g. because the frontend created a new session for a resumed round),
+    // use that one and update the tech result to reference it.
+    if ((!session || session.status !== 'completed') && bodySessionId && bodySessionId !== String(storedSessionId)) {
+      const altSession = await Session.findById(bodySessionId).lean();
+      if (altSession && altSession.status === 'completed') {
+        logger.info('Using alternate session from request body for tech round completion', {
+          storedSessionId: String(storedSessionId),
+          bodySessionId,
+          roundNumber,
+        });
+        session = altSession;
+        // Update the tech result to point to the correct session
+        const resultIndex = application.techResults.findIndex(r => r.roundNumber === roundNumber);
+        if (resultIndex >= 0) {
+          application.techResults[resultIndex].sessionId = bodySessionId;
+        }
+      }
+    }
+
     if (!session) {
       return res.status(404).json({ success: false, message: 'Session not found', data: null });
     }
@@ -377,15 +405,28 @@ async function completeHrRound(req, res) {
       return res.status(404).json({ success: false, message: 'Application not found', data: null });
     }
 
-    if (!application.hrResult?.sessionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'No active HR session found',
-        data: null,
-      });
+    // Try stored session first, then fall back to request body
+    const storedSessionId = application.hrResult?.sessionId;
+    const bodySessionId = req.body.sessionId;
+    let session = null;
+
+    if (storedSessionId) {
+      session = await Session.findById(storedSessionId).lean();
     }
 
-    const session = await Session.findById(application.hrResult.sessionId).lean();
+    // If stored session isn't completed but caller provided a different completed session
+    if ((!session || session.status !== 'completed') && bodySessionId && bodySessionId !== String(storedSessionId)) {
+      const altSession = await Session.findById(bodySessionId).lean();
+      if (altSession && altSession.status === 'completed') {
+        logger.info('Using alternate session from request body for HR round completion', {
+          storedSessionId: String(storedSessionId),
+          bodySessionId,
+        });
+        session = altSession;
+        application.hrResult.sessionId = bodySessionId;
+      }
+    }
+
     if (!session || session.status !== 'completed') {
       return res.status(400).json({
         success: false,

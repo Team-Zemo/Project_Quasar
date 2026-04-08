@@ -146,24 +146,29 @@ export function useInterviewSession() {
       setMessages([]);
       setStatus('connecting');
 
-      // Create session in DB
-      fetch('/api/sessions', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          domain: config.domain,
-          personaId: config.personaId,
-          jdSessionId: config.jdSessionId,
-        }),
-      })
-        .then(res => res.json())
-        .then(json => {
-          if (json.success && json.data) {
-            setSessionId(json.data.id);
-          }
+      // Create session in DB (or reuse pipeline-provided session)
+      if (config.pipelineSessionId) {
+        // Pipeline flow already created a session — reuse it
+        setSessionId(config.pipelineSessionId);
+      } else {
+        fetch('/api/sessions', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            domain: config.domain,
+            personaId: config.personaId,
+            jdSessionId: config.jdSessionId,
+          }),
         })
-        .catch(() => {});
+          .then(res => res.json())
+          .then(json => {
+            if (json.success && json.data) {
+              setSessionId(json.data.id);
+            }
+          })
+          .catch(() => {});
+      }
 
       const ws = new WebSocket(WS_URL);
       wsRef.current = ws;

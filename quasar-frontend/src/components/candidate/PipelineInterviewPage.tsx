@@ -1,23 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mic, Users, ArrowLeft, Shield, Clock, Zap, Play, Loader2, CheckCircle2 } from 'lucide-react';
 import { InterviewRoom } from '../InterviewRoom';
 import { useInterviewSession } from '../../hooks/useInterviewSession';
-import { apiPost } from '../../lib/api';
+import { apiGet, apiPost } from '../../lib/api';
 import type { SessionConfig } from '../../types/interview';
 
-interface Props {
+/**
+ * Route state passed via navigate('/pipeline-interview', { state: ... })
+ */
+interface PipelineInterviewState {
   appId: string;
   mode: 'tech' | 'hr';
-  roundNumber?: number;
-  domain?: string;
-  durationMinutes?: number;
+  roundNumber: number;
+  domain: string;
+  durationMinutes: number;
   jdContext: string;
   jobTitle: string;
   company: string;
   alreadyStarted?: boolean;
-  onBack: () => void;
-  onComplete: () => void;
 }
 
 /**
@@ -72,22 +74,49 @@ ${jdContext}
 8. Do NOT ask any technical or coding questions — this is strictly a culture-fit evaluation`;
 }
 
-export function PipelineInterviewPage({
-  appId, mode, roundNumber = 1, domain, durationMinutes = 30,
-  jdContext, jobTitle, company, alreadyStarted, onBack, onComplete,
-}: Props) {
+export function PipelineInterviewPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const params = location.state as PipelineInterviewState | null;
+
+  // Destructure with defaults so hooks are called consistently regardless of state
+  const appId = params?.appId ?? '';
+  const mode = params?.mode ?? 'tech';
+  const roundNumber = params?.roundNumber ?? 1;
+  const domain = params?.domain ?? '';
+  const durationMinutes = params?.durationMinutes ?? 30;
+  const jdContext = params?.jdContext ?? '';
+  const jobTitle = params?.jobTitle ?? '';
+  const company = params?.company ?? '';
+  const alreadyStarted = params?.alreadyStarted ?? false;
+
   const [phase, setPhase] = useState<'pre' | 'live' | 'completing'>('pre');
   const [startError, setStartError] = useState<string | null>(null);
   const [startLoading, setStartLoading] = useState(false);
+  const [pipelineSessionId, setPipelineSessionId] = useState<string | null>(null);
 
   const {
-    status, messages, error, isRecording, sessionId,
+    status, messages, isRecording, sessionId,
     activeCodingQuestion, startInterview, endInterview,
-    resetSession, getTranscript, submitCode,
+    getTranscript, submitCode,
   } = useInterviewSession();
 
   const isEnded = status === 'ended' || status === 'error';
-  const isActive = status === 'connecting' || status === 'active' || status === 'ready';
+
+  // Redirect if no route state (e.g. user navigated directly to /pipeline-interview)
+  useEffect(() => {
+    if (!params) {
+      navigate('/my-applications', { replace: true });
+    }
+  }, [params, navigate]);
+
+  const handleBack = useCallback(() => {
+    navigate('/my-applications', { state: { activeAppId: appId } });
+  }, [navigate, appId]);
+
+  const handleComplete = useCallback(() => {
+    navigate('/my-applications', { state: { activeAppId: appId } });
+  }, [navigate, appId]);
 
   // Start the pipeline round on backend + begin the live interview
   const handleStart = useCallback(async () => {
@@ -95,9 +124,10 @@ export function PipelineInterviewPage({
     setStartError(null);
 
     try {
-      // If the round is already in progress (user navigated away and came back),
-      // skip the backend /start call — it would reject because status is already *_in_progress
+      let capturedSessionId: string | undefined;
+
       if (!alreadyStarted) {
+        // Fresh start — call the pipeline /start endpoint to create a session
         const endpoint = mode === 'tech'
           ? `/api/candidate/applications/${appId}/tech/${roundNumber}/start`
           : `/api/candidate/applications/${appId}/hr/start`;
@@ -108,13 +138,38 @@ export function PipelineInterviewPage({
           setStartLoading(false);
           return;
         }
+        capturedSessionId = res.data?.sessionId;
+      } else {
+        // Round already in progress (user navigated away and came back).
+        // Fetch the existing pipeline session ID from the application data
+        // so we reuse it instead of creating a duplicate.
+        try {
+          const appsRes = await apiGet<any[]>('/api/candidate/applications');
+          if (appsRes.success && Array.isArray(appsRes.data)) {
+            const app = (appsRes.data as any[]).find((a: any) => a._id === appId);
+            if (app) {
+              if (mode === 'tech') {
+                const techResult = app.techResults?.find((r: any) => r.roundNumber === roundNumber);
+                capturedSessionId = techResult?.sessionId;
+              } else {
+                capturedSessionId = app.hrResult?.sessionId;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('[Pipeline] Could not fetch existing session ID:', err);
+        }
       }
+
+      if (capturedSessionId) setPipelineSessionId(capturedSessionId);
 
       // Build customized session config
       const systemPrompt = buildSystemPrompt(mode, jdContext, jobTitle, company);
       const config: SessionConfig = {
         domain: mode === 'tech' ? (domain || jobTitle) : `HR Interview - ${jobTitle}`,
         customSystemPrompt: systemPrompt,
+        // Reuse the pipeline's session so InterviewRoom saves metrics to the correct record
+        pipelineSessionId: capturedSessionId,
       };
 
       setPhase('live');
@@ -131,21 +186,51 @@ export function PipelineInterviewPage({
     if (!isEnded || phase !== 'live') return;
     setPhase('completing');
 
+    // The hook's sessionId is the one InterviewRoom saved metrics/transcript to.
+    // pipelineSessionId is the one stored in the application record.
+    // If the hook successfully reused the pipeline session, they'll be the same.
+    // If not (e.g. alreadyStarted fetch failed), they may differ — use the hook's for eval.
+    const evalSessionId = sessionId || pipelineSessionId;
+    const completeSessionId = sessionId || pipelineSessionId;
+
     const completeRound = async () => {
+      if (!evalSessionId) {
+        console.error('[Pipeline] No session ID available for completion');
+        return;
+      }
+
       try {
         const transcript = getTranscript();
 
-        // Wait a moment for the evaluation to finish on backend
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Step 1: Wait briefly for InterviewRoom's /end call to persist transcript
+        await new Promise(resolve => setTimeout(resolve, 2500));
 
+        // Step 2: Trigger evaluation (this scores the session and sets status='completed')
+        // In the direct flow, PostSessionResults does this — but the pipeline replaces InterviewRoom
+        // with a "completing" screen, so we must do it here.
+        console.log('[Pipeline] Triggering evaluation for session:', evalSessionId);
+        const evalRes = await apiPost(`/api/sessions/${evalSessionId}/evaluate`, {});
+        if (!evalRes.success) {
+          console.warn('[Pipeline] Evaluation failed:', evalRes.message, '— attempting /complete anyway');
+        } else {
+          console.log('[Pipeline] Evaluation completed successfully');
+        }
+
+        // Step 3: Now call the pipeline /complete endpoint to advance the application status
         const endpoint = mode === 'tech'
           ? `/api/candidate/applications/${appId}/tech/${roundNumber}/complete`
           : `/api/candidate/applications/${appId}/hr/complete`;
 
-        await apiPost(endpoint, {
-          sessionId,
+        const completeRes = await apiPost(endpoint, {
+          sessionId: completeSessionId,
           transcript,
         });
+
+        if (completeRes.success) {
+          console.log('[Pipeline] Round completed successfully:', completeRes.data);
+        } else {
+          console.error('[Pipeline] Complete round failed:', completeRes.message);
+        }
       } catch (err) {
         console.error('Failed to complete pipeline round:', err);
       }
@@ -153,6 +238,9 @@ export function PipelineInterviewPage({
 
     completeRound();
   }, [isEnded, phase]);
+
+  // Don't render anything if there's no route state
+  if (!params) return null;
 
   // ── Pre-interview screen ────────────────────────────────────────────
   if (phase === 'pre') {
@@ -166,7 +254,7 @@ export function PipelineInterviewPage({
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto py-16 px-4">
           <button
-            onClick={onBack}
+            onClick={handleBack}
             className="flex items-center gap-1.5 text-[13px] font-semibold text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors mb-8"
           >
             <ArrowLeft size={14} /> Back to Pipeline
@@ -261,7 +349,7 @@ export function PipelineInterviewPage({
           sessionId={sessionId}
           activeCodingQuestion={activeCodingQuestion}
           onEnd={endInterview}
-          onNewInterview={onComplete}
+          onNewInterview={handleComplete}
           onSubmitCode={submitCode}
           getTranscript={getTranscript}
         />
@@ -283,7 +371,7 @@ export function PipelineInterviewPage({
               <p className="text-[14px] text-[var(--c-text-dim)]">Your responses are being evaluated. Results will appear in your pipeline tracker.</p>
             </div>
             <button
-              onClick={onComplete}
+              onClick={handleComplete}
               className="mt-4 px-6 py-2.5 rounded-xl text-[14px] font-bold text-[var(--c-text)] bg-[var(--c-surface)] border border-[var(--c-border-2)] hover:bg-[var(--c-surface-3)] transition-colors"
             >
               Back to Applications

@@ -73,4 +73,6 @@ export interface SessionConfig {
   personaId?: string;
   jdSessionId?: string;
   customSystemPrompt?: string;
+  /** If provided, the hook will reuse this session ID instead of creating a new one via POST /api/sessions */
+  pipelineSessionId?: string;
 }

@@ -86,35 +86,24 @@ function JobBrowserPage() {
  */
 function ApplicationsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [view, setView] = useState<
     | { type: 'list' }
     | { type: 'mcq'; appId: string }
-    | { type: 'interview'; appId: string; mode: 'tech' | 'hr'; round: number; domain: string; duration: number; jdContext: string; jobTitle: string; company: string; alreadyStarted?: boolean }
   >({ type: 'list' });
-  const [activeAppId, setActiveAppId] = useState<string | null>(null);
+
+  // When returning from /pipeline-interview, the route state carries activeAppId
+  const routeActiveAppId = (location.state as any)?.activeAppId ?? null;
+  const [activeAppId, setActiveAppId] = useState<string | null>(routeActiveAppId);
+
+  // Sync if navigating back from pipeline interview while component is already mounted
+  useEffect(() => {
+    const fromRoute = (location.state as any)?.activeAppId;
+    if (fromRoute) setActiveAppId(fromRoute);
+  }, [location.state]);
 
   if (view.type === 'mcq') {
     return <McqTestPage appId={view.appId} onComplete={() => { setActiveAppId(view.appId); setView({ type: 'list' }); }} onBack={() => setView({ type: 'list' })} />;
-  }
-
-  if (view.type === 'interview') {
-    return (
-      <div className="fixed inset-0 z-50 bg-[var(--c-bg)] flex flex-col overflow-hidden" style={{ top: '64px' }}>
-        <PipelineInterviewPage
-          appId={view.appId}
-          mode={view.mode}
-          roundNumber={view.round}
-          domain={view.domain}
-          durationMinutes={view.duration}
-          jdContext={view.jdContext}
-          jobTitle={view.jobTitle}
-          company={view.company}
-          alreadyStarted={view.alreadyStarted}
-          onBack={() => { setActiveAppId(view.appId); setView({ type: 'list' }); }}
-          onComplete={() => { setActiveAppId(view.appId); setView({ type: 'list' }); }}
-        />
-      </div>
-    );
   }
 
   return (
@@ -123,18 +112,22 @@ function ApplicationsPage() {
       onClearActiveApp={() => setActiveAppId(null)}
       onStartMcq={(appId) => setView({ type: 'mcq', appId })}
       onStartTechInterview={(appId, round, config, jdContext, alreadyStarted) => {
-        setView({
-          type: 'interview', appId, mode: 'tech', round,
-          domain: config?.domain || 'Technical', duration: config?.durationMinutes || 30,
-          jdContext, jobTitle: config?.title || 'Technical Interview', company: '',
-          alreadyStarted,
+        navigate('/pipeline-interview', {
+          state: {
+            appId, mode: 'tech', roundNumber: round,
+            domain: config?.domain || 'Technical', durationMinutes: config?.durationMinutes || 30,
+            jdContext, jobTitle: config?.title || 'Technical Interview', company: '',
+            alreadyStarted,
+          },
         });
       }}
       onStartHrInterview={(appId, jdContext, alreadyStarted) => {
-        setView({
-          type: 'interview', appId, mode: 'hr', round: 1,
-          domain: 'HR', duration: 30, jdContext, jobTitle: 'HR Interview', company: '',
-          alreadyStarted,
+        navigate('/pipeline-interview', {
+          state: {
+            appId, mode: 'hr', roundNumber: 1,
+            domain: 'HR', durationMinutes: 30, jdContext, jobTitle: 'HR Interview', company: '',
+            alreadyStarted,
+          },
         });
       }}
     />
@@ -347,12 +340,13 @@ function AppShell() {
           {/* Candidate job routes */}
           <Route path="/jobs" element={<ProtectedRoute><JobBrowserPage /></ProtectedRoute>} />
           <Route path="/my-applications" element={<ProtectedRoute><ApplicationsPage /></ProtectedRoute>} />
+          <Route path="/pipeline-interview" element={<ProtectedRoute><PipelineInterviewPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 
       {/* Footer — hidden during interview and coach */}
-      {!isInterview && !isCoach && (
+      {!isFullScreenApp && !isCoach && (
         <footer className="flex items-center justify-center gap-2 mb-4 p-4 text-[11px] uppercase tracking-wider font-bold text-[var(--c-text-mute)] z-10 relative mt-auto border-t border-[var(--c-border)] backdrop-blur-sm bg-black/20">
           <span>Powered by</span>
           <span className="text-[var(--c-accent)] text-shadow-sm shadow-orange-500/20">Gemini Live API</span>
