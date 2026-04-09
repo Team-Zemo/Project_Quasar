@@ -13,9 +13,19 @@ export class AudioProcessor {
   private activeSources: AudioBufferSourceNode[] = [];
 
   private readonly sampleRate: number;
+  private _muted = false;
 
   constructor(sampleRate: number = 16000) {
     this.sampleRate = sampleRate;
+  }
+
+  /** When muted, sends silent PCM frames instead of real microphone data */
+  setMuted(muted: boolean): void {
+    this._muted = muted;
+  }
+
+  get isMuted(): boolean {
+    return this._muted;
   }
 
   async startRecording(onAudioData: (base64Data: string) => void): Promise<void> {
@@ -29,9 +39,16 @@ export class AudioProcessor {
 
     this.processor.onaudioprocess = (e) => {
       const inputData = e.inputBuffer.getChannelData(0);
-      const pcmData = this.floatTo16BitPCM(inputData);
-      const base64Data = this.arrayBufferToBase64(pcmData.buffer);
-      onAudioData(base64Data);
+      if (this._muted) {
+        // Send silent frames to keep the connection alive
+        const silentData = new Int16Array(inputData.length);
+        const base64Data = this.arrayBufferToBase64(silentData.buffer);
+        onAudioData(base64Data);
+      } else {
+        const pcmData = this.floatTo16BitPCM(inputData);
+        const base64Data = this.arrayBufferToBase64(pcmData.buffer);
+        onAudioData(base64Data);
+      }
     };
   }
 

@@ -32,7 +32,7 @@ import type { SessionConfig } from './types/interview';
 
 function InterviewPage() {
   const [activeDomain, setActiveDomain] = useState('');
-  const { status, messages, error, isRecording, sessionId, activeCodingQuestion, startInterview, endInterview, resetSession, getTranscript, submitCode } =
+  const { status, messages, error, isRecording, isMuted, sessionId, activeCodingQuestion, startInterview, endInterview, resetSession, getTranscript, submitCode, setMuted } =
     useInterviewSession();
 
   const isInSession = status === 'connecting' || status === 'active' || status === 'ready';
@@ -64,6 +64,8 @@ function InterviewPage() {
           onNewInterview={handleNewInterview}
           onSubmitCode={submitCode}
           getTranscript={getTranscript}
+          isMuted={isMuted}
+          setMuted={setMuted}
         />
       )}
     </>
@@ -78,6 +80,34 @@ function JobBrowserPage() {
   }
 
   return <JobBrowser onViewJob={(id) => setViewingJobId(id)} />;
+}
+
+/**
+ * McqTestRoute — standalone route for MCQ test (/mcq-test)
+ * Rendered without navbar for proctored exam experience.
+ */
+function McqTestRoute() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const appId = (location.state as any)?.appId;
+
+  useEffect(() => {
+    if (!appId) navigate('/my-applications', { replace: true });
+  }, [appId, navigate]);
+
+  if (!appId) return null;
+
+  return (
+    <McqTestPage
+      appId={appId}
+      onComplete={() => {
+        navigate('/my-applications', { state: { activeAppId: appId, refreshKey: Date.now() } });
+      }}
+      onBack={() => {
+        navigate('/my-applications');
+      }}
+    />
+  );
 }
 
 /**
@@ -104,7 +134,10 @@ function ApplicationsPage() {
   }, [location.state]);
 
   if (view.type === 'mcq') {
-    return <McqTestPage appId={view.appId} onComplete={() => { setActiveAppId(view.appId); setView({ type: 'list' }); }} onBack={() => setView({ type: 'list' })} />;
+    // Navigate to the MCQ standalone route so navbar is hidden during the test
+    navigate('/mcq-test', { state: { appId: view.appId } });
+    setView({ type: 'list' });
+    return null;
   }
 
   return (
@@ -162,7 +195,9 @@ function AppShell() {
   const location = useLocation();
   const isInterview = location.pathname === '/interview';
   const isCoach = location.pathname === '/coach';
-  const isFullScreenApp = isInterview || location.pathname.startsWith('/pipeline-interview');
+  const isFullScreenApp = isInterview || location.pathname.startsWith('/pipeline-interview') || location.pathname.startsWith('/mcq-test');
+  // Proctored exam pages: hide navbar entirely (fullscreen enforced by ProctoringGuard)
+  const isProctoredExam = location.pathname.startsWith('/pipeline-interview') || location.pathname.startsWith('/mcq-test');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes
@@ -184,7 +219,8 @@ function AppShell() {
       <div className="bg-blob bg-blob--2" aria-hidden="true" />
       {!isFullScreenApp && <div className="bg-blob bg-blob--3" aria-hidden="true" />}
 
-      {/* Top nav */}
+      {/* Top nav — hidden entirely during proctored exams */}
+      {!isProctoredExam && (
       <nav className="fixed top-0 inset-x-0 h-[64px] border-b border-[var(--c-border)] backdrop-blur-md bg-[var(--bg-app)]/80 z-40 flex items-center justify-between px-6 transition-all">
         <Link to="/" className="flex items-center gap-3 no-underline group">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--c-accent)] to-[#fb923c] flex items-center justify-center text-white font-black text-[14px] shadow-sm group-hover:shadow-[0_0_12px_var(--c-accent-glow)] transition-all">
@@ -272,9 +308,10 @@ function AppShell() {
           )}
         </div>
       </nav>
+      )}
 
-      {/* Mobile Drawer Overlay */}
-      {mobileMenuOpen && (
+      {/* Mobile Drawer Overlay — also hidden during proctored exams */}
+      {!isProctoredExam && mobileMenuOpen && (
         <div className="fixed inset-x-0 top-[64px] bottom-0 z-30 bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setMobileMenuOpen(false)}>
           <div className="flex flex-col h-full overflow-y-auto bg-[var(--c-surface)] border-b border-[var(--c-border)] shadow-xl p-4 gap-2 pb-8 max-h-[85vh] rounded-b-3xl" onClick={e => e.stopPropagation()}>
             <p className="text-[12px] font-black uppercase tracking-widest text-[var(--c-text-mute)] mb-2 mt-2 px-2">Menu</p>
@@ -320,11 +357,14 @@ function AppShell() {
           </div>
         </div>
       )}
+      
 
       {/* Main content */}
-      <main className={`flex-1 flex flex-col w-full relative z-10 pt-[64px] ${
-        isFullScreenApp || isCoach
+      <main className={`flex-1 flex flex-col w-full relative z-10 ${
+        isProctoredExam
           ? 'overflow-hidden p-0 items-stretch min-h-0'
+          : isFullScreenApp || isCoach
+          ? 'overflow-hidden p-0 items-stretch min-h-0 pt-[64px]'
           : 'items-center px-4 md:px-8 pb-8 pt-[80px]'
       }`}>
         <Routes>
@@ -343,6 +383,7 @@ function AppShell() {
           <Route path="/jobs" element={<ProtectedRoute><JobBrowserPage /></ProtectedRoute>} />
           <Route path="/my-applications" element={<ProtectedRoute><ApplicationsPage /></ProtectedRoute>} />
           <Route path="/pipeline-interview" element={<ProtectedRoute><PipelineInterviewPage /></ProtectedRoute>} />
+          <Route path="/mcq-test" element={<ProtectedRoute><McqTestRoute /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

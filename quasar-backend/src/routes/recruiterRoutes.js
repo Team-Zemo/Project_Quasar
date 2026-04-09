@@ -6,6 +6,7 @@ const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const jobPostingController = require('../controllers/jobPostingController');
 const dashboardController = require('../controllers/dashboardController');
+const proctoringController = require('../controllers/proctoringController');
 
 const router = express.Router();
 
@@ -37,5 +38,8 @@ router.post('/jobs/:id/applicants/:appId/shortlist', dashboardController.shortli
 router.get('/jobs/:id/applicants/:appId/resume', dashboardController.getApplicantResume);
 router.get('/jobs/:id/rankings', dashboardController.getRankings);
 router.get('/jobs/:id/export', dashboardController.exportApplicantsCSV);
+
+// ── Proctoring Reports ────────────────────────────────────────────────
+router.get('/jobs/:id/applicants/:appId/proctor', proctoringController.getProctoringReport);
 
 module.exports = router;

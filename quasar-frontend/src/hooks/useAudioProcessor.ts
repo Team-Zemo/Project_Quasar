@@ -35,11 +35,19 @@ export function useAudioProcessor() {
     processorRef.current?.clearPlaybackQueue();
   }, []);
 
+  const setMuted = useCallback((muted: boolean): void => {
+    processorRef.current?.setMuted(muted);
+  }, []);
+
+  const isMuted = useCallback((): boolean => {
+    return processorRef.current?.isMuted ?? true;
+  }, []);
+
   const destroy = useCallback((): void => {
     processorRef.current?.stopRecording();
     processorRef.current?.stopPlayback();
     processorRef.current = null;
   }, []);
 
-  return { startRecording, stopRecording, playChunk, clearQueue, destroy };
+  return { startRecording, stopRecording, playChunk, clearQueue, setMuted, isMuted, destroy };
 }

@@ -8,11 +8,16 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const applicationController = require('../controllers/applicationController');
 const mcqRoundController = require('../controllers/mcqRoundController');
 const pipelineController = require('../controllers/pipelineController');
+const proctoringController = require('../controllers/proctoringController');
 
 const router = express.Router();
 
 // All candidate routes require auth + candidate role
 router.use(requireAuth, requireRole('candidate'));
+
+// ── Proctoring ────────────────────────────────────────────────────────
+router.post('/applications/:appId/proctor/violation', proctoringController.logViolation);
+router.post('/applications/:appId/proctor/violations/batch', proctoringController.logViolationsBatch);
 
 // ── Job Browsing ──────────────────────────────────────────────────────
 router.get('/jobs', applicationController.browseJobs);

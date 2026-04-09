@@ -94,7 +94,7 @@ Requirements:
 
     setMcqEnabled(true);
     setMcqDuration(10);
-    setMcqPassingScore(70);
+    setMcqPassingScore(10);
     setMcqWindowStart(start);
     setMcqWindowEnd(end);
 
@@ -104,14 +104,14 @@ Requirements:
       domain: 'Full Stack Engineering',
       personaId: 'faang_engineer',
       durationMinutes: 10,
-      passingScore: 7,
+      passingScore: 2,
       windowStart: start,
       windowEnd: end,
     }]);
 
     setHrEnabled(true);
     setHrDuration(10);
-    setHrPassingScore(6);
+    setHrPassingScore(2);
     setHrWindowStart(start);
     setHrWindowEnd(end);
   };
