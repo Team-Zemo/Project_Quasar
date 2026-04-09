@@ -304,7 +304,7 @@ export function FeaturesSection() {
             style={{
               fontSize: 'clamp(48px, 10vw, 120px)',
               backgroundImage:
-                'linear-gradient(to bottom, rgba(255,255,255,0.12), rgba(255,255,255,0.04))',
+                'linear-gradient(to bottom, rgba(234, 140, 32, 1), rgba(155, 131, 70, 1))',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
             }}
