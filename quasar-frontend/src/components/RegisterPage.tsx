@@ -55,7 +55,7 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex items-center justify-center bg-transparent min-h-screen" style={{ padding: '16px' }}>
+    <div className="">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

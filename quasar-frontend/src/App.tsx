@@ -349,7 +349,7 @@ function AppShell() {
 
       {/* Footer — hidden during interview and coach */}
       {!isFullScreenApp && !isCoach && (
-        <footer className="flex items-center justify-center gap-2 mb-4 p-4 text-[11px] uppercase tracking-wider font-bold text-[var(--c-text-mute)] z-10 relative mt-auto border-t border-[var(--c-border)] backdrop-blur-sm bg-black/20">
+        <footer className="flex items-center justify-center gap-2 px-4 py-2 text-[11px] uppercase tracking-wider font-bold text-[var(--c-text-mute)] z-10 relative mt-auto border-t border-[var(--c-border)] backdrop-blur-sm bg-black/20">
           <span>Powered by</span>
           <span className="text-[var(--c-accent)] text-shadow-sm shadow-orange-500/20">Gemini Live API</span>
           <span className="opacity-50">•</span>
