@@ -25,7 +25,7 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
   const [error, setError] = useState('');
   const [testStarted, setTestStarted] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval>>();
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
 
   const startTest = async () => {
     setLoading(true);

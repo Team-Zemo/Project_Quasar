@@ -73,7 +73,16 @@ function InterviewPage() {
 }
 
 function JobBrowserPage() {
-  const [viewingJobId, setViewingJobId] = useState<string | null>(null);
+  const location = useLocation();
+  const routeState = location.state as { viewJobId?: string } | null;
+  const [viewingJobId, setViewingJobId] = useState<string | null>(routeState?.viewJobId ?? null);
+
+  // If navigated with a viewJobId (e.g. from Coach Chat), auto-open it
+  useEffect(() => {
+    if (routeState?.viewJobId && routeState.viewJobId !== viewingJobId) {
+      setViewingJobId(routeState.viewJobId);
+    }
+  }, [routeState?.viewJobId]);
 
   if (viewingJobId) {
     return <JobDetail jobId={viewingJobId} onBack={() => setViewingJobId(null)} />;
