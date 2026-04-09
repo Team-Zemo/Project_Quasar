@@ -388,8 +388,18 @@ export default function App() {
     return <LandingPage />;
   }
 
+  // Login & Register pages get their own full-page split layout
+  if (['/login', '/register'].includes(location.pathname)) {
+    return (
+      <Routes>
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/interview" replace /> : <LoginPage />} />
+        <Route path="/register" element={isAuthenticated ? <Navigate to="/interview" replace /> : <RegisterPage />} />
+      </Routes>
+    );
+  }
+
   // Public auth routes — no onboarding gate needed
-  const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+  const publicPaths = ['/forgot-password', '/reset-password'];
   if (publicPaths.includes(location.pathname)) {
     return <AppShell />;
   }
