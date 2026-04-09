@@ -17,29 +17,82 @@ export interface User {
   experience?: number | null;
 }
 
-type AuthListener = (user: User | null) => void;
+/**
+ * Observable auth state singleton.
+ * Follows the same pattern as Firebase Auth's onAuthStateChanged /
+ * Supabase's onAuthStateChange — a single source of truth that all
+ * consumers (hooks, interceptors) subscribe to.
+ */
+type AuthSnapshot = { user: User | null; ready: boolean };
+type AuthListener = (snapshot: AuthSnapshot) => void;
 
-let currentUser: User | null = null;
-const listeners: Set<AuthListener> = new Set();
+let _user: User | null = null;
+let _ready = false;
+let _initPromise: Promise<void> | null = null;
+const _listeners: Set<AuthListener> = new Set();
 
-function notify() {
-  listeners.forEach(fn => fn(currentUser));
+// Cached snapshot — must return the SAME reference when unchanged.
+// useSyncExternalStore compares with Object.is; new objects trigger infinite loops.
+let _snapshot: AuthSnapshot = { user: null, ready: false };
+
+function _updateSnapshot() {
+  _snapshot = { user: _user, ready: _ready };
+}
+
+function _notify() {
+  _updateSnapshot();
+  _listeners.forEach(fn => fn(_snapshot));
 }
 
 export const authState = {
+  /** Current snapshot (returns stable reference) */
+  getSnapshot(): AuthSnapshot {
+    return _snapshot;
+  },
+
   getUser(): User | null {
-    return currentUser;
+    return _user;
+  },
+
+  isReady(): boolean {
+    return _ready;
   },
 
   setUser(user: User | null) {
-    currentUser = user;
-    notify();
+    _user = user;
+    _notify();
+  },
+
+  /** Mark initialization complete — called once after the first refresh attempt */
+  setReady() {
+    if (!_ready) {
+      _ready = true;
+      _notify();
+    }
   },
 
   subscribe(listener: AuthListener): () => void {
-    listeners.add(listener);
-    return () => listeners.delete(listener);
-  }
+    _listeners.add(listener);
+    return () => _listeners.delete(listener);
+  },
+
+  /**
+   * Initialize auth state by attempting a silent token refresh.
+   * Idempotent: calling this multiple times returns the same promise.
+   * This is the ONLY place that fires the initial /auth/refresh.
+   */
+  init(): Promise<void> {
+    if (_initPromise) return _initPromise;
+
+    _initPromise = _doRefresh()
+      .catch(() => { _user = null; })
+      .finally(() => {
+        _ready = true;
+        _notify();
+      });
+
+    return _initPromise;
+  },
 };
 
 // API helpers
@@ -76,7 +129,27 @@ export async function login(email: string, password: string) {
   return json as { success: boolean; message: string; data: User | null };
 }
 
+/**
+ * Refresh the session. Handles two scenarios:
+ * 1. Initial page load → delegates to authState.init() (idempotent)
+ * 2. Mid-session 401 → fires a fresh refresh with its own dedup
+ */
+let _midSessionRefresh: Promise<User | null> | null = null;
+
 export async function refreshSession(): Promise<User | null> {
+  // If auth hasn't initialized yet, init first (idempotent)
+  if (!authState.isReady()) {
+    await authState.init();
+    return authState.getUser();
+  }
+
+  // Mid-session refresh — dedup concurrent calls but allow new refreshes
+  if (_midSessionRefresh) return _midSessionRefresh;
+  _midSessionRefresh = _doRefresh().finally(() => { _midSessionRefresh = null; });
+  return _midSessionRefresh;
+}
+
+async function _doRefresh(): Promise<User | null> {
   try {
     const res = await apiFetch(`${BASE}/auth/refresh`, { method: 'POST' });
     const json = await res.json();

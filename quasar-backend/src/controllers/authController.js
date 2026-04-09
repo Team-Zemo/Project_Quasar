@@ -78,7 +78,7 @@ function setAuthCookies(res, accessToken, refreshToken) {
     httpOnly: true,
     secure: isProduction,
     sameSite: 'lax',
-    maxAge: 15 * 60 * 1000,
+    maxAge: 190 * 60 * 1000, // 190 minutes — matches JWT expiry
     path: '/',
   });
 

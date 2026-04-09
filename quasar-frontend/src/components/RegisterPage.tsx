@@ -5,6 +5,17 @@ import { register } from '../lib/auth';
 import { motion } from 'framer-motion';
 import { AlertCircle, Loader2 } from 'lucide-react';
 
+import { Button } from "./ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+
 export function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,95 +55,107 @@ export function RegisterPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[var(--c-bg)]" style={{ padding: '16px' }}>
+    <div className="flex items-center justify-center bg-transparent min-h-screen" style={{ padding: '16px' }}>
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        className="w-full max-w-[440px] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-lg flex flex-col p-6 sm:p-10"
+        className="w-full max-w-[480px]"
       >
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-[48px] h-[48px] flex items-center justify-center rounded-[14px] bg-[var(--c-accent-dim)] border border-[var(--c-accent-glow)] text-[var(--c-accent)] font-black text-[15px] mb-5 tracking-tight shadow-sm">
-            AI
-          </div>
-          <h1 className="text-[24px] font-extrabold text-[var(--c-text)] m-0 mb-2 tracking-tight">Create Account</h1>
-          <p className="text-[14px] text-[var(--c-text-dim)] m-0">Start your AI interview practice journey</p>
-        </div>
+        <Card className="bg-[var(--c-surface)] border-[var(--c-border)] shadow-[var(--shadow-glass)] rounded-[24px]">
+          <CardHeader className="text-center">
+            <CardTitle className="text-[24px] font-extrabold text-[var(--c-text)] tracking-tight">Create your account</CardTitle>
+            <CardDescription className="text-[14px] text-[var(--c-text-dim)]">
+              Enter your email below to create your account
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="px-6 sm:px-8 pb-8">
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              
+              <div className="space-y-2 w-full">
+                <Label htmlFor="register-name" className="text-[13px] font-semibold text-[var(--c-text)]">Full Name</Label>
+                <Input 
+                  id="register-name" 
+                  type="text" 
+                  placeholder="John Doe" 
+                  required 
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="bg-[var(--c-bg)] border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus-visible:ring-4 focus-visible:ring-[var(--c-accent-dim)] focus-visible:border-[var(--c-accent)] outline-none transition-all shadow-none"
+                  style={{ height: '48px', padding: '0 14px' }}
+                />
+              </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full">
-          <div className="flex flex-col gap-2">
-            <label htmlFor="register-name" className="text-[13px] font-semibold text-[var(--c-text)]">Full Name</label>
-            <input
-              id="register-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
-              style={{ padding: '14px 16px' }}
-              placeholder="John Doe"
-              required
-              autoFocus
-            />
-          </div>
+              <div className="space-y-2 w-full">
+                <Label htmlFor="register-email" className="text-[13px] font-semibold text-[var(--c-text)]">Email</Label>
+                <Input 
+                  id="register-email" 
+                  type="email" 
+                  placeholder="m@example.com" 
+                  required 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="bg-[var(--c-bg)] border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus-visible:ring-4 focus-visible:ring-[var(--c-accent-dim)] focus-visible:border-[var(--c-accent)] outline-none transition-all shadow-none"
+                  style={{ height: '48px', padding: '0 14px' }}
+                />
+              </div>
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="register-email" className="text-[13px] font-semibold text-[var(--c-text)]">Email</label>
-            <input
-              id="register-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
-              style={{ padding: '14px 16px' }}
-              placeholder="you@example.com"
-              required
-            />
-          </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col sm:flex-row gap-4 w-full">
+                  <div className="space-y-2 w-full">
+                    <Label htmlFor="register-password" className="text-[13px] font-semibold text-[var(--c-text)]">Password</Label>
+                    <Input 
+                      id="register-password" 
+                      type="password" 
+                      required 
+                      minLength={8}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="bg-[var(--c-bg)] border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus-visible:ring-4 focus-visible:ring-[var(--c-accent-dim)] focus-visible:border-[var(--c-accent)] outline-none transition-all shadow-none"
+                      style={{ height: '48px', padding: '0 14px' }}
+                    />
+                  </div>
+                  <div className="space-y-2 w-full">
+                    <Label htmlFor="register-confirm" className="text-[13px] font-semibold text-[var(--c-text)]">Confirm Password</Label>
+                    <Input 
+                      id="register-confirm" 
+                      type="password" 
+                      required 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="bg-[var(--c-bg)] border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus-visible:ring-4 focus-visible:ring-[var(--c-accent-dim)] focus-visible:border-[var(--c-accent)] outline-none transition-all shadow-none"
+                      style={{ height: '48px', padding: '0 14px' }}
+                    />
+                  </div>
+                </div>
+                <p className="text-[13px] text-[var(--c-text-mute)] font-medium">Must be at least 8 characters long.</p>
+              </div>
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="register-password" className="text-[13px] font-semibold text-[var(--c-text)]">Password</label>
-            <input
-              id="register-password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
-              style={{ padding: '14px 16px' }}
-              placeholder="Min 8 characters"
-              required
-              minLength={8}
-            />
-          </div>
+              {error && (
+                <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[13px] font-semibold rounded-[12px] p-3 mt-1" role="alert">
+                  <AlertCircle size={16} strokeWidth={2.5} className="shrink-0" />
+                  {error}
+                </div>
+              )}
 
-          <div className="flex flex-col gap-2">
-            <label htmlFor="register-confirm" className="text-[13px] font-semibold text-[var(--c-text)]">Confirm Password</label>
-            <input
-              id="register-confirm"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
-              style={{ padding: '14px 16px' }}
-              placeholder="••••••••"
-              required
-            />
-          </div>
+              <div className="flex flex-col gap-3 mt-2">
+                <Button 
+                  type="submit" 
+                  disabled={loading}
+                  className="w-full bg-[var(--c-text)] hover:bg-[var(--c-text-dim)] text-[var(--c-bg)] font-bold text-[15px] rounded-[14px] h-[50px] transition-all"
+                >
+                  {loading ? <><Loader2 size={18} className="animate-spin mr-2" /> Creating account…</> : 'Create Account'}
+                </Button>
+              </div>
 
-          {error && (
-            <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 text-red-500 text-[13px] font-semibold rounded-[12px]" style={{ padding: '12px 16px' }} role="alert">
-              <AlertCircle size={16} strokeWidth={2.5} className="shrink-0" />
-              {error}
-            </div>
-          )}
+              <p className="text-center mt-3 mb-0 text-[14px] text-[var(--c-text-dim)] font-medium">
+                Already have an account? <Link to="/login" className="text-[var(--c-text)] underline underline-offset-4 hover:text-[var(--c-text)] transition-all">Sign in</Link>
+              </p>
 
-          <button type="submit" className="flex items-center justify-center gap-2 w-full bg-[var(--c-text)] hover:bg-white text-[var(--c-bg)] font-bold text-[15px] rounded-[14px] transition-all cursor-pointer mt-1" style={{ padding: '14px 24px' }} disabled={loading}>
-            {loading ? <><Loader2 size={18} className="animate-spin" /> Creating account…</> : 'Create Account'}
-          </button>
-        </form>
-
-        <p className="text-center mt-8 mb-0 text-[13px] text-[var(--c-text-mute)] font-medium">
-          Already have an account? <Link to="/login" className="text-[var(--c-text)] font-bold hover:underline">Sign in</Link>
-        </p>
+            </form>
+          </CardContent>
+        </Card>
       </motion.div>
     </div>
   );

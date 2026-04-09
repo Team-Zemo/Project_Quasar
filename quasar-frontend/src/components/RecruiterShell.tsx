@@ -23,7 +23,7 @@ export function RecruiterShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
-    return authState.subscribe(setUser);
+    return authState.subscribe((snapshot) => setUser(snapshot.user));
   }, []);
 
   const navItems = [

@@ -30,18 +30,18 @@ export function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-[var(--c-bg)]" style={{ padding: '16px' }}>
+    <div className="flex items-center justify-center bg-transparent">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-        className="w-full max-w-[440px] bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] shadow-lg flex flex-col p-6 sm:p-10"
+        className="w-full max-w-[440px] bg-transparent border border-[var(--c-border)] rounded-[24px] flex flex-col p-6 sm:p-10 sm:py-6"
       >
-        <div className="flex flex-col items-center text-center mb-8">
-          <div className="w-[48px] h-[48px] flex items-center justify-center rounded-[14px] bg-[var(--c-accent-dim)] border border-[var(--c-accent-glow)] text-[var(--c-accent)] font-black text-[15px] mb-5 tracking-tight shadow-sm">
+        <div className="flex flex-col items-center text-center mb-3">
+          {/* <div className="w-[48px] h-[48px] flex items-center justify-center rounded-[14px] bg-[var(--c-accent-dim)] border border-[var(--c-accent-glow)] text-[var(--c-accent)] font-black text-[15px] mb-5 tracking-tight shadow-sm">
             AI
-          </div>
-          <h1 className="text-[24px] font-extrabold text-[var(--c-text)] m-0 mb-2 tracking-tight">Welcome Back</h1>
+          </div> */}
+          <h1 className="text-[24px] font-extrabold text-[var(--c-text)] m-0 tracking-tight">Welcome Back</h1>
           <p className="text-[14px] text-[var(--c-text-dim)] m-0">Sign in to continue your interview practice</p>
         </div>
 
@@ -54,7 +54,7 @@ export function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
-              style={{ padding: '14px 16px' }}
+              style={{ padding: '10px 13px' }}
               placeholder="you@example.com"
               required
               autoFocus
@@ -72,7 +72,7 @@ export function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-[var(--c-bg)] border border-[var(--c-border)] rounded-[14px] text-[15px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] transition-all focus:border-[var(--c-accent)] focus:ring-4 focus:ring-[var(--c-accent-dim)] outline-none"
-              style={{ padding: '14px 16px' }}
+              style={{ padding: '10px 16px' }}
               placeholder="••••••••"
               required
             />
@@ -85,7 +85,7 @@ export function LoginPage() {
             </div>
           )}
 
-          <button type="submit" id="login-submit" className="flex items-center justify-center gap-2 w-full bg-[var(--c-text)] hover:bg-white text-[var(--c-bg)] font-bold text-[15px] rounded-[14px] transition-all cursor-pointer mt-1" style={{ padding: '14px 24px' }} disabled={loading}>
+          <button type="submit" id="login-submit" className="flex items-center justify-center gap-2 w-full bg-[var(--c-text)] hover:bg-white text-[var(--c-bg)] font-bold text-[15px] rounded-[14px] transition-all cursor-pointer" style={{ padding: '7px 24px' }} disabled={loading}>
             {loading ? <><Loader2 size={18} className="animate-spin" /> Signing in…</> : 'Sign In'}
           </button>
         </form>
@@ -112,7 +112,7 @@ export function LoginPage() {
           </a>
         </div>
 
-        <p className="text-center mt-8 mb-0 text-[13px] text-[var(--c-text-mute)] font-medium">
+        <p className="text-center mt-4 mb-0 text-[13px] text-[var(--c-text-mute)] font-medium">
           Don't have an account? <Link to="/register" className="text-[var(--c-text)] font-bold hover:underline">Create one</Link>
         </p>
       </motion.div>

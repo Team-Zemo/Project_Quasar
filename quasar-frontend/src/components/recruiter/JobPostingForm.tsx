@@ -68,7 +68,7 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
   const demoAutofillDetails = () => {
     setTitle('Junior Backend Engineer');
     setLocation('San Francisco, CA (Hybrid)');
-    setEmploymentType('Internship');
+    setEmploymentType('internship');
     setJobDescription(`We are looking for a Intern Backend Engineer to join our product team.
 
 Responsibilities:
@@ -93,7 +93,7 @@ Requirements:
     const end = formatLocal(endObj);
 
     setMcqEnabled(true);
-    setMcqDuration(30);
+    setMcqDuration(10);
     setMcqPassingScore(70);
     setMcqWindowStart(start);
     setMcqWindowEnd(end);
@@ -103,14 +103,14 @@ Requirements:
       title: 'System Design & React',
       domain: 'Full Stack Engineering',
       personaId: 'faang_engineer',
-      durationMinutes: 45,
+      durationMinutes: 10,
       passingScore: 7,
       windowStart: start,
       windowEnd: end,
     }]);
 
     setHrEnabled(true);
-    setHrDuration(20);
+    setHrDuration(10);
     setHrPassingScore(6);
     setHrWindowStart(start);
     setHrWindowEnd(end);

@@ -1,29 +1,36 @@
-import { useState, useEffect } from 'react';
-import { authState, refreshSession, type User } from '../lib/auth';
+import { useState, useEffect, useSyncExternalStore, useCallback } from 'react';
+import { authState, type User } from '../lib/auth';
 
-// Module-level flag to prevent StrictMode double-firing the refresh call
-let refreshAttempted = false;
-
+/**
+ * useAuth — single hook that ALL components use to access auth state.
+ *
+ * Architecture:
+ *   authState (singleton)  ──subscribes──▶  useAuth() instance 1
+ *                          ──subscribes──▶  useAuth() instance 2
+ *                          ──subscribes──▶  useAuth() instance N
+ *
+ * All instances share the exact same { user, ready } snapshot.
+ * `authState.init()` is called once (idempotent) and flips `ready`
+ * to true when the initial /auth/refresh completes or fails.
+ */
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(authState.getUser());
-  const [loading, setLoading] = useState(!refreshAttempted);
+  // Subscribe to the shared auth state — all useAuth instances see the same snapshot
+  const snapshot = useSyncExternalStore(
+    useCallback((onStoreChange: () => void) => {
+      return authState.subscribe(onStoreChange);
+    }, []),
+    () => authState.getSnapshot(),
+    () => authState.getSnapshot(),
+  );
 
+  // Trigger initialization exactly once (idempotent)
   useEffect(() => {
-    const unsubscribe = authState.subscribe(setUser);
-
-    // On app load, silently call /auth/refresh to restore session
-    // Only do this once — StrictMode in dev calls effects twice
-    if (!refreshAttempted && !authState.getUser()) {
-      refreshAttempted = true;
-      refreshSession().finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-
-    return unsubscribe;
+    authState.init();
   }, []);
 
-  const isAuthenticated = !!user;
-
-  return { user, loading, isAuthenticated };
+  return {
+    user: snapshot.user,
+    loading: !snapshot.ready,
+    isAuthenticated: !!snapshot.user,
+  };
 }
