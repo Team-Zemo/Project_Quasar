@@ -21,7 +21,8 @@ export function useInterviewSession() {
   const [activeCodingQuestion, setActiveCodingQuestion] = useState<CodingQuestion | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
-  const { startRecording, stopRecording, playChunk, clearQueue, destroy } = useAudioProcessor();
+  const { startRecording, stopRecording, playChunk, clearQueue, setMuted: setProcessorMuted, destroy } = useAudioProcessor();
+  const [isMuted, setIsMuted] = useState(true); // PTT: starts muted
 
   // Cleanup on unmount
   useEffect(() => {
@@ -71,8 +72,12 @@ export function useInterviewSession() {
         case 'session_ready':
           setStatus('active');
           setIsRecording(true);
+          setIsMuted(true); // Start muted — push-to-talk
           startRecording((base64) => {
             sendWsMessage({ type: 'audio', data: base64 });
+          }).then(() => {
+            // Ensure processor starts in muted state
+            setProcessorMuted(true);
           }).catch((err) => {
             setError('Microphone access denied: ' + err.message);
             setStatus('error');
@@ -244,13 +249,16 @@ export function useInterviewSession() {
         language,
       } satisfies BrowserMessage));
     }
-    // Close the editor and resume voice capture
+    // Close the editor and resume voice capture (muted — PTT)
     setActiveCodingQuestion(null);
     setIsRecording(true);
+    setIsMuted(true);
     startRecording((base64) => {
       sendWsMessage({ type: 'audio', data: base64 });
+    }).then(() => {
+      setProcessorMuted(true);
     }).catch(() => {});
-  }, [sendWsMessage, startRecording]);
+  }, [sendWsMessage, startRecording, setProcessorMuted]);
 
   /**
    * Get the full transcript from current messages
@@ -259,11 +267,18 @@ export function useInterviewSession() {
     return messages.map(m => `[${m.role === 'user' ? 'You' : 'Interviewer'}]: ${m.text}`).join('\n');
   }, [messages]);
 
+  /** Toggle mute state for push-to-talk */
+  const setMuted = useCallback((muted: boolean) => {
+    setProcessorMuted(muted);
+    setIsMuted(muted);
+  }, [setProcessorMuted]);
+
   return {
     status,
     messages,
     error,
     isRecording,
+    isMuted,
     sessionId,
     activeCodingQuestion,
     startInterview,
@@ -271,5 +286,6 @@ export function useInterviewSession() {
     resetSession,
     getTranscript,
     submitCode,
+    setMuted,
   };
 }

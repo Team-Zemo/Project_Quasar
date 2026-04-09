@@ -54,6 +54,32 @@ const screeningResultSchema = new mongoose.Schema({
   evaluatedAt: { type: Date, default: null },
 }, { _id: false });
 
+// ── Proctoring violation sub-schema ───────────────────────────────────
+
+const proctoringViolationSchema = new mongoose.Schema({
+  type: {
+    type: String,
+    enum: [
+      'fullscreen_exit', 'right_click', 'tab_switch', 'copy_paste',
+      'keyboard_shortcut', 'devtools_open', 'multi_monitor', 'print_screen',
+    ],
+    required: true,
+  },
+  round: { type: String, enum: ['mcq', 'tech', 'hr'], required: true },
+  roundNumber: { type: Number, default: 1 },
+  timestamp: { type: Date, default: Date.now },
+  details: { type: String, default: '' },
+  severity: { type: String, enum: ['warning', 'critical'], default: 'warning' },
+}, { _id: false });
+
+const proctoringFlagsSchema = new mongoose.Schema({
+  totalViolations: { type: Number, default: 0 },
+  criticalViolations: { type: Number, default: 0 },
+  autoTerminated: { type: Boolean, default: false },
+  autoTerminatedRound: { type: String, default: null },
+  trustScore: { type: Number, default: 100 },
+}, { _id: false });
+
 // ── Main Application schema ───────────────────────────────────────────
 
 const applicationSchema = new mongoose.Schema({
@@ -109,6 +135,10 @@ const applicationSchema = new mongoose.Schema({
   mcqResult: { type: mcqResultSchema, default: null },
   techResults: { type: [techResultSchema], default: [] },
   hrResult: { type: hrResultSchema, default: null },
+
+  // Proctoring
+  proctoringViolations: { type: [proctoringViolationSchema], default: [] },
+  proctoringFlags: { type: proctoringFlagsSchema, default: () => ({}) },
 
   // Aggregate scoring (for ranking among fully-passed candidates)
   totalScore: { type: Number, default: 0 },

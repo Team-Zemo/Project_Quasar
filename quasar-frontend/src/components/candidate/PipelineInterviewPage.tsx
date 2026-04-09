@@ -6,6 +6,7 @@ import { InterviewRoom } from '../InterviewRoom';
 import { useInterviewSession } from '../../hooks/useInterviewSession';
 import { apiGet, apiPost } from '../../lib/api';
 import type { SessionConfig } from '../../types/interview';
+import { ProctoringGuard } from './ProctoringGuard';
 
 /**
  * Route state passed via navigate('/pipeline-interview', { state: ... })
@@ -97,9 +98,9 @@ export function PipelineInterviewPage() {
   const [completionDone, setCompletionDone] = useState(false);
 
   const {
-    status, messages, isRecording, sessionId,
+    status, messages, isRecording, isMuted, sessionId,
     activeCodingQuestion, startInterview, endInterview,
-    getTranscript, submitCode,
+    getTranscript, submitCode, setMuted,
   } = useInterviewSession();
 
   const isEnded = status === 'ended' || status === 'error';
@@ -343,6 +344,7 @@ export function PipelineInterviewPage() {
   // ── Live interview — reuse the existing InterviewRoom ───────────────
   if (phase === 'live' || (phase === 'completing' && !isEnded)) {
     return (
+      <ProctoringGuard appId={appId} round={mode} roundNumber={roundNumber} onAutoTerminate={endInterview}>
       <div className="flex flex-col flex-1 min-h-0 overflow-hidden h-full">
         <InterviewRoom
           messages={messages}
@@ -355,8 +357,11 @@ export function PipelineInterviewPage() {
           onNewInterview={handleComplete}
           onSubmitCode={submitCode}
           getTranscript={getTranscript}
+          isMuted={isMuted}
+          setMuted={setMuted}
         />
       </div>
+      </ProctoringGuard>
     );
   }
 

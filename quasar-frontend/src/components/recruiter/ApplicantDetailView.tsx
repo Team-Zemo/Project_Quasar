@@ -4,7 +4,7 @@ import {
   ArrowLeft, User, Mail, Phone, MapPin, Briefcase,
   CheckCircle, XCircle, Award, FileText, MessageSquare,
   Clock, Star, AlertTriangle, ChevronDown, ChevronUp,
-  ThumbsUp, ThumbsDown, Shield, Target, Brain,
+  ThumbsUp, ThumbsDown, Shield, Target, Brain, Eye,
 } from 'lucide-react';
 import { apiGet, apiPost } from '../../lib/api';
 import type { ApplicationStatus } from '../../types/recruitment';
@@ -71,6 +71,25 @@ interface ApplicationDetail {
   mcqResult: McqResult | null;
   techResults: TechResult[];
   hrResult: HrResult | null;
+  proctoringViolations?: ProctoringViolation[];
+  proctoringFlags?: ProctoringFlags;
+}
+
+interface ProctoringViolation {
+  type: string;
+  round: string;
+  roundNumber: number;
+  timestamp: string;
+  details: string;
+  severity: 'warning' | 'critical';
+}
+
+interface ProctoringFlags {
+  totalViolations: number;
+  criticalViolations: number;
+  autoTerminated: boolean;
+  autoTerminatedRound?: string | null;
+  trustScore: number;
 }
 
 interface Props {
@@ -495,6 +514,118 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
             <div>
               <h5 className="text-[11px] font-bold uppercase text-[var(--c-text-mute)] flex items-center gap-1"><MessageSquare size={12} /> Interview Transcript</h5>
               <TranscriptViewer transcript={app.hrResult.transcript} />
+            </div>
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {/* Proctoring Report */}
+      {(app.proctoringFlags?.totalViolations ?? 0) > 0 && (
+        <CollapsibleSection
+          title="Proctoring Report"
+          icon={Eye}
+          defaultOpen={true}
+          badge={(() => {
+            const trust = app.proctoringFlags?.trustScore ?? 100;
+            if (trust >= 80) return { text: `${trust}% Trust`, color: 'var(--c-success)', bg: 'var(--c-success-dim)' };
+            if (trust >= 50) return { text: `${trust}% Trust`, color: 'var(--c-accent)', bg: 'var(--c-accent-dim)' };
+            return { text: `${trust}% Trust`, color: 'var(--c-error)', bg: 'var(--c-error-dim)' };
+          })()}
+        >
+          <div className="pt-4 space-y-4">
+            {/* Trust Score + Stats */}
+            <div className="grid grid-cols-4 gap-3">
+              <div className="relative">
+                <ScoreRing score={app.proctoringFlags?.trustScore ?? 100} label="Trust" />
+              </div>
+              {[
+                { label: 'Total', value: app.proctoringFlags?.totalViolations ?? 0, color: 'var(--c-text)' },
+                { label: 'Critical', value: app.proctoringFlags?.criticalViolations ?? 0, color: 'var(--c-error)' },
+                { label: 'Auto-Term', value: app.proctoringFlags?.autoTerminated ? 'Yes' : 'No', color: app.proctoringFlags?.autoTerminated ? 'var(--c-error)' : 'var(--c-success)' },
+              ].map(item => (
+                <div key={item.label} className="bg-[var(--c-bg)] rounded-xl p-3 border border-[var(--c-border)] text-center">
+                  <p className="text-[18px] font-black" style={{ color: item.color }}>{item.value}</p>
+                  <p className="text-[10px] font-bold uppercase text-[var(--c-text-mute)] mt-0.5">{item.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Auto-termination alert */}
+            {app.proctoringFlags?.autoTerminated && (
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-center gap-2">
+                <AlertTriangle size={14} className="text-[var(--c-error)] flex-shrink-0" />
+                <p className="text-[12px] text-[var(--c-error)] font-semibold">
+                  Exam was auto-terminated during the <span className="uppercase font-bold">{app.proctoringFlags.autoTerminatedRound}</span> round due to excessive violations.
+                </p>
+              </div>
+            )}
+
+            {/* Violation type breakdown */}
+            {(() => {
+              const byType: Record<string, number> = {};
+              for (const v of app.proctoringViolations || []) {
+                byType[v.type] = (byType[v.type] || 0) + 1;
+              }
+              const typeLabels: Record<string, { label: string; icon: string }> = {
+                fullscreen_exit: { label: 'Fullscreen Exits', icon: '🖥️' },
+                right_click: { label: 'Right Clicks', icon: '🖱️' },
+                tab_switch: { label: 'Tab Switches', icon: '👁️' },
+                copy_paste: { label: 'Copy/Paste', icon: '📋' },
+                keyboard_shortcut: { label: 'Keyboard Shortcuts', icon: '⌨️' },
+                devtools_open: { label: 'DevTools', icon: '🔧' },
+                multi_monitor: { label: 'Multi-Monitor', icon: '🖥️' },
+                print_screen: { label: 'Print Screen', icon: '📸' },
+              };
+
+              return Object.keys(byType).length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(byType).map(([type, count]) => {
+                    const info = typeLabels[type] || { label: type, icon: '⚠️' };
+                    return (
+                      <span
+                        key={type}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[var(--c-surface-2)] border border-[var(--c-border)] text-[var(--c-text-dim)]"
+                      >
+                        <span>{info.icon}</span>
+                        {info.label}: <span className="text-[var(--c-text)]">{count}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+
+            {/* Violation timeline */}
+            <div className="max-h-[300px] overflow-y-auto space-y-1.5 rounded-xl bg-[var(--c-bg)] p-3 border border-[var(--c-border)]">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-2">Violation Timeline</p>
+              {(app.proctoringViolations || []).map((v, i) => (
+                <div
+                  key={i}
+                  className={`text-[11px] leading-relaxed rounded-lg px-3 py-2 flex items-center justify-between gap-3 ${
+                    v.severity === 'critical'
+                      ? 'bg-red-500/8 border border-red-500/15'
+                      : 'bg-[var(--c-surface-2)] border border-[var(--c-border)]'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                      v.severity === 'critical' ? 'bg-[var(--c-error)]' : 'bg-amber-400'
+                    }`} />
+                    <span className="font-semibold text-[var(--c-text-dim)] truncate">
+                      {v.type.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-[9px] uppercase font-bold px-1.5 py-0.5 rounded" style={{
+                      color: v.severity === 'critical' ? 'var(--c-error)' : 'var(--c-accent)',
+                      background: v.severity === 'critical' ? 'var(--c-error-dim)' : 'var(--c-accent-dim)',
+                    }}>
+                      {v.round}{v.roundNumber > 1 ? ` R${v.roundNumber}` : ''}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-[var(--c-text-mute)] flex-shrink-0">
+                    {new Date(v.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </CollapsibleSection>

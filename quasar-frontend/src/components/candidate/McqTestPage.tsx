@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { apiPost, apiGet } from '../../lib/api';
 import type { McqTestQuestion, McqTestStartData } from '../../types/recruitment';
+import { ProctoringGuard } from './ProctoringGuard';
 
 interface Props {
   appId: string;
@@ -23,6 +24,7 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
   const [timeLeft, setTimeLeft] = useState(0);
   const [error, setError] = useState('');
   const [testStarted, setTestStarted] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
   const startTest = async () => {
@@ -128,6 +130,7 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
   const isLowTime = timeLeft < 60;
 
   return (
+    <ProctoringGuard appId={appId} round="mcq" onAutoTerminate={handleSubmit}>
     <div className="min-h-screen bg-[var(--c-bg)] flex">
       {/* Sidebar — Question Navigator */}
       <div className="w-64 bg-[var(--c-surface)] border-r border-[var(--c-border)] p-4 flex flex-col">
@@ -167,13 +170,42 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
           })}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          disabled={submitting}
-          className="btn-primary btn-full flex items-center gap-2 justify-center mt-auto"
-        >
-          {submitting ? <div className="spinner" /> : <><Send size={14} /> Submit Test</>}
-        </button>
+        {!showSubmitConfirm ? (
+          <button
+            onClick={() => setShowSubmitConfirm(true)}
+            disabled={submitting}
+            className="btn-primary btn-full flex items-center gap-2 justify-center mt-auto"
+          >
+            {submitting ? <div className="spinner" /> : <><Send size={14} /> Submit Test</>}
+          </button>
+        ) : (
+          <div className="mt-auto flex flex-col gap-2">
+            <div className="bg-[var(--c-accent-dim)] border border-[var(--c-accent)]/20 rounded-xl p-3 text-center">
+              <AlertTriangle size={18} className="text-[var(--c-accent)] mx-auto mb-1.5" />
+              <p className="text-[12px] font-bold text-[var(--c-text)] mb-0.5">Submit Test?</p>
+              <p className="text-[11px] text-[var(--c-text-dim)]">
+                {total - answered > 0
+                  ? `${total - answered} question${total - answered > 1 ? 's' : ''} unanswered`
+                  : 'All questions answered'}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowSubmitConfirm(false)}
+                className="flex-1 py-2 rounded-xl text-[12px] font-bold bg-[var(--c-surface-2)] hover:bg-[var(--c-surface-3)] text-[var(--c-text-dim)] border border-[var(--c-border)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="flex-1 py-2 rounded-xl text-[12px] font-bold bg-[var(--c-error)] hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5 active:scale-95"
+              >
+                {submitting ? <div className="spinner" /> : <><CheckCircle size={13} /> Confirm</>}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Question Area */}
@@ -265,5 +297,6 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
         </div>
       </div>
     </div>
+    </ProctoringGuard>
   );
 }

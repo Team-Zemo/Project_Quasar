@@ -8,7 +8,7 @@ import { PostSessionResults } from './PostSessionResults';
 import { CodeEditor } from './CodeEditor';
 import { apiPost, apiFetchRaw } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Square, Mic, MessageSquare, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
+import { Square, Mic, MicOff, MessageSquare, CheckCircle2, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
 
 const logger = (...args: unknown[]) => console.log('[InterviewRoom]', ...args);
 
@@ -23,6 +23,10 @@ interface InterviewRoomProps {
   onNewInterview: () => void;
   onSubmitCode: (code: string, language: string) => void;
   getTranscript: () => string;
+  /** Push-to-talk: true = mic muted (sending silence) */
+  isMuted: boolean;
+  /** Push-to-talk: toggle mute */
+  setMuted: (muted: boolean) => void;
 }
 
 export function InterviewRoom({
@@ -36,6 +40,8 @@ export function InterviewRoom({
   onNewInterview,
   onSubmitCode,
   getTranscript,
+  isMuted,
+  setMuted,
 }: InterviewRoomProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const isEnded = status === 'ended' || status === 'error';
@@ -50,11 +56,79 @@ export function InterviewRoom({
   } | null>(null);
   const [reportDownloading, setReportDownloading] = useState(false);
   const [metricsReady, setMetricsReady] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   // Auto-scroll to latest message
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // ── Push-to-Talk: spacebar hold to unmute ──────────────────────────
+  useEffect(() => {
+    // Disable PTT when code editor is open or session is ended
+    if (activeCodingQuestion || isEnded) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle Space key
+      if (e.code !== 'Space') return;
+
+      // Don't intercept if user is typing in an input/textarea/contenteditable
+      const target = e.target as HTMLElement;
+      const isTypable =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable ||
+        target.closest('.monaco-editor') !== null ||
+        target.closest('[role="textbox"]') !== null;
+
+      if (isTypable) return;
+
+      // Prevent spacebar scroll on the page
+      e.preventDefault();
+
+      // Avoid repeat events (key held down fires repeatedly)
+      if (e.repeat) return;
+
+      // Unmute (send real audio)
+      setMuted(false);
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return;
+
+      const target = e.target as HTMLElement;
+      const isTypable =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable ||
+        target.closest('.monaco-editor') !== null ||
+        target.closest('[role="textbox"]') !== null;
+
+      if (isTypable) return;
+
+      e.preventDefault();
+
+      // Re-mute (send silence)
+      setMuted(true);
+    };
+
+    // Also mute when window loses focus (user alt-tabs)
+    const handleBlur = () => {
+      setMuted(true);
+    };
+
+    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('keyup', handleKeyUp, true);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('keyup', handleKeyUp, true);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [activeCodingQuestion, isEnded, setMuted]);
 
   const handleEmotionSnapshot = useCallback((snapshot: EmotionSnapshot) => {
     setEmotionSnapshots(prev => [...prev, snapshot]);
@@ -163,7 +237,8 @@ export function InterviewRoom({
           </div>
           <p className="text-[11px] sm:text-[12px] font-medium text-[var(--c-text-dim)] m-0 mt-0.5 ml-5 truncate max-w-full sm:max-w-[300px]">
             {status === 'active' && activeCodingQuestion && 'Write your code solution — microphone paused'}
-            {status === 'active' && !activeCodingQuestion && isRecording && 'Session active — speak to respond'}
+            {status === 'active' && !activeCodingQuestion && isRecording && !isMuted && 'Listening — speak now'}
+            {status === 'active' && !activeCodingQuestion && isRecording && isMuted && 'Hold Space to talk'}
             {status === 'active' && !activeCodingQuestion && !isRecording && 'Connecting audio…'}
             {status === 'connecting' && 'Connecting to Gemini…'}
             {status === 'ended' && 'Session completed — reviewing performance'}
@@ -179,15 +254,50 @@ export function InterviewRoom({
           />
 
           {!isEnded && (
-            <button
-              id="end-session-btn"
-              onClick={onEnd}
-              className="flex items-center justify-center gap-1 sm:gap-2 w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 font-bold text-[13px] bg-red-500 hover:bg-red-600 text-white border border-red-500/20 rounded-xl transition-all shadow-[0_2px_10px_rgba(239,68,68,0.2)] active:scale-95"
-              title="End Session"
-            >
-              <Square size={14} fill="currentColor" />
-              <span className="hidden sm:inline">End Session</span>
-            </button>
+            <AnimatePresence mode="wait">
+              {!showEndConfirm ? (
+                <motion.button
+                  key="end-btn"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, x: 10 }}
+                  id="end-session-btn"
+                  onClick={() => setShowEndConfirm(true)}
+                  className="flex items-center justify-center gap-1 sm:gap-2 w-10 h-10 sm:w-auto sm:h-auto sm:px-4 sm:py-2 font-bold text-[13px] bg-red-500 hover:bg-red-600 text-white border border-red-500/20 rounded-xl transition-all shadow-[0_2px_10px_rgba(239,68,68,0.2)] active:scale-95"
+                  title="End Session"
+                >
+                  <Square size={14} fill="currentColor" />
+                  <span className="hidden sm:inline">End Session</span>
+                </motion.button>
+              ) : (
+                <motion.div
+                  key="end-confirm"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="flex items-center gap-2 bg-[var(--c-surface)] p-1.5 pr-2 rounded-xl border border-[var(--c-border)] shadow-lg"
+                >
+                  <span className="flex items-center gap-1.5 pl-2.5 pr-1">
+                    <AlertTriangle size={13} className="text-red-400 shrink-0" />
+                    <span className="text-[12px] font-bold text-[var(--c-text)] hidden sm:inline whitespace-nowrap">End interview?</span>
+                  </span>
+                  <button
+                    className="px-3 py-1.5 text-[12px] font-semibold rounded-lg bg-[var(--c-surface-2)] hover:bg-[var(--c-surface-3)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
+                    onClick={() => setShowEndConfirm(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    id="end-confirm-btn"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold rounded-lg bg-red-500 hover:bg-red-600 text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] transition-colors active:scale-95"
+                    onClick={() => { setShowEndConfirm(false); onEnd(); }}
+                  >
+                    <Square size={11} fill="currentColor" />
+                    Confirm
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           )}
         </div>
       </header>
@@ -217,7 +327,7 @@ export function InterviewRoom({
                   <div className="flex flex-col min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] m-0">Microphone</p>
                     <p className="text-[13px] font-semibold text-[var(--c-text)] m-0 mt-0.5 truncate">
-                      {isRecording ? 'Listening…' : 'Connecting…'}
+                      {isRecording && !isMuted ? 'Listening…' : isRecording && isMuted ? 'Muted — Hold Space' : 'Connecting…'}
                     </p>
                   </div>
                 </div>
@@ -251,6 +361,44 @@ export function InterviewRoom({
                 <MessageBubble key={msg.id} message={msg} />
               ))}
               <div ref={bottomRef} className="h-4" />
+            </div>
+          )}
+
+          {/* Push-to-Talk bottom indicator */}
+          {!isEnded && !activeCodingQuestion && isRecording && (
+            <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center pb-4 pt-6 bg-gradient-to-t from-[var(--c-surface)] to-transparent z-10 pointer-events-none">
+              <AnimatePresence mode="wait">
+                {isMuted ? (
+                  <motion.div
+                    key="muted"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-full shadow-lg pointer-events-auto"
+                  >
+                    <MicOff size={16} className="text-[var(--c-text-mute)]" />
+                    <span className="text-[13px] font-bold text-[var(--c-text-dim)]">
+                      Hold&nbsp;<kbd className="inline-flex items-center justify-center px-2 py-0.5 bg-[var(--c-surface-3)] border border-[var(--c-border-2)] rounded-md text-[11px] font-black text-[var(--c-text)] mx-0.5 min-w-[3rem]">SPACE</kbd>&nbsp;to talk
+                    </span>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="listening"
+                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    className="flex items-center gap-2.5 px-6 py-3 bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30 rounded-full shadow-lg shadow-red-500/10 pointer-events-auto"
+                  >
+                    <div className="relative flex items-center justify-center">
+                      <Mic size={18} className="text-red-400" />
+                      <div className="absolute inset-0 rounded-full border-2 border-red-400/40 animate-ping" style={{ animationDuration: '1.5s' }} />
+                    </div>
+                    <span className="text-[14px] font-bold text-red-400 tracking-wide">
+                      Listening…
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
