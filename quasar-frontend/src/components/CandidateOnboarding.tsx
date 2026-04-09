@@ -166,8 +166,9 @@ export function CandidateOnboarding() {
                       type="tel"
                       value={phone}
                       onChange={e => setPhone(e.target.value)}
+                      maxLength={10}
                       className="w-full px-4 py-3 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-xl text-[var(--c-text)] text-[14px] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
-                      placeholder="+91 9876543210"
+                      placeholder="9876543210"
                     />
                   </div>
                   <div>

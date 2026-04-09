@@ -92,8 +92,9 @@ function ApplicationsPage() {
     | { type: 'mcq'; appId: string }
   >({ type: 'list' });
 
-  // When returning from /pipeline-interview, the route state carries activeAppId
+  // When returning from /pipeline-interview, the route state carries activeAppId + refreshKey
   const routeActiveAppId = (location.state as any)?.activeAppId ?? null;
+  const routeRefreshKey = (location.state as any)?.refreshKey ?? null;
   const [activeAppId, setActiveAppId] = useState<string | null>(routeActiveAppId);
 
   // Sync if navigating back from pipeline interview while component is already mounted
@@ -109,6 +110,7 @@ function ApplicationsPage() {
   return (
     <MyApplications
       activeAppId={activeAppId}
+      refreshKey={routeRefreshKey}
       onClearActiveApp={() => setActiveAppId(null)}
       onStartMcq={(appId) => setView({ type: 'mcq', appId })}
       onStartTechInterview={(appId, round, config, jdContext, alreadyStarted) => {

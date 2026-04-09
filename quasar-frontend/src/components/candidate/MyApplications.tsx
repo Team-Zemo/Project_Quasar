@@ -16,6 +16,8 @@ interface Props {
   /** If set, show a specific application in detail mode */
   activeAppId?: string | null;
   onClearActiveApp?: () => void;
+  /** Changed after interview completion — triggers a re-fetch of application data */
+  refreshKey?: number | null;
 }
 
 const statusConfig: Partial<Record<ApplicationStatus, { icon: typeof CheckCircle; color: string; label: string }>> = {
@@ -39,16 +41,17 @@ const statusConfig: Partial<Record<ApplicationStatus, { icon: typeof CheckCircle
   rejected: { icon: XCircle, color: 'var(--c-error)', label: 'Rejected' },
 };
 
-export function MyApplications({ onViewApplication, onStartMcq, onStartTechInterview, onStartHrInterview, activeAppId, onClearActiveApp }: Props) {
+export function MyApplications({ onViewApplication, onStartMcq, onStartTechInterview, onStartHrInterview, activeAppId, onClearActiveApp, refreshKey }: Props) {
   const [applications, setApplications] = useState<(Application & { jobPostingId: JobPosting })[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAppId, setSelectedAppId] = useState<string | null>(activeAppId || null);
 
   useEffect(() => {
+    setLoading(true);
     apiGet<Application[]>('/api/candidate/applications')
       .then(res => { if (res.success) setApplications(res.data as (Application & { jobPostingId: JobPosting })[]); })
       .finally(() => setLoading(false));
-  }, []);
+  }, [refreshKey]);
 
   // Sync external activeAppId
   useEffect(() => {
@@ -64,6 +67,7 @@ export function MyApplications({ onViewApplication, onStartMcq, onStartTechInter
     return (
       <PipelineTracker
         appId={selectedAppId}
+        refreshKey={refreshKey}
         onBack={() => {
           setSelectedAppId(null);
           onClearActiveApp?.();

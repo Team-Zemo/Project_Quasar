@@ -16,6 +16,8 @@ interface Props {
   onStartMcq: (appId: string) => void;
   onStartTechInterview: (appId: string, round: number, config: TechRoundConfig, jdContext: string, alreadyStarted?: boolean) => void;
   onStartHrInterview: (appId: string, jdContext: string, alreadyStarted?: boolean) => void;
+  /** Changed after interview completion — triggers a re-fetch of application data */
+  refreshKey?: number | null;
 }
 
 type StageKey = 'screening' | 'mcq' | 'tech' | 'hr' | 'result';
@@ -82,13 +84,14 @@ const statusColors: Record<string, { bg: string; border: string; text: string; r
   skipped: { bg: 'var(--c-surface-2)', border: 'var(--c-border)', text: 'var(--c-text-mute)', ring: 'transparent' },
 };
 
-export function PipelineTracker({ appId, onBack, onStartMcq, onStartTechInterview, onStartHrInterview }: Props) {
+export function PipelineTracker({ appId, onBack, onStartMcq, onStartTechInterview, onStartHrInterview, refreshKey }: Props) {
   const [app, setApp] = useState<Application | null>(null);
   const [job, setJob] = useState<JobPosting | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchData = () => {
+    setLoading(true);
     apiGet<Application>(`/api/candidate/applications`)
       .then(res => {
         if (res.success && Array.isArray(res.data)) {
@@ -103,7 +106,7 @@ export function PipelineTracker({ appId, onBack, onStartMcq, onStartTechIntervie
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchData(); }, [appId]);
+  useEffect(() => { fetchData(); }, [appId, refreshKey]);
 
   if (loading) {
     return (

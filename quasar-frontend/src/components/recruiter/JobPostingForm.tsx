@@ -66,20 +66,16 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
   };
 
   const demoAutofillDetails = () => {
-    setTitle('Senior Full Stack Engineer');
+    setTitle('Junior Backend Engineer');
     setLocation('San Francisco, CA (Hybrid)');
-    setEmploymentType('full-time');
-    setJobDescription(`We are looking for a Senior Full Stack Engineer to join our product team.
+    setEmploymentType('Internship');
+    setJobDescription(`We are looking for a Intern Backend Engineer to join our product team.
 
 Responsibilities:
-- Build scalable backend systems using Node.js
-- Develop stunning user interfaces with React and TailwindCSS
-- Mentor junior engineers
+- Handle junior level codebase
 
 Requirements:
-- 5+ years of experience in web development
-- Deep expertise in TypeScript
-- Strong understanding of system design`);
+- 0 years of experience in web development`);
   };
 
   const demoAutofillPipeline = () => {

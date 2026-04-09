@@ -94,6 +94,7 @@ export function PipelineInterviewPage() {
   const [startError, setStartError] = useState<string | null>(null);
   const [startLoading, setStartLoading] = useState(false);
   const [pipelineSessionId, setPipelineSessionId] = useState<string | null>(null);
+  const [completionDone, setCompletionDone] = useState(false);
 
   const {
     status, messages, isRecording, sessionId,
@@ -115,7 +116,7 @@ export function PipelineInterviewPage() {
   }, [navigate, appId]);
 
   const handleComplete = useCallback(() => {
-    navigate('/my-applications', { state: { activeAppId: appId } });
+    navigate('/my-applications', { state: { activeAppId: appId, refreshKey: Date.now() } });
   }, [navigate, appId]);
 
   // Start the pipeline round on backend + begin the live interview
@@ -233,6 +234,8 @@ export function PipelineInterviewPage() {
         }
       } catch (err) {
         console.error('Failed to complete pipeline round:', err);
+      } finally {
+        setCompletionDone(true);
       }
     };
 
@@ -363,19 +366,33 @@ export function PipelineInterviewPage() {
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-lg mx-auto py-20 px-4 text-center">
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center gap-5">
-            <div className="flex items-center justify-center w-16 h-16 rounded-[20px] bg-green-500/10 text-green-500 border border-green-500/20">
-              <CheckCircle2 size={32} />
-            </div>
-            <div>
-              <h3 className="text-[20px] font-bold text-[var(--c-text)] mb-2">Interview Complete</h3>
-              <p className="text-[14px] text-[var(--c-text-dim)]">Your responses are being evaluated. Results will appear in your pipeline tracker.</p>
-            </div>
-            <button
-              onClick={handleComplete}
-              className="mt-4 px-6 py-2.5 rounded-xl text-[14px] font-bold text-[var(--c-text)] bg-[var(--c-surface)] border border-[var(--c-border-2)] hover:bg-[var(--c-surface-3)] transition-colors"
-            >
-              Back to Applications
-            </button>
+            {completionDone ? (
+              <>
+                <div className="flex items-center justify-center w-16 h-16 rounded-[20px] bg-green-500/10 text-green-500 border border-green-500/20">
+                  <CheckCircle2 size={32} />
+                </div>
+                <div>
+                  <h3 className="text-[20px] font-bold text-[var(--c-text)] mb-2">Interview Complete</h3>
+                  <p className="text-[14px] text-[var(--c-text-dim)]">Your responses have been evaluated. View your results in the pipeline tracker.</p>
+                </div>
+                <button
+                  onClick={handleComplete}
+                  className="mt-4 px-6 py-2.5 rounded-xl text-[14px] font-bold text-[var(--c-text)] bg-[var(--c-surface)] border border-[var(--c-border-2)] hover:bg-[var(--c-surface-3)] transition-colors"
+                >
+                  Back to Applications
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-center w-16 h-16 rounded-[20px] bg-[var(--c-accent)]/10 text-[var(--c-accent)] border border-[var(--c-accent)]/20">
+                  <Loader2 size={32} className="animate-spin" />
+                </div>
+                <div>
+                  <h3 className="text-[20px] font-bold text-[var(--c-text)] mb-2">Evaluating Your Interview</h3>
+                  <p className="text-[14px] text-[var(--c-text-dim)]">Please wait while we analyze your responses and calculate your score...</p>
+                </div>
+              </>
+            )}
           </motion.div>
         </div>
       </div>
