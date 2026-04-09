@@ -16,7 +16,7 @@ const logger = winston.createLogger({
     timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.errors({ stack: true }),
     winston.format.splat(),
-    process.env.NODE_ENV === 'development' ? colorize() : winston.format.uncolorize(),
+    process.env.NODE_ENV === 'development' ? colorize({ all: true }) : winston.format.uncolorize(),
     logFormat
   ),
   transports: [

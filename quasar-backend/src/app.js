@@ -38,8 +38,12 @@ app.use(cors({
 configurePassport();
 app.use(passport.initialize());
 
-// Route HTTP access logs to winston
-app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+// Route HTTP access logs dynamically based on environment
+if (config.nodeEnv === 'development') {
+  app.use(morgan('dev'));
+} else {
+  app.use(morgan('combined', { stream: { write: message => logger.info(message.trim()) } }));
+}
 
 // Health check
 app.get('/health', (req, res) => res.status(200).json({ success: true, message: 'Quasar Backend API Health Okay', data: { version: '2.0.0' } }));

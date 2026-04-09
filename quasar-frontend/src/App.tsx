@@ -367,6 +367,13 @@ export default function App() {
       autoRaf: true,
       lerp: 0.05,
       wheelMultiplier: 1,
+      prevent: (node) => {
+        return (
+          node.classList?.contains?.('overflow-y-auto') ||
+          node.classList?.contains?.('overflow-auto') ||
+          node.nodeName === 'TEXTAREA'
+        );
+      }
     });
 
     return () => {

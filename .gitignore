@@ -40,3 +40,5 @@ coverage/
 tmp/
 .tmp/
 script.txt
+quasar_architecture_prompt.md
+README.md

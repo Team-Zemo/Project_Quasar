@@ -5,6 +5,7 @@ import {
   CheckCircle, AlertCircle,
 } from 'lucide-react';
 import { apiPost } from '../../lib/api';
+import { authState } from '../../lib/auth';
 import type { PipelineConfig, TechRoundConfig } from '../../types/recruitment';
 
 interface Props {
@@ -21,7 +22,7 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
 
   // Step 1: Job Details
   const [title, setTitle] = useState('');
-  const [company, setCompany] = useState('');
+  const [company, setCompany] = useState(authState.getUser()?.company || '');
   const [location, setLocation] = useState('');
   const [employmentType, setEmploymentType] = useState('full-time');
   const [jobDescription, setJobDescription] = useState('');
@@ -33,7 +34,7 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
   const [mcqWindowStart, setMcqWindowStart] = useState('');
   const [mcqWindowEnd, setMcqWindowEnd] = useState('');
 
-  const [techRounds, setTechRounds] = useState<Omit<TechRoundConfig, 'window'> & { windowStart: string; windowEnd: string }[]>([
+  const [techRounds, setTechRounds] = useState<Array<Omit<TechRoundConfig, 'window'> & { windowStart: string; windowEnd: string }>>([
     { roundNumber: 1, title: 'Technical Interview', domain: 'General', personaId: 'faang_engineer', durationMinutes: 30, passingScore: 6, windowStart: '', windowEnd: '' },
   ]);
 
@@ -62,6 +63,61 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
 
   const updateTechRound = (index: number, field: string, value: string | number) => {
     setTechRounds(prev => prev.map((r, i) => i === index ? { ...r, [field]: value } : r));
+  };
+
+  const demoAutofillDetails = () => {
+    setTitle('Senior Full Stack Engineer');
+    setLocation('San Francisco, CA (Hybrid)');
+    setEmploymentType('full-time');
+    setJobDescription(`We are looking for a Senior Full Stack Engineer to join our product team.
+
+Responsibilities:
+- Build scalable backend systems using Node.js
+- Develop stunning user interfaces with React and TailwindCSS
+- Mentor junior engineers
+
+Requirements:
+- 5+ years of experience in web development
+- Deep expertise in TypeScript
+- Strong understanding of system design`);
+  };
+
+  const demoAutofillPipeline = () => {
+    const now = new Date();
+    // Start window from yesterday to open it immediately, end in 7 days
+    const startObj = new Date(now.getTime() - 24 * 3600 * 1000);
+    const endObj = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
+    // Format to yyyy-mm-ddThh:mm for datetime-local
+    const formatLocal = (d: Date) => {
+      const pad = (n: number) => n.toString().padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+    
+    const start = formatLocal(startObj);
+    const end = formatLocal(endObj);
+
+    setMcqEnabled(true);
+    setMcqDuration(30);
+    setMcqPassingScore(70);
+    setMcqWindowStart(start);
+    setMcqWindowEnd(end);
+
+    setTechRounds([{
+      roundNumber: 1,
+      title: 'System Design & React',
+      domain: 'Full Stack Engineering',
+      personaId: 'faang_engineer',
+      durationMinutes: 45,
+      passingScore: 7,
+      windowStart: start,
+      windowEnd: end,
+    }]);
+
+    setHrEnabled(true);
+    setHrDuration(20);
+    setHrPassingScore(6);
+    setHrWindowStart(start);
+    setHrWindowEnd(end);
   };
 
   const buildPipeline = (): PipelineConfig => ({
@@ -149,7 +205,15 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
         {/* Step 1: Details */}
         {step === 'details' && (
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-            <h2 className="text-xl font-bold text-[var(--c-text)] mb-6">Job Details</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-[var(--c-text)]">Job Details</h2>
+              <button 
+                onClick={demoAutofillDetails} 
+                className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-[var(--c-accent-dim)] text-[var(--c-accent)] hover:bg-[var(--c-accent)] hover:text-black transition-colors flex items-center gap-1.5"
+              >
+                <Sparkles size={14} /> Demo Autofill
+              </button>
+            </div>
             <div className="space-y-4">
               <div><label className={labelClass}>Job Title *</label>
                 <input type="text" value={title} onChange={e => setTitle(e.target.value)} className={inputClass} placeholder="Senior Full Stack Developer" /></div>
@@ -179,7 +243,15 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
         {/* Step 2: Pipeline */}
         {step === 'pipeline' && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-            <h2 className="text-xl font-bold text-[var(--c-text)] mb-6">Interview Pipeline</h2>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-[var(--c-text)]">Interview Pipeline</h2>
+              <button 
+                onClick={demoAutofillPipeline} 
+                className="text-[11px] font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg bg-[var(--c-accent-dim)] text-[var(--c-accent)] hover:bg-[var(--c-accent)] hover:text-black transition-colors flex items-center gap-1.5"
+              >
+                <Sparkles size={14} /> Demo Autofill
+              </button>
+            </div>
             <p className="text-[var(--c-text-dim)] text-[13px] mb-6 flex items-center gap-2">
               <AlertCircle size={14} className="text-[var(--c-accent)]" />
               Each round is an eliminator — candidates must pass to advance.
