@@ -4,7 +4,7 @@ import { apiFetchRaw } from '../lib/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, LineChart, BookOpen, Lightbulb, Map, Send, Square, Target, Bot } from 'lucide-react';
+import { Calendar, Clock, LineChart, BookOpen, Lightbulb, Map, Send, Square, Target, Bot, Search } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -13,12 +13,14 @@ interface ChatMessage {
 }
 
 const SUGGESTIONS = [
+  { icon: <Search size={18} className="text-orange-500" />, text: 'Find job opportunities matching my skills' },
   { icon: <Calendar size={18} className="text-orange-500" />, text: 'Create a 2-week prep plan for FAANG interviews' },
   { icon: <Clock size={18} className="text-orange-500" />, text: 'How to manage interview prep while working full-time?' },
   { icon: <LineChart size={18} className="text-orange-500" />, text: 'Analyze my performance and give improvement tips' },
   { icon: <BookOpen size={18} className="text-orange-500" />, text: 'Recommend courses to improve my weak areas' },
   { icon: <Lightbulb size={18} className="text-orange-500" />, text: 'Best STAR method strategies for behavioral rounds' },
   { icon: <Map size={18} className="text-orange-500" />, text: 'Create a 3-month career growth roadmap' },
+  { icon: <Search size={18} className="text-orange-500" />, text: 'Show me remote or internship job openings' },
 ];
 
 export function CoachChat() {
