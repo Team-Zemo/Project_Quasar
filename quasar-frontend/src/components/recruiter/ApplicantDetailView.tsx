@@ -5,6 +5,7 @@ import {
   CheckCircle, XCircle, Award, FileText, MessageSquare,
   Clock, Star, AlertTriangle, ChevronDown, ChevronUp,
   ThumbsUp, ThumbsDown, Shield, Target, Brain,
+  Download, Loader2,
 } from 'lucide-react';
 import { apiGet, apiPost } from '../../lib/api';
 import type { ApplicationStatus } from '../../types/recruitment';
@@ -205,6 +206,9 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [resumeUrl, setResumeUrl] = useState<string | null>(null);
+  const [resumeLoading, setResumeLoading] = useState(false);
+  const [resumeFilename, setResumeFilename] = useState<string>('resume.pdf');
 
   useEffect(() => {
     apiGet<{ application: ApplicationDetail }>(`/api/recruiter/jobs/${jobId}/applicants/${applicationId}`)
@@ -212,6 +216,17 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
         if (res.success) setApp(res.data.application);
       })
       .finally(() => setLoading(false));
+
+    // Fetch resume
+    setResumeLoading(true);
+    apiGet<{ url: string; filename: string }>(`/api/recruiter/jobs/${jobId}/applicants/${applicationId}/resume`)
+      .then(res => {
+        if (res.success && res.data?.url) {
+          setResumeUrl(res.data.url);
+          setResumeFilename(res.data.filename || 'resume.pdf');
+        }
+      })
+      .finally(() => setResumeLoading(false));
   }, [jobId, applicationId]);
 
   const handleShortlist = async (action: 'shortlist' | 'reject') => {
@@ -540,6 +555,35 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
               </div>
             </div>
           ))}
+        </div>
+      </CollapsibleSection>
+
+      {/* Resume */}
+      <CollapsibleSection title="Resume" icon={FileText} defaultOpen={false}
+        badge={resumeUrl ? { text: 'Available', color: 'var(--c-success)', bg: 'var(--c-success-dim)' } : null}
+      >
+        <div className="pt-4">
+          {resumeLoading ? (
+            <div className="flex items-center gap-2 text-[13px] text-[var(--c-text-mute)]">
+              <Loader2 size={16} className="animate-spin" /> Loading resume...
+            </div>
+          ) : resumeUrl ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[12px] text-[var(--c-text-dim)]">{resumeFilename}</p>
+                <a href={resumeUrl} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[12px] font-bold border border-[var(--c-border)] text-[var(--c-text-dim)] hover:bg-[var(--c-surface-2)] transition-all"
+                >
+                  <Download size={14} /> Download
+                </a>
+              </div>
+              <div className="rounded-xl overflow-hidden border border-[var(--c-border)] bg-white">
+                <iframe src={resumeUrl} className="w-full h-[600px]" title="Candidate Resume" />
+              </div>
+            </div>
+          ) : (
+            <p className="text-[12px] text-[var(--c-text-mute)] italic">No resume uploaded by this candidate.</p>
+          )}
         </div>
       </CollapsibleSection>
     </motion.div>

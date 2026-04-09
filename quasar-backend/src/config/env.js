@@ -31,6 +31,14 @@ const config = {
   smtpUser: process.env.SMTP_USER || '',
   smtpPass: process.env.SMTP_PASS || '',
   emailFrom: process.env.EMAIL_FROM || 'noreply@quasar.app',
+
+  // MinIO (S3-compatible)
+  minioEndpoint: process.env.MINIO_ENDPOINT || 'localhost',
+  minioPort: parseInt(process.env.MINIO_PORT || '9000', 10),
+  minioAccessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
+  minioSecretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+  minioBucket: process.env.MINIO_BUCKET || 'quasar-resumes',
+  minioUseSSL: process.env.MINIO_USE_SSL === 'true',
 };
 
 if (!config.geminiApiKey) {

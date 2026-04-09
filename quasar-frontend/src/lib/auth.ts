@@ -13,8 +13,13 @@ export interface User {
   headline?: string | null;
   location?: string | null;
   company?: string | null;
+  designation?: string | null;
+  companyWebsite?: string | null;
   skills?: string[];
   experience?: number | null;
+  resumeKey?: string | null;
+  resumeFilename?: string | null;
+  resumeUploadedAt?: string | null;
 }
 
 /**

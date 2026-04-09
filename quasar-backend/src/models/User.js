@@ -31,11 +31,16 @@ const userSchema = new mongoose.Schema({
   resumeUrl: { type: String, default: null },
   resumeText: { type: String, default: null },
   resumeParsed: { type: mongoose.Schema.Types.Mixed, default: null },
+  resumeKey: { type: String, default: null },          // MinIO object key
+  resumeUploadedAt: { type: Date, default: null },
+  resumeFilename: { type: String, default: null },     // original filename
   skills: { type: [String], default: [] },
   experience: { type: Number, default: null },
 
   // ── Recruiter-specific fields ───────────────────────────────────
   company: { type: String, default: null, trim: true },
+  designation: { type: String, default: null, trim: true },
+  companyWebsite: { type: String, default: null, trim: true },
 }, {
   timestamps: true,
 });

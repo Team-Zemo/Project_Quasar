@@ -297,7 +297,7 @@ export function CandidateOnboarding() {
 
               {!resumeFile && (
                 <p className="text-[var(--c-text-mute)] text-[11px] text-center mt-3">
-                  You can upload your resume later in Settings. It's required before applying to jobs.
+                  You can upload your resume later in your Profile. It's required before applying to jobs.
                 </p>
               )}
             </motion.div>

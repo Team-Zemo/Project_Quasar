@@ -1,11 +1,13 @@
 /**
  * AI Career Coach — streaming chat endpoint (Groq).
  * Scoped to: interview prep, time management, course planning, career advice.
- * Context-aware: injects user's progress, skill vector, and gamification stats.
+ * Context-aware: injects user's progress, skill vector, gamification stats, and profile data.
  */
 const { chatCompletion } = require('../services/groqService');
 const { Session, UserStats } = require('../models');
 const SkillVector = require('../models/SkillVector');
+const User = require('../models/User');
+const Application = require('../models/Application');
 const logger = require('../utils/logger');
 
 const SYSTEM_PROMPT = `You are **Quasar Coach**, an expert AI career coach built into the Interview Quasar platform.
@@ -36,24 +38,59 @@ You help users with:
 `;
 
 /**
- * Build a context block from the user's interview history.
+ * Build a context block from the user's profile, interview history, and applications.
  */
 async function buildUserContext(userId) {
   try {
-    const [sessions, stats, skillVectors] = await Promise.all([
+    const [user, sessions, stats, skillVectors, applications] = await Promise.all([
+      User.findById(userId).select('name headline skills experience resumeParsed location role').lean(),
       Session.find({ userId, overallScore: { $exists: true } })
         .sort({ createdAt: -1 })
         .limit(10)
         .lean(),
       UserStats.findOne({ userId }).lean(),
       SkillVector.find({ userId }).lean(),
+      Application.find({ candidateId: userId })
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate('jobPostingId', 'title company')
+        .lean(),
     ]);
 
-    if (!sessions.length && !stats) return '';
+    if (!user && !sessions.length && !stats) return '';
 
     const parts = [`\n## USER CONTEXT (use this to personalize advice)\n`];
 
+    // Profile info
+    if (user) {
+      if (user.headline) parts.push(`- **Current Role/Title**: ${user.headline}`);
+      if (user.location) parts.push(`- **Location**: ${user.location}`);
+      if (user.experience != null) parts.push(`- **Experience**: ${user.experience} years`);
+      if (user.skills?.length > 0) parts.push(`- **Skills**: ${user.skills.join(', ')}`);
+
+      // Resume parsed data
+      if (user.resumeParsed) {
+        const rp = user.resumeParsed;
+        if (rp.education) parts.push(`- **Education**: ${Array.isArray(rp.education) ? rp.education.join('; ') : rp.education}`);
+        if (rp.certifications) parts.push(`- **Certifications**: ${Array.isArray(rp.certifications) ? rp.certifications.join(', ') : rp.certifications}`);
+        if (rp.projects && Array.isArray(rp.projects)) parts.push(`- **Projects**: ${rp.projects.slice(0, 3).join(', ')}`);
+      }
+    }
+
+    // Job applications
+    if (applications.length > 0) {
+      parts.push(`\n### Active Job Applications`);
+      parts.push(`- **Applied to ${applications.length} jobs** recently`);
+      applications.slice(0, 3).forEach(app => {
+        const job = app.jobPostingId;
+        const title = job?.title || 'Unknown role';
+        const company = job?.company || '';
+        parts.push(`  - ${title}${company ? ` at ${company}` : ''} — Status: **${app.status?.replace(/_/g, ' ')}**`);
+      });
+    }
+
     if (stats) {
+      parts.push(`\n### Platform Activity`);
       parts.push(`- **Level**: ${stats.level} | **XP**: ${stats.xp}`);
       parts.push(`- **Total sessions**: ${stats.totalSessions}`);
       parts.push(`- **Current streak**: ${stats.currentStreak} days (longest: ${stats.longestStreak})`);

@@ -6,6 +6,7 @@ const Application = require('../models/Application');
 const JobPosting = require('../models/JobPosting');
 const User = require('../models/User');
 const { sendPipelineNotification } = require('../services/emailService');
+const { getPresignedUrl } = require('../services/storageService');
 const logger = require('../utils/logger');
 
 /**
@@ -406,6 +407,54 @@ async function exportApplicantsCSV(req, res) {
   }
 }
 
+/**
+ * GET /api/recruiter/jobs/:id/applicants/:appId/resume
+ * Serve a candidate's resume to the recruiter via presigned MinIO URL.
+ */
+async function getApplicantResume(req, res) {
+  try {
+    const recruiterId = req.user?.id;
+    const { id, appId } = req.params;
+
+    // Verify job ownership
+    const posting = await JobPosting.findOne({ _id: id, recruiterId }).select('_id').lean();
+    if (!posting) {
+      return res.status(404).json({ success: false, message: 'Job posting not found', data: null });
+    }
+
+    // Find the application and get candidate
+    const application = await Application.findOne({ _id: appId, jobPostingId: id })
+      .select('candidateId')
+      .lean();
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found', data: null });
+    }
+
+    const candidate = await User.findById(application.candidateId)
+      .select('resumeKey resumeFilename name')
+      .lean();
+
+    if (!candidate || !candidate.resumeKey) {
+      return res.status(404).json({ success: false, message: 'Candidate has no resume uploaded', data: null });
+    }
+
+    const url = await getPresignedUrl(candidate.resumeKey, 3600);
+
+    return res.json({
+      success: true,
+      message: 'Resume URL retrieved',
+      data: {
+        url,
+        filename: candidate.resumeFilename || 'resume.pdf',
+        candidateName: candidate.name,
+      },
+    });
+  } catch (err) {
+    logger.error('Get applicant resume error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to get resume', data: null });
+  }
+}
+
 module.exports = {
   getDashboardStats,
   getApplicants,
@@ -413,4 +462,5 @@ module.exports = {
   shortlistCandidate,
   getRankings,
   exportApplicantsCSV,
+  getApplicantResume,
 };

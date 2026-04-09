@@ -15,6 +15,7 @@ const gamificationController = require('../controllers/gamificationController');
 const coachController        = require('../controllers/coachController');
 const studyPlanController    = require('../controllers/studyPlanController');
 const onboardingController   = require('../controllers/onboardingController');
+const profileController      = require('../controllers/profileController');
 
 // New route modules
 const recruiterRoutes = require('./recruiterRoutes');
@@ -26,6 +27,13 @@ const router = express.Router();
 router.post('/onboarding/role',    requireAuth, onboardingController.setRole);
 router.post('/onboarding/profile', requireAuth, onboardingController.completeProfile);
 router.post('/onboarding/resume',  requireAuth, upload.single('resume'), onboardingController.uploadResume);
+
+// ── Profile Management ───────────────────────────────────────
+router.get('/profile',           requireAuth, profileController.getProfile);
+router.put('/profile',           requireAuth, profileController.updateProfile);
+router.post('/profile/resume',   requireAuth, upload.single('resume'), profileController.uploadResume);
+router.get('/profile/resume',    requireAuth, profileController.downloadResume);
+router.delete('/profile/resume', requireAuth, profileController.deleteResume);
 
 // ── Recruiter Portal ──────────────────────────────────────────
 router.use('/recruiter', recruiterRoutes);

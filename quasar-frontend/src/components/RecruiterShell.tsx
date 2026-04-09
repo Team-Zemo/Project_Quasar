@@ -1,24 +1,25 @@
 import { useState, useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, Briefcase, Plus, Users, Settings, LogOut,
+  LayoutDashboard, Briefcase, Plus, User, LogOut,
   ChevronLeft, Menu,
 } from 'lucide-react';
-import { authState, type User } from '../lib/auth';
+import { authState, type User as UserType } from '../lib/auth';
 import { RecruiterDashboard } from './recruiter/RecruiterDashboard';
 import { JobPostingList } from './recruiter/JobPostingList';
 import { JobPostingForm } from './recruiter/JobPostingForm';
 import { JobPostingDetail } from './recruiter/JobPostingDetail';
+import { ProfilePage } from './ProfilePage';
 
 type RecruiterView =
   | { type: 'dashboard' }
   | { type: 'jobs' }
   | { type: 'create-job' }
   | { type: 'job-detail'; id: string }
-  | { type: 'settings' };
+  | { type: 'profile' };
 
 export function RecruiterShell() {
-  const [user, setUser] = useState<User | null>(authState.getUser());
+  const [user, setUser] = useState<UserType | null>(authState.getUser());
   const [view, setView] = useState<RecruiterView>({ type: 'dashboard' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -30,7 +31,7 @@ export function RecruiterShell() {
     { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'jobs' as const, label: 'Job Postings', icon: Briefcase },
     { id: 'create-job' as const, label: 'Create Job', icon: Plus },
-    { id: 'settings' as const, label: 'Settings', icon: Settings },
+    { id: 'profile' as const, label: 'Profile', icon: User },
   ];
 
   const handleLogout = async () => {
@@ -51,8 +52,8 @@ export function RecruiterShell() {
         return <JobPostingForm onComplete={(id: string) => setView({ type: 'job-detail', id })} onCancel={() => setView({ type: 'jobs' })} />;
       case 'job-detail':
         return <JobPostingDetail jobId={view.id} onBack={() => setView({ type: 'jobs' })} />;
-      case 'settings':
-        return <div className="p-8 text-[var(--c-text-dim)]">Settings page coming soon</div>;
+      case 'profile':
+        return <ProfilePage />;
       default:
         return null;
     }

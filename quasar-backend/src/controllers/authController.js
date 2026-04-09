@@ -30,8 +30,13 @@ function buildUserPayload(user) {
     headline: user.headline || null,
     location: user.location || null,
     company: user.company || null,
+    designation: user.designation || null,
+    companyWebsite: user.companyWebsite || null,
     skills: user.skills || [],
     experience: user.experience || null,
+    resumeKey: user.resumeKey || null,
+    resumeFilename: user.resumeFilename || null,
+    resumeUploadedAt: user.resumeUploadedAt || null,
   };
 }
 
@@ -256,35 +261,16 @@ async function me(req, res) {
   try {
     // Fetch full user record to return provider info and password status
     const user = await User.findById(req.user?.id || req.user?._id)
-      .select('email name avatarUrl googleId githubId passwordHash role profileComplete phone headline location company skills experience');
+      .select('email name avatarUrl googleId githubId passwordHash role profileComplete phone headline location company designation companyWebsite skills experience resumeKey resumeFilename resumeUploadedAt');
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found', data: null });
     }
 
-    const linkedProviders = [];
-    if (user.googleId) linkedProviders.push('google');
-    if (user.githubId) linkedProviders.push('github');
-
     return res.json({
       success: true,
       message: 'User retrieved',
-      data: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        avatarUrl: user.avatarUrl || null,
-        hasPassword: !!user.passwordHash,
-        linkedProviders,
-        role: user.role || null,
-        profileComplete: user.profileComplete || false,
-        phone: user.phone || null,
-        headline: user.headline || null,
-        location: user.location || null,
-        company: user.company || null,
-        skills: user.skills || [],
-        experience: user.experience || null,
-      },
+      data: buildUserPayload(user),
     });
   } catch (err) {
     logger.error('me() error', { err: err.message });

@@ -127,6 +127,7 @@ async function completeProfile(req, res) {
 /**
  * POST /api/onboarding/resume
  * Upload and parse resume (PDF). Auto-fills candidate profile with extracted data.
+ * Stores the PDF in MinIO for later retrieval.
  * Accepts multipart form with field name "resume".
  */
 async function uploadResume(req, res) {
@@ -175,6 +176,22 @@ async function uploadResume(req, res) {
       });
     }
 
+    // Upload to MinIO
+    let objectKey = null;
+    try {
+      const { uploadFile, deleteFile } = require('../services/storageService');
+      // Delete old resume if exists
+      if (user.resumeKey) {
+        await deleteFile(user.resumeKey);
+      }
+      const timestamp = Date.now();
+      const sanitizedName = (req.file.originalname || 'resume.pdf').replace(/[^a-zA-Z0-9._-]/g, '_');
+      objectKey = `resumes/${userId}_${timestamp}_${sanitizedName}`;
+      await uploadFile(objectKey, req.file.buffer, 'application/pdf');
+    } catch (storageErr) {
+      logger.warn('MinIO upload failed during onboarding, continuing without storage', { err: storageErr.message });
+    }
+
     // AI parse resume
     let parsedData;
     try {
@@ -187,6 +204,11 @@ async function uploadResume(req, res) {
     // Update user with resume data
     user.resumeText = resumeText;
     user.resumeParsed = parsedData;
+    if (objectKey) {
+      user.resumeKey = objectKey;
+      user.resumeFilename = req.file.originalname || 'resume.pdf';
+      user.resumeUploadedAt = new Date();
+    }
 
     // Auto-fill fields from parsed data
     if (parsedData) {
@@ -206,7 +228,7 @@ async function uploadResume(req, res) {
 
     await user.save();
 
-    logger.info('Resume uploaded and parsed', { userId, skillsCount: user.skills.length });
+    logger.info('Resume uploaded and parsed', { userId, skillsCount: user.skills.length, storedInMinIO: !!objectKey });
 
     return res.json({
       success: true,

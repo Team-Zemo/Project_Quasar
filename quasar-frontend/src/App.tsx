@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Lenis from 'lenis';
 import 'lenis/dist/lenis.css';
 import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mic, TrendingUp, FileText, BarChart2, MessageSquare, Settings, LogOut, BookOpenCheck, Menu, X, Briefcase, FolderOpen } from 'lucide-react';
+import { Mic, TrendingUp, FileText, BarChart2, MessageSquare, User, LogOut, BookOpenCheck, Menu, X, Briefcase, FolderOpen } from 'lucide-react';
 import { DomainSelector } from './components/DomainSelector';
 import { InterviewRoom } from './components/InterviewRoom';
 import { LoginPage } from './components/LoginPage';
@@ -10,7 +10,7 @@ import { RegisterPage } from './components/RegisterPage';
 import { ProgressDashboard } from './components/ProgressDashboard';
 import { ForgotPasswordPage } from './components/ForgotPasswordPage';
 import { ResetPasswordPage } from './components/ResetPasswordPage';
-import { SettingsPage } from './components/SettingsPage';
+import { ProfilePage } from './components/ProfilePage';
 import { ResumeComparePage } from './components/ResumeComparePage';
 import { StatsPage } from './components/StatsPage';
 import { CoachChat } from './components/CoachChat';
@@ -251,8 +251,8 @@ function AppShell() {
                   </Link>
                 </>
               )}
-              <Link to="/settings" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors" title="Settings">
-                <Settings size={16} strokeWidth={2.5} />
+              <Link to="/profile" className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors" title="Profile">
+                <User size={16} strokeWidth={2.5} />
               </Link>
 
               <div className="flex items-center gap-2.5 ml-2 pl-4 border-l border-[var(--c-border)]">
@@ -305,9 +305,9 @@ function AppShell() {
                   Study Plan
                 </Link>
                 <div className="h-px bg-[var(--c-border)] my-2"></div>
-                <Link to="/settings" className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
-                  <Settings size={20} className="text-[var(--c-text-dim)]" strokeWidth={2.5} />
-                  Settings
+                <Link to="/profile" className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors">
+                  <User size={20} className="text-[var(--c-text-dim)]" strokeWidth={2.5} />
+                  Profile
                 </Link>
                 <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[#f87171] hover:bg-red-500/10 transition-colors w-full text-left">
                   <LogOut size={20} strokeWidth={2.5} />
@@ -333,7 +333,7 @@ function AppShell() {
           <Route path="/forgot-password" element={isAuthenticated ? <Navigate to="/interview" replace /> : <ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/progress" element={<ProtectedRoute><ProgressDashboard /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           <Route path="/resume-compare" element={<ProtectedRoute><ResumeComparePage /></ProtectedRoute>} />
           <Route path="/stats" element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
           <Route path="/coach" element={<ProtectedRoute><CoachChat /></ProtectedRoute>} />
