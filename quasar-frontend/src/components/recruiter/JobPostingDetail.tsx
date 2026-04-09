@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Users, Sparkles, Plus, Trash2, Edit3,
   CheckCircle, XCircle, Clock, Play, Square,
@@ -44,6 +44,20 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addingMcq, setAddingMcq] = useState(false);
+  const [newMcq, setNewMcq] = useState({
+    question: '',
+    options: [
+      { text: '', isCorrect: true },
+      { text: '', isCorrect: false },
+      { text: '', isCorrect: false },
+      { text: '', isCorrect: false },
+    ],
+    difficulty: 2 as 1 | 2 | 3,
+    topic: '',
+    explanation: '',
+  });
 
   useEffect(() => {
     Promise.all([
@@ -60,7 +74,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
   const handleGenerateMcqs = async () => {
     setGenerating(true);
     try {
-      const res = await apiPost<McqQuestion[]>(`/api/recruiter/jobs/${jobId}/mcqs/generate`, { count: 20 });
+      const res = await apiPost<McqQuestion[]>(`/api/recruiter/jobs/${jobId}/mcqs/generate`, { count: 10 });
       if (res.success) {
         setMcqs(prev => [...prev, ...res.data]);
       }
@@ -69,13 +83,64 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
     }
   };
 
+  const handleAddMcq = async () => {
+    if (!newMcq.question.trim()) return;
+    const filledOptions = newMcq.options.filter(o => o.text.trim());
+    if (filledOptions.length < 2) return;
+    const correctCount = newMcq.options.filter(o => o.isCorrect).length;
+    if (correctCount !== 1) return;
+
+    setAddingMcq(true);
+    try {
+      const res = await apiPost<McqQuestion>(`/api/recruiter/jobs/${jobId}/mcqs`, {
+        question: newMcq.question.trim(),
+        options: newMcq.options.filter(o => o.text.trim()),
+        difficulty: newMcq.difficulty,
+        topic: newMcq.topic.trim() || null,
+        explanation: newMcq.explanation.trim() || null,
+      });
+      if (res.success) {
+        setMcqs(prev => [...prev, res.data]);
+        setNewMcq({
+          question: '',
+          options: [
+            { text: '', isCorrect: true },
+            { text: '', isCorrect: false },
+            { text: '', isCorrect: false },
+            { text: '', isCorrect: false },
+          ],
+          difficulty: 2,
+          topic: '',
+          explanation: '',
+        });
+        setShowAddForm(false);
+      }
+    } catch {} finally {
+      setAddingMcq(false);
+    }
+  };
+
+  const updateOption = (index: number, text: string) => {
+    setNewMcq(prev => ({
+      ...prev,
+      options: prev.options.map((o, i) => i === index ? { ...o, text } : o),
+    }));
+  };
+
+  const setCorrectOption = (index: number) => {
+    setNewMcq(prev => ({
+      ...prev,
+      options: prev.options.map((o, i) => ({ ...o, isCorrect: i === index })),
+    }));
+  };
+
   const handlePublish = async () => {
     setPublishing(true);
     try {
       const res = await apiPost<JobPosting>(`/api/recruiter/jobs/${jobId}/publish`, {});
       if (res.success) setPosting(res.data);
       else alert(res.message);
-    } catch {} finally {
+    } catch { /* empty */ } finally {
       setPublishing(false);
     }
   };
@@ -84,7 +149,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
     try {
       const res = await apiPost<JobPosting>(`/api/recruiter/jobs/${jobId}/close`, {});
       if (res.success) setPosting(res.data);
-    } catch {}
+    } catch { /* empty */ }
   };
 
   const handleDeleteMcq = async (mcqId: string) => {
@@ -92,7 +157,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
       const res = await apiGet(`/api/recruiter/jobs/${jobId}/mcqs/${mcqId}`); // We'll use fetch DELETE
       await fetch(`/api/recruiter/jobs/${jobId}/mcqs/${mcqId}`, { method: 'DELETE', credentials: 'include' });
       setMcqs(prev => prev.filter(m => m._id !== mcqId));
-    } catch {}
+    } catch { /* empty */ }
   };
 
   const handleShortlist = async (appId: string, action: 'shortlist' | 'reject') => {
@@ -249,12 +314,161 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
           <div className="flex items-center justify-between mb-4">
             <p className="text-[13px] text-[var(--c-text-dim)]">{mcqs.length} questions</p>
             <div className="flex gap-2">
+              <button
+                onClick={() => setShowAddForm(!showAddForm)}
+                className="btn-secondary flex items-center gap-2"
+              >
+                <Plus size={14} />
+                Add Manually
+              </button>
               <button onClick={handleGenerateMcqs} disabled={generating} className="btn-secondary flex items-center gap-2">
                 {generating ? <div className="spinner !w-4 !h-4 !border-[var(--c-accent)] !border-t-transparent" /> : <Sparkles size={14} />}
-                {generating ? 'Generating...' : 'AI Generate (20)'}
+                {generating ? 'Generating...' : 'AI Generate (10)'}
               </button>
             </div>
           </div>
+
+          {/* Manual MCQ Form */}
+          <AnimatePresence>
+            {showAddForm && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden mb-4"
+              >
+                <div className="bg-[var(--c-surface)] border border-[var(--c-accent)]/30 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[14px] font-bold text-[var(--c-text)] flex items-center gap-2">
+                      <Plus size={16} className="text-[var(--c-accent)]" />
+                      Add New Question
+                    </h4>
+                    <button
+                      onClick={() => setShowAddForm(false)}
+                      className="p-1.5 rounded-lg hover:bg-[var(--c-surface-2)] text-[var(--c-text-mute)] hover:text-[var(--c-text)]"
+                    >
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+
+                  {/* Question text */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-1.5">Question *</label>
+                    <textarea
+                      value={newMcq.question}
+                      onChange={e => setNewMcq(prev => ({ ...prev, question: e.target.value }))}
+                      placeholder="Enter the question text..."
+                      rows={2}
+                      className="w-full bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-xl text-[13px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus:outline-none focus:border-[var(--c-accent)] focus:ring-1 focus:ring-[var(--c-accent-dim)] transition-all resize-none"
+                      style={{ padding: '10px 14px' }}
+                    />
+                  </div>
+
+                  {/* Options */}
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-2">Options * (click radio to mark correct)</label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {newMcq.options.map((opt, oi) => (
+                        <div key={oi} className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
+                          opt.isCorrect
+                            ? 'bg-[var(--c-success-dim)] border-[var(--c-success)]/30'
+                            : 'bg-[var(--c-surface-2)] border-[var(--c-border)]'
+                        }`}>
+                          <button
+                            type="button"
+                            onClick={() => setCorrectOption(oi)}
+                            className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                              opt.isCorrect
+                                ? 'border-[var(--c-success)] bg-[var(--c-success)]'
+                                : 'border-[var(--c-border)] hover:border-[var(--c-text-mute)]'
+                            }`}
+                          >
+                            {opt.isCorrect && <CheckCircle size={12} className="text-white" />}
+                          </button>
+                          <span className="text-[12px] font-bold text-[var(--c-text-mute)] w-4">{String.fromCharCode(65 + oi)}.</span>
+                          <input
+                            type="text"
+                            value={opt.text}
+                            onChange={e => updateOption(oi, e.target.value)}
+                            placeholder={`Option ${String.fromCharCode(65 + oi)}`}
+                            className="flex-1 bg-transparent text-[13px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus:outline-none"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Difficulty & Topic row */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-1.5">Difficulty</label>
+                      <div className="flex gap-1">
+                        {([1, 2, 3] as const).map(d => (
+                          <button
+                            key={d}
+                            onClick={() => setNewMcq(prev => ({ ...prev, difficulty: d }))}
+                            className={`flex-1 py-2 rounded-lg text-[11px] font-bold uppercase transition-all ${
+                              newMcq.difficulty === d
+                                ? d === 1 ? 'bg-[var(--c-success-dim)] text-[var(--c-success)] border border-[var(--c-success)]/30'
+                                  : d === 3 ? 'bg-[var(--c-error-dim)] text-[var(--c-error)] border border-[var(--c-error)]/30'
+                                  : 'bg-[var(--c-accent-dim)] text-[var(--c-accent)] border border-[var(--c-accent)]/30'
+                                : 'bg-[var(--c-surface-2)] text-[var(--c-text-mute)] border border-[var(--c-border)] hover:bg-[var(--c-surface-3)]'
+                            }`}
+                          >
+                            {d === 1 ? 'Easy' : d === 3 ? 'Hard' : 'Medium'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-1.5">Topic</label>
+                      <input
+                        type="text"
+                        value={newMcq.topic}
+                        onChange={e => setNewMcq(prev => ({ ...prev, topic: e.target.value }))}
+                        placeholder="e.g. React Hooks"
+                        className="w-full bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-lg text-[13px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus:outline-none focus:border-[var(--c-accent)] transition-all"
+                        style={{ padding: '8px 12px' }}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-1.5">Explanation</label>
+                      <input
+                        type="text"
+                        value={newMcq.explanation}
+                        onChange={e => setNewMcq(prev => ({ ...prev, explanation: e.target.value }))}
+                        placeholder="Why is this correct?"
+                        className="w-full bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-lg text-[13px] text-[var(--c-text)] placeholder-[var(--c-text-mute)] focus:outline-none focus:border-[var(--c-accent)] transition-all"
+                        style={{ padding: '8px 12px' }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit */}
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--c-border)]">
+                    <button
+                      onClick={() => setShowAddForm(false)}
+                      className="px-4 py-2 text-[13px] font-semibold text-[var(--c-text-mute)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] rounded-xl transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAddMcq}
+                      disabled={addingMcq || !newMcq.question.trim() || newMcq.options.filter(o => o.text.trim()).length < 2}
+                      className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-bold transition-all ${
+                        addingMcq || !newMcq.question.trim() || newMcq.options.filter(o => o.text.trim()).length < 2
+                          ? 'bg-[var(--c-surface-3)] text-[var(--c-text-mute)] cursor-not-allowed'
+                          : 'bg-gradient-to-r from-[var(--c-accent)] to-[#fb923c] text-white hover:brightness-110 shadow-md active:scale-95'
+                      }`}
+                    >
+                      {addingMcq ? <div className="spinner !w-4 !h-4 !border-white !border-t-transparent" /> : <Plus size={14} />}
+                      {addingMcq ? 'Adding...' : 'Add Question'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
           <div className="space-y-3">
             {mcqs.map((mcq, i) => (
               <motion.div

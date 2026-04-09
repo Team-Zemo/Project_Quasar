@@ -3,7 +3,7 @@
  * Scoped to: interview prep, time management, course planning, career advice.
  * Context-aware: injects user's progress, skill vector, and gamification stats.
  */
-const { groq } = require('../services/groqService');
+const { chatCompletion } = require('../services/groqService');
 const { Session, UserStats } = require('../models');
 const SkillVector = require('../models/SkillVector');
 const logger = require('../utils/logger');
@@ -131,23 +131,18 @@ async function chat(req, res) {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    // Stream from Groq
-    const stream = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.5,
-      max_tokens: 4096,
-      stream: true,
-      messages: [
-        { role: 'system', content: fullSystemPrompt },
-        ...sanitized,
-      ],
-    });
+    // Non-streaming completion (NeevCloud does not support streaming)
+    const completion = await chatCompletion(
+      fullSystemPrompt,
+      sanitized.map(m => `${m.role}: ${m.content}`).join('\n'),
+      { model: 'llama-3.3-70b-versatile', temperature: 0.5, maxTokens: 4096 }
+    );
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta?.content;
-      if (delta) {
-        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
-      }
+    // Simulate streaming by flushing in small chunks for progressive UI rendering
+    const CHUNK_SIZE = 80;
+    for (let i = 0; i < completion.length; i += CHUNK_SIZE) {
+      const chunk = completion.slice(i, i + CHUNK_SIZE);
+      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
     }
 
     res.write('data: [DONE]\n\n');

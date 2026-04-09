@@ -3,7 +3,7 @@
  * Takes user inputs (weeks, techStack, skillToLearn, optional fields)
  * and streams a rich Markdown weekly study plan via Groq.
  */
-const { groq } = require('../services/groqService');
+const { chatCompletion } = require('../services/groqService');
 const logger = require('../utils/logger');
 
 const SYSTEM_PROMPT = `You are an expert learning architect and curriculum designer. 
@@ -107,7 +107,7 @@ ${Number(weeks) <= 4 ? 'Be very granular with daily topics since the timeline is
 ${Number(weeks) >= 8 ? 'Structure the plan in phases: Foundations, Core Concepts, Advanced Topics, and Project Work.' : ''}
 Make the resource links real and specific to "${stackStr}".`;
 
-    // SSE headers — match coachController pattern exactly
+    // SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -121,22 +121,18 @@ Make the resource links real and specific to "${stackStr}".`;
       techStack: stackStr,
     });
 
-    const stream = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
-      temperature: 0.4,
-      max_tokens: 8192,
-      stream: true,
-      messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
-        { role: 'user', content: userPrompt },
-      ],
-    });
+    // Non-streaming completion (NeevCloud does not support streaming)
+    const completion = await chatCompletion(
+      SYSTEM_PROMPT,
+      userPrompt,
+      { model: 'llama-3.3-70b-versatile', temperature: 0.4, maxTokens: 8192 }
+    );
 
-    for await (const chunk of stream) {
-      const delta = chunk.choices?.[0]?.delta?.content;
-      if (delta) {
-        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
-      }
+    // Simulate streaming by flushing in small chunks for progressive UI rendering
+    const CHUNK_SIZE = 80;
+    for (let i = 0; i < completion.length; i += CHUNK_SIZE) {
+      const chunk = completion.slice(i, i + CHUNK_SIZE);
+      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
     }
 
     res.write('data: [DONE]\n\n');

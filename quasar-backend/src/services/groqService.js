@@ -1,30 +1,35 @@
 /**
- * Shared Groq client — used for JD parsing, transcript evaluation, and report generation.
+ * Shared NeevCloud client (OpenAI-compatible) — used for JD parsing,
+ * transcript evaluation, report generation, coach chat, and study plans.
  * Gemini remains in use for the real-time Live interview session (geminiService.js).
  */
-const Groq = require('groq-sdk');
+const OpenAI = require('openai');
 const config = require('../config/env');
 
-const groq = new Groq({ apiKey: config.groqApiKey });
+const client = new OpenAI({
+  apiKey: config.neevApiKey,
+  baseURL: 'https://inference.ai.neevcloud.com/v1',
+  timeout: 5 * 60 * 1000, // 5 minutes
+});
 
 /**
- * Run a chat completion against Groq and return the raw text.
+ * Run a chat completion against NeevCloud and return the raw text.
  * @param {string} systemPrompt  – system message (role instructions)
  * @param {string} userPrompt    – user message (data / request)
  * @param {object} [opts]
- * @param {string} [opts.model]  – Groq model id
+ * @param {string} [opts.model]  – model id (default: kimi-k2)
  * @param {number} [opts.temperature] – sampling temperature (default: 0.3)
  * @param {number} [opts.maxTokens]   – max tokens (default: 4096)
  * @returns {Promise<string>}
  */
 async function chatCompletion(systemPrompt, userPrompt, opts = {}) {
   const {
-    model = 'openai/gpt-oss-120b',
+    model = 'llama-3.3-70b-versatile',
     temperature = 0.3,
     maxTokens = 4096,
   } = opts;
 
-  const completion = await groq.chat.completions.create({
+  const completion = await client.chat.completions.create({
     model,
     temperature,
     max_tokens: maxTokens,
@@ -37,4 +42,4 @@ async function chatCompletion(systemPrompt, userPrompt, opts = {}) {
   return completion.choices[0]?.message?.content?.trim() ?? '';
 }
 
-module.exports = { groq, chatCompletion };
+module.exports = { client, chatCompletion };
