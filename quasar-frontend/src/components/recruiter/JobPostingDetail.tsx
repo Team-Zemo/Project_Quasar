@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowLeft, Users, Sparkles, Plus, Trash2, Edit3,
-  CheckCircle, XCircle, Clock, Play, Square,
-  Trophy, ChevronDown, ChevronUp, FileText,
+  ArrowLeft, Users, Sparkles, Plus, Trash2,
+  CheckCircle, XCircle, Play, Square,
+  Download, Eye,
 } from 'lucide-react';
-import { apiGet, apiPost, apiPut } from '../../lib/api';
+import { apiGet, apiPost } from '../../lib/api';
 import type { JobPosting, McqQuestion, ApplicantSummary, ApplicationStatus } from '../../types/recruitment';
+import { ApplicantDetailView } from './ApplicantDetailView';
 
 interface Props {
   jobId: string;
@@ -44,6 +45,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addingMcq, setAddingMcq] = useState(false);
   const [newMcq, setNewMcq] = useState({
@@ -154,7 +156,6 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
 
   const handleDeleteMcq = async (mcqId: string) => {
     try {
-      const res = await apiGet(`/api/recruiter/jobs/${jobId}/mcqs/${mcqId}`); // We'll use fetch DELETE
       await fetch(`/api/recruiter/jobs/${jobId}/mcqs/${mcqId}`, { method: 'DELETE', credentials: 'include' });
       setMcqs(prev => prev.filter(m => m._id !== mcqId));
     } catch { /* empty */ }
@@ -166,6 +167,35 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
       setApplicants(prev => prev.map(a => a._id === appId ? { ...a, status: action === 'shortlist' ? 'selected' : 'rejected' } : a));
     } catch {}
   };
+
+  const handleExportCSV = async () => {
+    try {
+      const response = await fetch(`/api/recruiter/jobs/${jobId}/export`, { credentials: 'include' });
+      if (!response.ok) throw new Error('Export failed');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = response.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'applicants.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Failed to export CSV');
+    }
+  };
+
+  // Show applicant detail view if one is selected
+  if (selectedApplicantId) {
+    return (
+      <ApplicantDetailView
+        jobId={jobId}
+        applicationId={selectedApplicantId}
+        onBack={() => setSelectedApplicantId(null)}
+      />
+    );
+  }
 
   if (loading) {
     return <div className="flex items-center justify-center h-full">
@@ -261,6 +291,15 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
 
       {tab === 'applicants' && (
         <div>
+          {/* Export button */}
+          {applicants.length > 0 && (
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-[13px] text-[var(--c-text-dim)]">{applicants.length} applicant{applicants.length !== 1 ? 's' : ''}</p>
+              <button onClick={handleExportCSV} className="btn-secondary flex items-center gap-2">
+                <Download size={14} /> Export CSV
+              </button>
+            </div>
+          )}
           {applicants.length === 0 ? (
             <div className="text-center py-16">
               <Users size={48} className="mx-auto text-[var(--c-text-mute)] mb-4" />
@@ -269,13 +308,16 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
           ) : (
             <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl overflow-hidden">
               {/* Table header */}
-              <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-4 px-5 py-3 bg-[var(--c-surface-2)] text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)]">
-                <span>#</span><span>Candidate</span><span>Screening</span><span>MCQ</span><span>Tech</span><span>Status</span><span>Actions</span>
+              <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 bg-[var(--c-surface-2)] text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)]">
+                <span>#</span><span>Candidate</span><span>Screening</span><span>MCQ</span><span>Tech</span><span>HR</span><span>Status</span><span>Actions</span>
               </div>
               {applicants.map((app, i) => {
                 const st = statusColors[app.status] || { color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)', label: app.status };
                 return (
-                  <div key={app._id} className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto] gap-4 px-5 py-4 border-t border-[var(--c-border)] items-center hover:bg-[var(--c-surface-2)] transition-colors">
+                  <div key={app._id}
+                    className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-4 border-t border-[var(--c-border)] items-center hover:bg-[var(--c-surface-2)] transition-colors cursor-pointer"
+                    onClick={() => setSelectedApplicantId(app._id)}
+                  >
                     <span className="text-[12px] font-bold text-[var(--c-text-mute)] w-5">{app.rank || i + 1}</span>
                     <div>
                       <p className="text-[13px] font-semibold text-[var(--c-text)]">{app.candidate?.name || 'Unknown'}</p>
@@ -286,10 +328,14 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                     <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">
                       {app.techScores?.length > 0 ? app.techScores.map(t => t.score != null ? t.score.toFixed(1) : '—').join('/') : '—'}
                     </span>
+                    <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{app.hrScore != null ? app.hrScore.toFixed(1) : '—'}</span>
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" style={{ color: st.color, background: st.bg }}>
                       {st.label}
                     </span>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => setSelectedApplicantId(app._id)} className="p-1.5 rounded-lg hover:bg-[var(--c-accent-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-accent)]" title="View Details">
+                        <Eye size={14} />
+                      </button>
                       {!['selected', 'rejected'].includes(app.status) && (
                         <>
                           <button onClick={() => handleShortlist(app._id, 'shortlist')} className="p-1.5 rounded-lg hover:bg-[var(--c-success-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-success)]" title="Shortlist">

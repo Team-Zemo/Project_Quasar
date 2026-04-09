@@ -35,5 +35,6 @@ router.get('/jobs/:id/applicants', dashboardController.getApplicants);
 router.get('/jobs/:id/applicants/:appId', dashboardController.getApplicantDetail);
 router.post('/jobs/:id/applicants/:appId/shortlist', dashboardController.shortlistCandidate);
 router.get('/jobs/:id/rankings', dashboardController.getRankings);
+router.get('/jobs/:id/export', dashboardController.exportApplicantsCSV);
 
 module.exports = router;

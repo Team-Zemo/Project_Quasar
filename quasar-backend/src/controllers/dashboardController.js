@@ -308,10 +308,109 @@ async function getRankings(req, res) {
   }
 }
 
+/**
+ * GET /api/recruiter/jobs/:id/export
+ * Export all applicants for a job posting as CSV.
+ */
+async function exportApplicantsCSV(req, res) {
+  try {
+    const recruiterId = req.user?.id;
+    const { id } = req.params;
+
+    const posting = await JobPosting.findOne({ _id: id, recruiterId }).lean();
+    if (!posting) {
+      return res.status(404).json({ success: false, message: 'Job posting not found', data: null });
+    }
+
+    const applications = await Application.find({ jobPostingId: id })
+      .populate('candidateId', 'name email phone headline skills experience location')
+      .sort({ totalScore: -1 })
+      .lean();
+
+    // CSV header
+    const headers = [
+      'Rank', 'Name', 'Email', 'Phone', 'Location', 'Headline',
+      'Skills', 'Experience (Years)', 'Status', 'Applied At',
+      'Screening Score (%)', 'Screening Passed', 'Matched Skills', 'Missing Skills', 'Screening Summary',
+      'MCQ Score (%)', 'MCQ Correct', 'MCQ Total', 'MCQ Passed',
+    ];
+
+    // Add dynamic tech round columns
+    const maxTechRounds = Math.max(...applications.map(a => (a.techResults || []).length), 0);
+    for (let i = 1; i <= maxTechRounds; i++) {
+      headers.push(`Tech Round ${i} Score`, `Tech Round ${i} Passed`);
+    }
+
+    headers.push('HR Score', 'HR Passed', 'Total Score');
+
+    // Escape CSV value
+    const esc = (val) => {
+      if (val === null || val === undefined) return '';
+      const str = String(val).replace(/"/g, '""');
+      return str.includes(',') || str.includes('"') || str.includes('\n') ? `"${str}"` : str;
+    };
+
+    const rows = [headers.join(',')];
+
+    applications.forEach((app, index) => {
+      const c = app.candidateId || {};
+      const sr = app.screeningResult || {};
+      const mcq = app.mcqResult || {};
+
+      const row = [
+        app.rank || index + 1,
+        esc(c.name),
+        esc(c.email),
+        esc(c.phone),
+        esc(c.location),
+        esc(c.headline),
+        esc((c.skills || []).join('; ')),
+        c.experience ?? '',
+        app.status,
+        app.appliedAt ? new Date(app.appliedAt).toISOString().split('T')[0] : '',
+        sr.matchScore ?? '',
+        sr.passed != null ? (sr.passed ? 'Yes' : 'No') : '',
+        esc((sr.matchedSkills || []).join('; ')),
+        esc((sr.missingSkills || []).join('; ')),
+        esc(sr.summary),
+        mcq.percentage ?? '',
+        mcq.correctAnswers ?? '',
+        mcq.totalQuestions ?? '',
+        mcq.passed != null ? (mcq.passed ? 'Yes' : 'No') : '',
+      ];
+
+      // Tech rounds
+      for (let i = 0; i < maxTechRounds; i++) {
+        const tr = (app.techResults || [])[i];
+        row.push(tr?.score != null ? tr.score.toFixed(1) : '');
+        row.push(tr?.passed != null ? (tr.passed ? 'Yes' : 'No') : '');
+      }
+
+      const hr = app.hrResult || {};
+      row.push(hr.score != null ? hr.score.toFixed(1) : '');
+      row.push(hr.passed != null ? (hr.passed ? 'Yes' : 'No') : '');
+      row.push(app.totalScore ? app.totalScore.toFixed(2) : '0');
+
+      rows.push(row.join(','));
+    });
+
+    const csv = rows.join('\n');
+    const filename = `${posting.title.replace(/[^a-zA-Z0-9]/g, '_')}_applicants_${new Date().toISOString().split('T')[0]}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send(csv);
+  } catch (err) {
+    logger.error('Export applicants CSV error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to export applicants', data: null });
+  }
+}
+
 module.exports = {
   getDashboardStats,
   getApplicants,
   getApplicantDetail,
   shortlistCandidate,
   getRankings,
+  exportApplicantsCSV,
 };
