@@ -177,7 +177,7 @@ function AppShell() {
 
   return (
     <div className={`flex flex-col relative overflow-x-hidden ${
-      isFullScreenApp ? 'h-screen overflow-hidden' : 'min-h-screen'
+      isFullScreenApp || isCoach ? 'h-screen overflow-hidden' : 'min-h-screen'
     }`}>
       {/* Ambient background blobs */}
       <div className="bg-blob bg-blob--1" aria-hidden="true" />
