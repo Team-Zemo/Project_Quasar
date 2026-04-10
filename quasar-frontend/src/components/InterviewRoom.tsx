@@ -9,7 +9,7 @@ import { CodeEditor } from './CodeEditor';
 import { useProctoring } from '../hooks/useProctoring';
 import { apiPost, apiFetchRaw } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Square, Mic, MicOff, MessageSquare, CheckCircle2, RefreshCw, Loader2, AlertTriangle, Users } from 'lucide-react';
+import { Square, Mic, MicOff, MessageSquare, CheckCircle2, RefreshCw, Loader2, AlertTriangle, Users, Radio } from 'lucide-react';
 
 const logger = (...args: unknown[]) => console.log('[InterviewRoom]', ...args);
 
@@ -28,6 +28,10 @@ interface InterviewRoomProps {
   isMuted: boolean;
   /** Push-to-talk: toggle mute */
   setMuted: (muted: boolean) => void;
+  /** Whether push-to-talk mode is enabled */
+  pttEnabled: boolean;
+  /** Toggle push-to-talk on/off */
+  setPttEnabled: (enabled: boolean) => void;
 }
 
 export function InterviewRoom({
@@ -43,6 +47,8 @@ export function InterviewRoom({
   getTranscript,
   isMuted,
   setMuted,
+  pttEnabled,
+  setPttEnabled,
 }: InterviewRoomProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const isEnded = status === 'ended' || status === 'error';
@@ -85,8 +91,8 @@ export function InterviewRoom({
 
   // ── Push-to-Talk: spacebar hold to unmute ──────────────────────────
   useEffect(() => {
-    // Disable PTT when code editor is open or session is ended
-    if (activeCodingQuestion || isEnded) return;
+    // Disable PTT when code editor is open, session is ended, or PTT mode is disabled
+    if (activeCodingQuestion || isEnded || !pttEnabled) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle Space key
@@ -148,7 +154,7 @@ export function InterviewRoom({
       document.removeEventListener('keyup', handleKeyUp, true);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [activeCodingQuestion, isEnded, setMuted]);
+  }, [activeCodingQuestion, isEnded, setMuted, pttEnabled]);
 
   const handleEmotionSnapshot = useCallback((snapshot: EmotionSnapshot) => {
     setEmotionSnapshots(prev => [...prev, snapshot]);
@@ -258,7 +264,8 @@ export function InterviewRoom({
           <p className="text-[11px] sm:text-[12px] font-medium text-[var(--c-text-dim)] m-0 mt-0.5 ml-5 truncate max-w-full sm:max-w-[300px]">
             {status === 'active' && activeCodingQuestion && 'Write your code solution — microphone paused'}
             {status === 'active' && !activeCodingQuestion && isRecording && !isMuted && 'Listening — speak now'}
-            {status === 'active' && !activeCodingQuestion && isRecording && isMuted && 'Hold Space to talk'}
+            {status === 'active' && !activeCodingQuestion && isRecording && isMuted && pttEnabled && 'Hold Space to talk'}
+            {status === 'active' && !activeCodingQuestion && isRecording && isMuted && !pttEnabled && 'Connecting audio…'}
             {status === 'active' && !activeCodingQuestion && !isRecording && 'Connecting audio…'}
             {status === 'connecting' && 'Connecting to Gemini…'}
             {status === 'ended' && 'Session completed — reviewing performance'}
@@ -364,9 +371,39 @@ export function InterviewRoom({
                   <div className="flex flex-col min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] m-0">Microphone</p>
                     <p className="text-[13px] font-semibold text-[var(--c-text)] m-0 mt-0.5 truncate">
-                      {isRecording && !isMuted ? 'Listening…' : isRecording && isMuted ? 'Muted — Hold Space' : 'Connecting…'}
+                      {!pttEnabled ? 'Always on — speak freely' : isRecording && !isMuted ? 'Listening…' : isRecording && isMuted ? 'Muted — Hold Space' : 'Connecting…'}
                     </p>
                   </div>
+                </div>
+
+                {/* Push-to-Talk toggle */}
+                <div className="flex items-center justify-between p-3.5 bg-[var(--c-surface-3)] border border-[var(--c-border)] rounded-2xl shadow-sm">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="shrink-0 flex items-center justify-center p-2 rounded-xl bg-[var(--c-surface)] text-[var(--c-text)]">
+                      <Radio size={16} />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] m-0">Mic Mode</p>
+                      <p className="text-[12px] font-semibold text-[var(--c-text)] m-0 mt-0.5 truncate">
+                        {pttEnabled ? 'Push to Talk' : 'Free Talk'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setPttEnabled(!pttEnabled)}
+                    title={pttEnabled ? 'Switch to Free Talk (always-on mic)' : 'Switch to Push-to-Talk (hold Space)'}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none ${
+                      pttEnabled
+                        ? 'bg-[var(--c-surface)] border-[var(--c-border-2)]'
+                        : 'bg-green-500 border-green-500'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out ${
+                        pttEnabled ? 'translate-x-0' : 'translate-x-5'
+                      }`}
+                    />
+                  </button>
                 </div>
               </div>
             </motion.aside>
@@ -405,33 +442,53 @@ export function InterviewRoom({
           {!isEnded && !activeCodingQuestion && isRecording && (
             <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center pb-4 pt-6 bg-gradient-to-t from-[var(--c-surface)] to-transparent z-10 pointer-events-none">
               <AnimatePresence mode="wait">
-                {isMuted ? (
+                {pttEnabled ? (
+                  // ── PTT mode indicators ──
+                  isMuted ? (
+                    <motion.div
+                      key="muted"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-full shadow-lg pointer-events-auto"
+                    >
+                      <MicOff size={16} className="text-[var(--c-text-mute)]" />
+                      <span className="text-[13px] font-bold text-[var(--c-text-dim)]">
+                        Hold&nbsp;<kbd className="inline-flex items-center justify-center px-2 py-0.5 bg-[var(--c-surface-3)] border border-[var(--c-border-2)] rounded-md text-[11px] font-black text-[var(--c-text)] mx-0.5 min-w-[3rem]">SPACE</kbd>&nbsp;to talk
+                      </span>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="listening"
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                      className="flex items-center gap-2.5 px-6 py-3 bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30 rounded-full shadow-lg shadow-red-500/10 pointer-events-auto"
+                    >
+                      <div className="relative flex items-center justify-center">
+                        <Mic size={18} className="text-red-400" />
+                        <div className="absolute inset-0 rounded-full border-2 border-red-400/40 animate-ping" style={{ animationDuration: '1.5s' }} />
+                      </div>
+                      <span className="text-[14px] font-bold text-red-400 tracking-wide">
+                        Listening…
+                      </span>
+                    </motion.div>
+                  )
+                ) : (
+                  // ── Free Talk mode indicator ──
                   <motion.div
-                    key="muted"
+                    key="freetalk"
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-full shadow-lg pointer-events-auto"
-                  >
-                    <MicOff size={16} className="text-[var(--c-text-mute)]" />
-                    <span className="text-[13px] font-bold text-[var(--c-text-dim)]">
-                      Hold&nbsp;<kbd className="inline-flex items-center justify-center px-2 py-0.5 bg-[var(--c-surface-3)] border border-[var(--c-border-2)] rounded-md text-[11px] font-black text-[var(--c-text)] mx-0.5 min-w-[3rem]">SPACE</kbd>&nbsp;to talk
-                    </span>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="listening"
-                    initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
-                    className="flex items-center gap-2.5 px-6 py-3 bg-gradient-to-r from-red-500/20 to-orange-500/20 border border-red-500/30 rounded-full shadow-lg shadow-red-500/10 pointer-events-auto"
+                    className="flex items-center gap-2.5 px-5 py-2.5 bg-gradient-to-r from-green-500/15 to-emerald-500/15 border border-green-500/30 rounded-full shadow-lg pointer-events-auto"
                   >
                     <div className="relative flex items-center justify-center">
-                      <Mic size={18} className="text-red-400" />
-                      <div className="absolute inset-0 rounded-full border-2 border-red-400/40 animate-ping" style={{ animationDuration: '1.5s' }} />
+                      <Mic size={16} className="text-green-400" />
+                      <div className="absolute inset-0 rounded-full border-2 border-green-400/30 animate-ping" style={{ animationDuration: '2s' }} />
                     </div>
-                    <span className="text-[14px] font-bold text-red-400 tracking-wide">
-                      Listening…
+                    <span className="text-[13px] font-bold text-green-400">
+                      Free Talk — speak anytime
                     </span>
                   </motion.div>
                 )}

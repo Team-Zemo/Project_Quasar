@@ -98,9 +98,9 @@ export function PipelineInterviewPage() {
   const [completionDone, setCompletionDone] = useState(false);
 
   const {
-    status, messages, isRecording, isMuted, sessionId,
+    status, messages, isRecording, isMuted, pttEnabled, sessionId,
     activeCodingQuestion, startInterview, endInterview,
-    getTranscript, submitCode, setMuted,
+    getTranscript, submitCode, setMuted, setPttEnabled,
   } = useInterviewSession();
 
   const isEnded = status === 'ended' || status === 'error';
@@ -359,6 +359,8 @@ export function PipelineInterviewPage() {
           getTranscript={getTranscript}
           isMuted={isMuted}
           setMuted={setMuted}
+          pttEnabled={pttEnabled}
+          setPttEnabled={setPttEnabled}
         />
       </div>
       </ProctoringGuard>

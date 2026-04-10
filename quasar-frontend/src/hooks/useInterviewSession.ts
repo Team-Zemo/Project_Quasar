@@ -26,6 +26,7 @@ export function useInterviewSession() {
   const wsRef    = useRef<WebSocket | null>(null);
   const { startRecording, stopRecording, playChunk, clearQueue, setMuted: setProcessorMuted, destroy } = useAudioProcessor();
   const [isMuted, setIsMuted] = useState(true);
+  const [pttEnabled, setPttEnabledRaw] = useState(true);
 
   // ── Refs that let socket callbacks always read the latest values ────
   /** Mirror of `status` that is safe to read inside WebSocket callbacks */
@@ -77,18 +78,21 @@ export function useInterviewSession() {
         case 'connected':
           break;
 
-        case 'session_ready':
+        case 'session_ready': {
           setStatusSynced('active');
           setIsRecording(true);
-          setIsMuted(true);
+          // If PTT is disabled (free talk), start unmuted so user can speak immediately
+          const shouldMute = pttEnabled;
+          setIsMuted(shouldMute);
           startRecording((base64) => {
             sendWsMessage({ type: 'audio', data: base64 });
           }).then(() => {
-            setProcessorMuted(true);
+            setProcessorMuted(shouldMute);
           }).catch((err) => {
             setError('Microphone access denied: ' + err.message);
             setStatusSynced('error');
           });
+        }
           break;
 
         case 'audio':
@@ -137,7 +141,7 @@ export function useInterviewSession() {
           break;
       }
     },
-    [startRecording, stopRecording, playChunk, clearQueue, addMessage, sendWsMessage, setStatusSynced, setProcessorMuted],
+    [startRecording, stopRecording, playChunk, clearQueue, addMessage, sendWsMessage, setStatusSynced, setProcessorMuted, pttEnabled],
   );
 
   // Keep the ref pointing to the latest handler — no socket recreation needed
@@ -291,12 +295,27 @@ export function useInterviewSession() {
     setIsMuted(muted);
   }, [setProcessorMuted]);
 
+  /** Toggle push-to-talk on/off. When disabled, mic stays always unmuted (free talk). */
+  const setPttEnabled = useCallback((enabled: boolean) => {
+    setPttEnabledRaw(enabled);
+    if (!enabled) {
+      // Free talk mode — unmute immediately
+      setProcessorMuted(false);
+      setIsMuted(false);
+    } else {
+      // PTT re-enabled — mute until spacebar is held
+      setProcessorMuted(true);
+      setIsMuted(true);
+    }
+  }, [setProcessorMuted]);
+
   return {
     status,
     messages,
     error,
     isRecording,
     isMuted,
+    pttEnabled,
     sessionId,
     activeCodingQuestion,
     startInterview,
@@ -305,5 +324,6 @@ export function useInterviewSession() {
     getTranscript,
     submitCode,
     setMuted,
+    setPttEnabled,
   };
 }

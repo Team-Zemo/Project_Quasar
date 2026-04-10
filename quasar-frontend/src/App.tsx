@@ -32,7 +32,7 @@ import type { SessionConfig } from './types/interview';
 
 function InterviewPage() {
   const [activeDomain, setActiveDomain] = useState('');
-  const { status, messages, error, isRecording, isMuted, sessionId, activeCodingQuestion, startInterview, endInterview, resetSession, getTranscript, submitCode, setMuted } =
+  const { status, messages, error, isRecording, isMuted, pttEnabled, sessionId, activeCodingQuestion, startInterview, endInterview, resetSession, getTranscript, submitCode, setMuted, setPttEnabled } =
     useInterviewSession();
 
   const isInSession = status === 'connecting' || status === 'active' || status === 'ready';
@@ -66,6 +66,8 @@ function InterviewPage() {
           getTranscript={getTranscript}
           isMuted={isMuted}
           setMuted={setMuted}
+          pttEnabled={pttEnabled}
+          setPttEnabled={setPttEnabled}
         />
       )}
     </>
