@@ -10,6 +10,7 @@ import { JobPostingList } from './recruiter/JobPostingList';
 import { JobPostingForm } from './recruiter/JobPostingForm';
 import { JobPostingDetail } from './recruiter/JobPostingDetail';
 import { ProfilePage } from './ProfilePage';
+import { RecruiterTour, TOUR_DUMMY_STATS, TOUR_DUMMY_JOBS } from './recruiter/RecruiterTour';
 
 type RecruiterView =
   | { type: 'dashboard' }
@@ -22,16 +23,17 @@ export function RecruiterShell() {
   const [user, setUser] = useState<UserType | null>(authState.getUser());
   const [view, setView] = useState<RecruiterView>({ type: 'dashboard' });
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [tourActive, setTourActive] = useState(false);
 
   useEffect(() => {
     return authState.subscribe((snapshot) => setUser(snapshot.user));
   }, []);
 
   const navItems = [
-    { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'jobs' as const, label: 'Job Postings', icon: Briefcase },
-    { id: 'create-job' as const, label: 'Create Job', icon: Plus },
-    { id: 'profile' as const, label: 'Profile', icon: User },
+    { id: 'dashboard' as const, label: 'Dashboard', icon: LayoutDashboard, tourId: 'tour-nav-dashboard' },
+    { id: 'jobs' as const, label: 'Job Postings', icon: Briefcase, tourId: 'tour-nav-jobs' },
+    { id: 'create-job' as const, label: 'Create Job', icon: Plus, tourId: 'tour-nav-create-job' },
+    { id: 'profile' as const, label: 'Profile', icon: User, tourId: 'tour-nav-profile' },
   ];
 
   const handleLogout = async () => {
@@ -42,12 +44,31 @@ export function RecruiterShell() {
     }
   };
 
+  // Tours calls onNavigate with a view type string — map to proper RecruiterView
+  const handleTourNavigate = (v: { type: string }) => {
+    const type = v.type as RecruiterView['type'];
+    if (type === 'dashboard' || type === 'jobs' || type === 'create-job' || type === 'profile') {
+      setView({ type });
+    }
+  };
+
   const renderContent = (): ReactNode => {
     switch (view.type) {
       case 'dashboard':
-        return <RecruiterDashboard onNavigate={(v: RecruiterView) => setView(v)} />;
+        return (
+          <RecruiterDashboard
+            onNavigate={(v: RecruiterView) => setView(v)}
+            dummyStats={tourActive ? TOUR_DUMMY_STATS : undefined}
+          />
+        );
       case 'jobs':
-        return <JobPostingList onViewJob={(id: string) => setView({ type: 'job-detail', id })} onCreateJob={() => setView({ type: 'create-job' })} />;
+        return (
+          <JobPostingList
+            onViewJob={(id: string) => setView({ type: 'job-detail', id })}
+            onCreateJob={() => setView({ type: 'create-job' })}
+            dummyJobs={tourActive ? TOUR_DUMMY_JOBS : undefined}
+          />
+        );
       case 'create-job':
         return <JobPostingForm onComplete={(id: string) => setView({ type: 'job-detail', id })} onCancel={() => setView({ type: 'jobs' })} />;
       case 'job-detail':
@@ -61,14 +82,15 @@ export function RecruiterShell() {
 
   return (
     <div className="h-screen flex overflow-hidden bg-[var(--c-bg)]">
-      {/* Sidebar */}
+      {/* ── Sidebar ─────────────────────────────────────────────────── */}
       <motion.aside
+        id="tour-sidebar"
         initial={false}
         animate={{ width: sidebarOpen ? 260 : 72 }}
         transition={{ duration: 0.25, ease: 'easeInOut' }}
         className="relative flex flex-col bg-[var(--c-surface)] border-r border-[var(--c-border)] z-20 flex-shrink-0"
       >
-        {/* Header */}
+        {/* Brand header */}
         <div className="flex items-center gap-3 p-5 border-b border-[var(--c-border)]">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--c-accent)] to-[#fb923c] flex items-center justify-center text-white font-black text-sm flex-shrink-0">
             Q
@@ -94,7 +116,7 @@ export function RecruiterShell() {
           </button>
         </div>
 
-        {/* Nav */}
+        {/* Nav items */}
         <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -102,6 +124,7 @@ export function RecruiterShell() {
             return (
               <button
                 key={item.id}
+                id={item.tourId}
                 onClick={() => setView({ type: item.id })}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left ${
                   isActive
@@ -128,7 +151,7 @@ export function RecruiterShell() {
         </nav>
 
         {/* User footer */}
-        <div className="p-3 border-t border-[var(--c-border)]">
+        <div id="tour-user-footer" className="p-3 border-t border-[var(--c-border)]">
           <div className="flex items-center gap-3 px-3 py-2">
             <div className="w-8 h-8 rounded-full bg-[var(--c-surface-3)] flex items-center justify-center text-[var(--c-text-dim)] text-[11px] font-bold flex-shrink-0">
               {user?.name?.charAt(0)?.toUpperCase() || 'R'}
@@ -157,7 +180,7 @@ export function RecruiterShell() {
         </div>
       </motion.aside>
 
-      {/* Main Content */}
+      {/* ── Main content ─────────────────────────────────────────────── */}
       <main className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           <motion.div
@@ -172,6 +195,12 @@ export function RecruiterShell() {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* ── Tour ─────────────────────────────────────────────────────── */}
+      <RecruiterTour
+        onNavigate={handleTourNavigate}
+        onTourActiveChange={setTourActive}
+      />
     </div>
   );
 }

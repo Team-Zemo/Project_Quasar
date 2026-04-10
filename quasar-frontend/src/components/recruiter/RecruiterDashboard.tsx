@@ -1,23 +1,33 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Briefcase, Users, CheckCircle, Clock, TrendingUp, ArrowRight } from 'lucide-react';
+import { Briefcase, Users, CheckCircle, TrendingUp, ArrowRight } from 'lucide-react';
 import { apiGet } from '../../lib/api';
 import type { DashboardStats } from '../../types/recruitment';
 
 interface Props {
   onNavigate: (view: { type: string; id?: string }) => void;
+  /** When provided (during tour), uses this data instead of API */
+  dummyStats?: DashboardStats;
 }
 
-export function RecruiterDashboard({ onNavigate }: Props) {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+export function RecruiterDashboard({ onNavigate, dummyStats }: Props) {
+  const [apiStats, setApiStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(!dummyStats);
 
   useEffect(() => {
+    // Skip API fetch when tour is showing dummy data
+    if (dummyStats) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     apiGet<DashboardStats>('/api/recruiter/dashboard/stats')
-      .then(res => { if (res.success) setStats(res.data); })
+      .then(res => { if (res.success) setApiStats(res.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, []);
+  }, [dummyStats]);
+
+  const stats = dummyStats ?? apiStats;
 
   const statCards = stats ? [
     { label: 'Active Postings', value: stats.activePostings, icon: Briefcase, color: 'var(--c-accent)', bg: 'var(--c-accent-dim)' },
@@ -27,7 +37,7 @@ export function RecruiterDashboard({ onNavigate }: Props) {
   ] : [];
 
   const funnelStages = stats?.pipelineFunnel ? [
-    { label: 'Applied', count: (stats.pipelineFunnel['applied'] || 0) + (stats.pipelineFunnel['screening'] || 0) + (stats.pipelineFunnel['screening_passed'] || 0) },
+    { label: 'Applied', count: (stats.pipelineFunnel['applied'] || 0) + (stats.pipelineFunnel['screening'] || 0) + (stats.pipelineFunnel['screening_passed'] || 0) + (stats.pipelineFunnel['screening_failed'] || 0) },
     { label: 'MCQ', count: (stats.pipelineFunnel['mcq_pending'] || 0) + (stats.pipelineFunnel['mcq_in_progress'] || 0) + (stats.pipelineFunnel['mcq_passed'] || 0) },
     { label: 'Tech', count: (stats.pipelineFunnel['tech_pending'] || 0) + (stats.pipelineFunnel['tech_in_progress'] || 0) + (stats.pipelineFunnel['tech_passed'] || 0) },
     { label: 'HR', count: (stats.pipelineFunnel['hr_pending'] || 0) + (stats.pipelineFunnel['hr_in_progress'] || 0) + (stats.pipelineFunnel['hr_passed'] || 0) },
@@ -46,14 +56,14 @@ export function RecruiterDashboard({ onNavigate }: Props) {
 
   return (
     <div className="p-8 max-w-6xl mx-auto">
-      {/* Header */}
+      {/* Page header */}
       <div className="mb-8">
         <h1 className="text-3xl font-black text-[var(--c-text)] tracking-tight">Dashboard</h1>
         <p className="text-[var(--c-text-dim)] text-[14px] mt-1">Your recruitment pipeline at a glance</p>
       </div>
 
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      {/* ── Stat cards — tour target ─────────────────────────────────── */}
+      <div id="tour-stat-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
@@ -70,14 +80,17 @@ export function RecruiterDashboard({ onNavigate }: Props) {
                 </div>
               </div>
               <p className="text-3xl font-black text-[var(--c-text)]">{card.value}</p>
-              <p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)] mt-1">{card.label}</p>
+              <p className="text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)] mt-1">
+                {card.label}
+              </p>
             </motion.div>
           );
         })}
       </div>
 
-      {/* Pipeline Funnel */}
+      {/* ── Pipeline funnel — tour target ────────────────────────────── */}
       <motion.div
+        id="tour-pipeline-funnel"
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
@@ -87,7 +100,9 @@ export function RecruiterDashboard({ onNavigate }: Props) {
         <div className="space-y-3">
           {funnelStages.map((stage) => (
             <div key={stage.label} className="flex items-center gap-4">
-              <span className="w-16 text-[12px] font-semibold text-[var(--c-text-dim)] text-right">{stage.label}</span>
+              <span className="w-16 text-[12px] font-semibold text-[var(--c-text-dim)] text-right">
+                {stage.label}
+              </span>
               <div className="flex-1 h-8 bg-[var(--c-surface-2)] rounded-lg overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
@@ -106,8 +121,8 @@ export function RecruiterDashboard({ onNavigate }: Props) {
         </div>
       </motion.div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* ── Quick actions — tour target ───────────────────────────────── */}
+      <div id="tour-quick-actions" className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

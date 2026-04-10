@@ -1,33 +1,46 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Briefcase, Users, Eye, MoreVertical } from 'lucide-react';
+import { Plus, Briefcase, Users, Eye } from 'lucide-react';
 import { apiGet } from '../../lib/api';
 import type { JobPosting } from '../../types/recruitment';
 
 interface Props {
   onViewJob: (id: string) => void;
   onCreateJob: () => void;
+  /** When provided (during tour), uses this data instead of API */
+  dummyJobs?: JobPosting[];
 }
 
 const statusBadge: Record<string, { label: string; color: string; bg: string }> = {
-  draft: { label: 'Draft', color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)' },
-  published: { label: 'Published', color: 'var(--c-success)', bg: 'var(--c-success-dim)' },
-  closed: { label: 'Closed', color: 'var(--c-error)', bg: 'var(--c-error-dim)' },
-  archived: { label: 'Archived', color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)' },
+  draft:     { label: 'Draft',     color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)' },
+  published: { label: 'Published', color: 'var(--c-success)',   bg: 'var(--c-success-dim)' },
+  closed:    { label: 'Closed',    color: 'var(--c-error)',     bg: 'var(--c-error-dim)' },
+  archived:  { label: 'Archived',  color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)' },
 };
 
-export function JobPostingList({ onViewJob, onCreateJob }: Props) {
-  const [postings, setPostings] = useState<JobPosting[]>([]);
-  const [loading, setLoading] = useState(true);
+export function JobPostingList({ onViewJob, onCreateJob, dummyJobs }: Props) {
+  const [apiPostings, setApiPostings] = useState<JobPosting[]>([]);
+  const [loading, setLoading] = useState(!dummyJobs);
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
+    // Skip API fetch when tour is showing dummy data
+    if (dummyJobs) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
     const url = filter === 'all' ? '/api/recruiter/jobs' : `/api/recruiter/jobs?status=${filter}`;
     apiGet<JobPosting[]>(url)
-      .then(res => { if (res.success) setPostings(res.data); })
+      .then(res => { if (res.success) setApiPostings(res.data); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [filter]);
+  }, [filter, dummyJobs]);
+
+  // Apply filter to dummy jobs client-side
+  const postings = dummyJobs
+    ? (filter === 'all' ? dummyJobs : dummyJobs.filter(j => j.status === filter))
+    : apiPostings;
 
   const filters = ['all', 'published', 'draft', 'closed'];
 
@@ -39,7 +52,8 @@ export function JobPostingList({ onViewJob, onCreateJob }: Props) {
           <h1 className="text-3xl font-black text-[var(--c-text)] tracking-tight">Job Postings</h1>
           <p className="text-[var(--c-text-dim)] text-[14px] mt-1">{postings.length} total postings</p>
         </div>
-        <button onClick={onCreateJob} className="btn-primary flex items-center gap-2">
+        {/* ── Create button — tour target ───────────────────────────── */}
+        <button id="tour-create-job-btn" onClick={onCreateJob} className="btn-primary flex items-center gap-2">
           <Plus size={16} /> New Posting
         </button>
       </div>
@@ -49,7 +63,7 @@ export function JobPostingList({ onViewJob, onCreateJob }: Props) {
         {filters.map(f => (
           <button
             key={f}
-            onClick={() => { setFilter(f); setLoading(true); }}
+            onClick={() => { setFilter(f); if (!dummyJobs) setLoading(true); }}
             className={`px-4 py-2 rounded-xl text-[12px] font-bold uppercase tracking-wider transition-all ${
               filter === f
                 ? 'bg-[var(--c-accent-dim)] text-[var(--c-accent)] border border-[var(--c-accent)]/30'
@@ -61,7 +75,7 @@ export function JobPostingList({ onViewJob, onCreateJob }: Props) {
         ))}
       </div>
 
-      {/* List */}
+      {/* ── Job list — tour target ────────────────────────────────────── */}
       {loading ? (
         <div className="flex justify-center py-20">
           <div className="spinner !w-8 !h-8 !border-[var(--c-accent)] !border-t-transparent !border-[3px]" />
@@ -70,11 +84,13 @@ export function JobPostingList({ onViewJob, onCreateJob }: Props) {
         <div className="text-center py-20">
           <Briefcase size={48} className="mx-auto text-[var(--c-text-mute)] mb-4" />
           <p className="text-[var(--c-text-dim)] text-[15px] font-semibold mb-2">No job postings yet</p>
-          <p className="text-[var(--c-text-mute)] text-[13px] mb-6">Create your first job posting to start receiving applications.</p>
+          <p className="text-[var(--c-text-mute)] text-[13px] mb-6">
+            Create your first job posting to start receiving applications.
+          </p>
           <button onClick={onCreateJob} className="btn-primary">Create Job Posting</button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div id="tour-job-list" className="space-y-3">
           {postings.map((posting, i) => {
             const badge = statusBadge[posting.status] || statusBadge.draft;
             return (
