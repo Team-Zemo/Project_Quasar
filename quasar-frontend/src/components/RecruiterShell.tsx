@@ -1,10 +1,11 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useCallback, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Briefcase, Plus, User, LogOut,
-  ChevronLeft, Menu, X,
+  ChevronLeft, Menu, X, Bot, AlertTriangle,
 } from 'lucide-react';
 import { authState, type User as UserType } from '../lib/auth';
+import { apiGet } from '../lib/api';
 import { RecruiterDashboard } from './recruiter/RecruiterDashboard';
 import { JobPostingList } from './recruiter/JobPostingList';
 import { JobPostingForm } from './recruiter/JobPostingForm';
@@ -38,11 +39,37 @@ export function RecruiterShell() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [tourActive, setTourActive] = useState(false);
+  const [escalationCount, setEscalationCount] = useState(0);
   const isMobile = useIsMobile();
+
+  // Poll for pending escalations across all agent-enabled jobs
+  const pollEscalations = useCallback(async () => {
+    try {
+      const jobsRes = await apiGet<{ jobs: Array<{ _id: string; agentEnabled?: boolean }> }>('/api/recruiter/jobs');
+      if (!jobsRes.success) return;
+      const agentJobs = (jobsRes.data.jobs || jobsRes.data as unknown as Array<{ _id: string; agentEnabled?: boolean }>)
+        .filter(j => j.agentEnabled);
+      let total = 0;
+      for (const job of agentJobs.slice(0, 10)) {
+        try {
+          const res = await apiGet<{ escalations: unknown[]; total: number }>(`/api/recruiter/agent/${job._id}/events/escalations`);
+          if (res.success) total += res.data.total || 0;
+        } catch { /* skip */ }
+      }
+      setEscalationCount(total);
+    } catch { /* empty */ }
+  }, []);
 
   useEffect(() => {
     return authState.subscribe((snapshot) => setUser(snapshot.user));
   }, []);
+
+  // Poll escalations every 30s
+  useEffect(() => {
+    pollEscalations();
+    const interval = setInterval(pollEscalations, 30000);
+    return () => clearInterval(interval);
+  }, [pollEscalations]);
 
   // Close mobile drawer on navigation
   const navigate = (v: RecruiterView) => {
@@ -223,6 +250,14 @@ export function RecruiterShell() {
             Q
           </div>
           <p className="text-[14px] font-bold text-[var(--c-text)]">Quasar Recruit</p>
+          {escalationCount > 0 && (
+            <div className="relative ml-auto mr-2">
+              <AlertTriangle size={18} className="text-[var(--c-error)]" />
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-[var(--c-error)] text-white text-[9px] font-bold flex items-center justify-center animate-pulse">
+                {escalationCount > 9 ? '9+' : escalationCount}
+              </span>
+            </div>
+          )}
         </div>
       )}
 

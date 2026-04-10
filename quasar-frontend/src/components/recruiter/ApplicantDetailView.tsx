@@ -5,7 +5,7 @@ import {
   CheckCircle, XCircle, Award, FileText, MessageSquare,
   Clock, Star, AlertTriangle, ChevronDown, ChevronUp,
   ThumbsUp, ThumbsDown, Shield, Target, Brain, Eye,
-  Download, Loader2,
+  Download, Loader2, Bot,
 } from 'lucide-react';
 import { apiGet, apiPost } from '../../lib/api';
 import type { ApplicationStatus } from '../../types/recruitment';
@@ -74,6 +74,9 @@ interface ApplicationDetail {
   hrResult: HrResult | null;
   proctoringViolations?: ProctoringViolation[];
   proctoringFlags?: ProctoringFlags;
+  agentAdvanced?: boolean;
+  escalated?: boolean;
+  escalationReason?: string | null;
 }
 
 interface ProctoringViolation {
@@ -330,6 +333,16 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
               {status && (
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase" style={{ color: status.color, background: status.bg }}>
                   {status.label}
+                </span>
+              )}
+              {app.agentAdvanced && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--c-purple-dim)] text-[var(--c-purple)]">
+                  <Bot size={10} /> Agent
+                </span>
+              )}
+              {app.escalated && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[var(--c-error-dim)] text-[var(--c-error)]">
+                  <AlertTriangle size={10} /> Escalated
                 </span>
               )}
               {app.rank && (

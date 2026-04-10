@@ -7,6 +7,7 @@ const { requireAuth, requireRole } = require('../middleware/auth');
 const jobPostingController = require('../controllers/jobPostingController');
 const dashboardController = require('../controllers/dashboardController');
 const proctoringController = require('../controllers/proctoringController');
+const agentController = require('../controllers/agentController');
 
 const router = express.Router();
 
@@ -41,5 +42,17 @@ router.get('/jobs/:id/export', dashboardController.exportApplicantsCSV);
 
 // ── Proctoring Reports ────────────────────────────────────────────────
 router.get('/jobs/:id/applicants/:appId/proctor', proctoringController.getProctoringReport);
+
+// ── Agent Management ──────────────────────────────────────────────────
+router.get('/agent/digests', agentController.getDigests);
+router.get('/agent/:jobId/config', agentController.getConfig);
+router.put('/agent/:jobId/config', agentController.upsertConfig);
+router.post('/agent/:jobId/start', agentController.startAgent);
+router.post('/agent/:jobId/pause', agentController.pauseAgent);
+router.post('/agent/:jobId/stop', agentController.stopAgent);
+router.get('/agent/:jobId/events', agentController.getEvents);
+router.get('/agent/:jobId/events/escalations', agentController.getEscalations);
+router.post('/agent/:jobId/events/:eventId/resolve', agentController.resolveEscalation);
+router.get('/agent/:jobId/stats', agentController.getStats);
 
 module.exports = router;

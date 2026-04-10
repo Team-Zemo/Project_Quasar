@@ -77,6 +77,9 @@ const jobPostingSchema = new mongoose.Schema({
   autoScreeningEnabled: { type: Boolean, default: true },
   screeningThreshold: { type: Number, default: 50, min: 0, max: 100 }, // min resume match %
 
+  // ── Agentic pipeline flag ──────────────────────────────────────────
+  agentEnabled: { type: Boolean, default: false },
+
   applicantCount: { type: Number, default: 0 },
 }, {
   timestamps: true,

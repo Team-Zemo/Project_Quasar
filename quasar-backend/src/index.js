@@ -5,6 +5,7 @@ const logger = require('./utils/logger');
 const SocketManager = require('./websocket/socketManager');
 const { connectDatabase } = require('./config/database');
 const { seedPersonas } = require('./models');
+const agentScheduler = require('./services/agentScheduler');
 
 // Wrap Express Application inside Native HTTP server for WS
 const server = http.createServer(app);
@@ -21,6 +22,9 @@ async function start() {
 
   // Spin up WS server bound on the HTTP listener instance
   SocketManager.init(server);
+
+  // Start the agent background scheduler
+  agentScheduler.start();
 
   server.listen(config.port, () => {
     logger.info(`Starting Backend Services Node Environment: ${config.nodeEnv}`);

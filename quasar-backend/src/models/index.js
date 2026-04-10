@@ -10,6 +10,9 @@ const UserStats = require('./UserStats');
 const JobPosting = require('./JobPosting');
 const McqQuestion = require('./McqQuestion');
 const Application = require('./Application');
+const AgentConfig = require('./AgentConfig');
+const AgentEvent = require('./AgentEvent');
+const AgentDigest = require('./AgentDigest');
 const logger = require('../utils/logger');
 
 /**
@@ -82,5 +85,8 @@ module.exports = {
   JobPosting,
   McqQuestion,
   Application,
+  AgentConfig,
+  AgentEvent,
+  AgentDigest,
   seedPersonas,
 };

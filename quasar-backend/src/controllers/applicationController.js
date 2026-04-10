@@ -7,6 +7,7 @@ const JobPosting = require('../models/JobPosting');
 const User = require('../models/User');
 const { screenResume } = require('../services/resumeScreeningService');
 const { sendApplicationSubmitted, sendScreeningResult } = require('../services/emailService');
+const agentService = require('../services/agentService');
 const logger = require('../utils/logger');
 
 /**
@@ -247,6 +248,10 @@ async function applyToJob(req, res) {
       jobId: id,
       status: application.status,
     });
+
+    // ── Agent hook: fire-and-forget ────────────────────────────────────
+    agentService.onApplicationStatusChanged(application._id)
+      .catch(err => logger.warn('Agent hook failed after application', { err: err.message }));
 
     return res.status(201).json({
       success: true,

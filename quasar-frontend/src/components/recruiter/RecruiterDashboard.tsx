@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Briefcase, Users, CheckCircle, TrendingUp, ArrowRight } from 'lucide-react';
 import { apiGet } from '../../lib/api';
 import type { DashboardStats } from '../../types/recruitment';
+import { AgentStatsCard } from './AgentStatsCard';
 
 interface Props {
   onNavigate: (view: { type: string; id?: string }) => void;
@@ -120,6 +121,9 @@ export function RecruiterDashboard({ onNavigate, dummyStats }: Props) {
           ))}
         </div>
       </motion.div>
+
+      {/* ── Agent Stats Card ────────────────────────────────────────── */}
+      {!dummyStats && <AgentStatsCard onNavigate={onNavigate} />}
 
       {/* ── Quick actions — tour target ───────────────────────────────── */}
       <div id="tour-quick-actions" className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">

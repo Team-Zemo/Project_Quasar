@@ -144,6 +144,11 @@ const applicationSchema = new mongoose.Schema({
   totalScore: { type: Number, default: 0 },
   rank: { type: Number, default: null },
 
+  // ── Agent orchestration tracking ────────────────────────────────────
+  agentAdvanced: { type: Boolean, default: false },     // was the last transition agent-driven?
+  escalated: { type: Boolean, default: false },          // is this app currently escalated to recruiter?
+  escalationReason: { type: String, default: null },     // 'borderline_score' | 'proctoring_flag' | etc.
+
   appliedAt: { type: Date, default: Date.now },
   lastActivityAt: { type: Date, default: Date.now },
 }, {

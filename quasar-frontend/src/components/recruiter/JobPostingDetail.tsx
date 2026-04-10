@@ -3,18 +3,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Users, Sparkles, Plus, Trash2,
   CheckCircle, XCircle, Play, Square,
-  Download, Eye,
+  Download, Eye, Bot,
 } from 'lucide-react';
 import { apiGet, apiPost } from '../../lib/api';
 import type { JobPosting, McqQuestion, ApplicantSummary, ApplicationStatus } from '../../types/recruitment';
 import { ApplicantDetailView } from './ApplicantDetailView';
+import { AgentConfigPanel } from './AgentConfigPanel';
+import { AgentActivityFeed } from './AgentActivityFeed';
+import { EscalationPanel } from './EscalationPanel';
 
 interface Props {
   jobId: string;
   onBack: () => void;
 }
 
-type Tab = 'overview' | 'applicants' | 'mcqs' | 'pipeline';
+type Tab = 'overview' | 'applicants' | 'mcqs' | 'pipeline' | 'agent';
 
 const statusColors: Partial<Record<ApplicationStatus, { color: string; bg: string; label: string }>> = {
   applied: { color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)', label: 'Applied' },
@@ -48,6 +51,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
   const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addingMcq, setAddingMcq] = useState(false);
+  const [agentRefresh, setAgentRefresh] = useState(0);
   const [newMcq, setNewMcq] = useState({
     question: '',
     options: [
@@ -207,11 +211,12 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
     return <div className="p-8 text-center text-[var(--c-text-dim)]">Job posting not found</div>;
   }
 
-  const tabs: { id: Tab; label: string; count?: number }[] = [
+  const tabs: { id: Tab; label: string; count?: number; icon?: typeof Bot }[] = [
     { id: 'overview', label: 'Overview' },
     { id: 'applicants', label: 'Applicants', count: applicants.length },
     { id: 'mcqs', label: 'MCQ Questions', count: mcqs.length },
     { id: 'pipeline', label: 'Pipeline Config' },
+    { id: 'agent', label: 'AI Agent', icon: Bot },
   ];
 
   return (
@@ -657,6 +662,24 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {tab === 'agent' && (
+        <div className="space-y-5">
+          <AgentConfigPanel
+            jobId={jobId}
+            onStatusChange={() => setAgentRefresh(n => n + 1)}
+          />
+          <EscalationPanel
+            jobId={jobId}
+            refreshTrigger={agentRefresh}
+            onResolved={() => setAgentRefresh(n => n + 1)}
+          />
+          <AgentActivityFeed
+            jobId={jobId}
+            refreshTrigger={agentRefresh}
+          />
         </div>
       )}
     </div>

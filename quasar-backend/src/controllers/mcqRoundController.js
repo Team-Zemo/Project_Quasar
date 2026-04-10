@@ -6,6 +6,7 @@
 const Application = require('../models/Application');
 const JobPosting = require('../models/JobPosting');
 const McqQuestion = require('../models/McqQuestion');
+const agentService = require('../services/agentService');
 const logger = require('../utils/logger');
 
 /**
@@ -246,6 +247,10 @@ async function submitMcqTest(req, res) {
       percentage,
       passed,
     });
+
+    // ── Agent hook: fire-and-forget ────────────────────────────────────
+    agentService.onApplicationStatusChanged(application._id)
+      .catch(err => logger.warn('Agent hook failed after MCQ', { err: err.message }));
 
     return res.json({
       success: true,

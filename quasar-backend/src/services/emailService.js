@@ -949,6 +949,475 @@ async function sendPipelineNotification(to, candidateName, jobTitle, company, ou
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// Email #7 — MCQ Invitation (Agent-triggered)
+// Triggered: agentService when auto-advancing to MCQ round
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Invite a candidate to take the MCQ assessment.
+ * @param {string} to              — candidate email
+ * @param {string} name            — candidate name
+ * @param {string} jobTitle        — job title
+ * @param {string} company         — company name
+ * @param {Date}   windowStart     — MCQ window opens
+ * @param {Date}   windowEnd       — MCQ window closes
+ * @param {number} durationMinutes — test duration
+ */
+async function sendMcqInvitation(to, name, jobTitle, company, windowStart, windowEnd, durationMinutes) {
+  const firstName = (name || 'there').split(' ')[0];
+  const startStr = windowStart ? new Date(windowStart).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : 'Soon';
+  const endStr = windowEnd ? new Date(windowEnd).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : 'TBD';
+
+  const body = `
+    <h1 class="email-heading">You've been advanced! 🎯</h1>
+    <p class="email-subheading">Your next step: MCQ Assessment for ${jobTitle} at ${company}.</p>
+
+    <p class="email-p">Hi <strong>${firstName}</strong>,</p>
+    <p class="email-p">
+      Great news! Based on your resume screening results, you've been <strong>advanced to the MCQ Assessment</strong>
+      for <strong>${jobTitle}</strong> at <strong>${company}</strong>.
+    </p>
+
+    <div style="display:flex;gap:12px;margin:20px 0;">
+      <div class="info-box" style="flex:1;margin:0;">
+        <p class="info-box-label">Window Opens</p>
+        <p class="info-box-value">${startStr}</p>
+      </div>
+      <div class="info-box" style="flex:1;margin:0;">
+        <p class="info-box-label">Window Closes</p>
+        <p class="info-box-value">${endStr}</p>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <p class="info-box-label">Duration</p>
+      <p class="info-box-value">${durationMinutes || 30} minutes</p>
+    </div>
+
+    <div class="alert-box alert-info">
+      <strong>Important:</strong> Log in during the test window to start your assessment. Once started,
+      you'll have ${durationMinutes || 30} minutes to complete it. The test is proctored — ensure
+      you have a stable internet connection and a quiet environment.
+    </div>
+
+    <div class="btn-wrap">
+      <a href="${BRAND.appUrl}" class="btn-cta">Start Assessment &rarr;</a>
+    </div>
+
+    <hr class="divider" />
+    <div class="alert-box alert-info">
+      <strong>Prep tip:</strong> Use the Quasar AI Coach to review key concepts before your assessment.
+    </div>
+  `;
+
+  const html = buildEmail({
+    preheader: `You've been advanced to the MCQ Assessment for ${jobTitle} at ${company}!`,
+    accentColor: BRAND.accent,
+    body,
+  });
+
+  const text = buildPlainText([
+    `You've been advanced — MCQ Assessment`,
+    '',
+    `Hi ${firstName},`,
+    `You've been advanced to the MCQ Assessment for ${jobTitle} at ${company}.`,
+    `Window: ${startStr} to ${endStr}`,
+    `Duration: ${durationMinutes || 30} minutes`,
+    '',
+    `Log in at: ${BRAND.appUrl}`,
+  ]);
+
+  return send({
+    to,
+    subject: `🎯 You've been advanced — MCQ Assessment for ${jobTitle} at ${company}`,
+    html,
+    text,
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Email #8 — Tech Interview Invitation (Agent-triggered)
+// Triggered: agentService when auto-advancing to tech round
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Invite a candidate to the AI technical interview.
+ */
+async function sendTechInterviewInvitation(to, name, jobTitle, company, roundTitle, windowStart, windowEnd, durationMinutes) {
+  const firstName = (name || 'there').split(' ')[0];
+  const startStr = windowStart ? new Date(windowStart).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : 'Soon';
+  const endStr = windowEnd ? new Date(windowEnd).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : 'TBD';
+
+  const body = `
+    <h1 class="email-heading">Technical Interview Invitation 🎙️</h1>
+    <p class="email-subheading">${roundTitle || 'Technical Interview'} for ${jobTitle} at ${company}.</p>
+
+    <p class="email-p">Hi <strong>${firstName}</strong>,</p>
+    <p class="email-p">
+      Congratulations on passing the assessment! You've been advanced to
+      <strong>${roundTitle || 'Technical Interview'}</strong> — an AI-powered voice interview
+      that evaluates your technical depth, problem-solving, and communication skills.
+    </p>
+
+    <div style="display:flex;gap:12px;margin:20px 0;">
+      <div class="info-box" style="flex:1;margin:0;">
+        <p class="info-box-label">Window Opens</p>
+        <p class="info-box-value">${startStr}</p>
+      </div>
+      <div class="info-box" style="flex:1;margin:0;">
+        <p class="info-box-label">Window Closes</p>
+        <p class="info-box-value">${endStr}</p>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <p class="info-box-label">Duration</p>
+      <p class="info-box-value">${durationMinutes || 30} minutes</p>
+    </div>
+
+    <p class="email-p" style="margin-top:24px;"><strong>What to expect:</strong></p>
+    <ul style="color:${BRAND.textSecondary};font-size:15px;line-height:2;padding-left:20px;margin:0 0 28px;">
+      <li>A structured voice interview with an AI interviewer</li>
+      <li>Technical questions related to the job requirements</li>
+      <li>A coding challenge (code editor provided)</li>
+      <li>Real-time proctoring is active</li>
+    </ul>
+
+    <div class="btn-wrap">
+      <a href="${BRAND.appUrl}" class="btn-cta">Start Interview &rarr;</a>
+    </div>
+  `;
+
+  const html = buildEmail({
+    preheader: `Technical interview scheduled — ${jobTitle} at ${company}`,
+    accentColor: BRAND.accent,
+    body,
+  });
+
+  const text = buildPlainText([
+    `Technical Interview Invitation — ${jobTitle}`,
+    '',
+    `Hi ${firstName},`,
+    `You've been advanced to ${roundTitle || 'Technical Interview'} for ${jobTitle} at ${company}.`,
+    `Window: ${startStr} to ${endStr} | Duration: ${durationMinutes || 30} min`,
+    '',
+    `Log in at: ${BRAND.appUrl}`,
+  ]);
+
+  return send({
+    to,
+    subject: `🎙️ Technical Interview — ${jobTitle} at ${company}`,
+    html,
+    text,
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Email #9 — HR Interview Invitation (Agent-triggered)
+// ══════════════════════════════════════════════════════════════════════
+
+async function sendHrInterviewInvitation(to, name, jobTitle, company, windowStart, windowEnd, durationMinutes) {
+  const firstName = (name || 'there').split(' ')[0];
+  const startStr = windowStart ? new Date(windowStart).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : 'Soon';
+  const endStr = windowEnd ? new Date(windowEnd).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : 'TBD';
+
+  const body = `
+    <h1 class="email-heading">HR Interview Invitation 🤝</h1>
+    <p class="email-subheading">Final round for ${jobTitle} at ${company}.</p>
+
+    <p class="email-p">Hi <strong>${firstName}</strong>,</p>
+    <p class="email-p">
+      You're almost there! You've been advanced to the <strong>HR Interview</strong> — the final round
+      for <strong>${jobTitle}</strong> at <strong>${company}</strong>. This round focuses on culture fit,
+      values alignment, and soft skills.
+    </p>
+
+    <div style="display:flex;gap:12px;margin:20px 0;">
+      <div class="info-box" style="flex:1;margin:0;">
+        <p class="info-box-label">Window Opens</p>
+        <p class="info-box-value">${startStr}</p>
+      </div>
+      <div class="info-box" style="flex:1;margin:0;">
+        <p class="info-box-label">Window Closes</p>
+        <p class="info-box-value">${endStr}</p>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <p class="info-box-label">Duration</p>
+      <p class="info-box-value">${durationMinutes || 20} minutes</p>
+    </div>
+
+    <div class="btn-wrap">
+      <a href="${BRAND.appUrl}" class="btn-cta">Start HR Interview &rarr;</a>
+    </div>
+  `;
+
+  const html = buildEmail({
+    preheader: `Final round — HR interview for ${jobTitle} at ${company}`,
+    accentColor: BRAND.success,
+    body,
+  });
+
+  const text = buildPlainText([
+    `HR Interview Invitation — ${jobTitle}`,
+    '',
+    `Hi ${firstName},`,
+    `Final round! HR Interview for ${jobTitle} at ${company}.`,
+    `Window: ${startStr} to ${endStr} | Duration: ${durationMinutes || 20} min`,
+    '',
+    `Log in at: ${BRAND.appUrl}`,
+  ]);
+
+  return send({
+    to,
+    subject: `🤝 HR Interview — Final round for ${jobTitle} at ${company}`,
+    html,
+    text,
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Email #10 — Escalation Alert (Agent → Recruiter)
+// Triggered: agentService when a candidate needs human review
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Alert the recruiter that the agent needs their decision.
+ */
+async function sendEscalationAlert(to, recruiterName, jobTitle, company, candidateName, reason, details, eventId) {
+  const firstName = (recruiterName || 'there').split(' ')[0];
+
+  const reasonLabels = {
+    borderline_score: '⚖️ Borderline Score',
+    proctoring_flag: '🚩 Proctoring Violation',
+    low_ai_confidence: '🤔 Low AI Confidence',
+    target_reached: '🎯 Finalist Target Reached',
+    deadline_approaching: '⏰ Deadline Approaching',
+    deadline_passed: '🔴 Deadline Passed',
+  };
+
+  const reasonLabel = reasonLabels[reason] || reason;
+
+  const body = `
+    <h1 class="email-heading">🚨 Agent Needs Your Decision</h1>
+    <p class="email-subheading">Action required for ${jobTitle} at ${company}.</p>
+
+    <p class="email-p">Hi <strong>${firstName}</strong>,</p>
+    <p class="email-p">
+      Your hiring agent has flagged an item that requires your judgment:
+    </p>
+
+    <div class="alert-box alert-warning">
+      <strong>${reasonLabel}</strong><br/>
+      ${details?.message || `Candidate: ${candidateName || 'N/A'}`}
+    </div>
+
+    ${details?.score != null ? `
+    <div style="display:flex;gap:12px;margin:20px 0;">
+      <div class="info-box" style="flex:1;margin:0;text-align:center;">
+        <p class="info-box-label">Score</p>
+        <p class="stat-value" style="color:${BRAND.accent};font-size:28px;font-weight:900;margin:4px 0 0;">${details.score}${details.threshold <= 10 ? '/10' : '%'}</p>
+      </div>
+      <div class="info-box" style="flex:1;margin:0;text-align:center;">
+        <p class="info-box-label">Threshold</p>
+        <p class="stat-value" style="color:${BRAND.textSecondary};font-size:28px;font-weight:900;margin:4px 0 0;">${details.threshold}${details.threshold <= 10 ? '/10' : '%'}</p>
+      </div>
+    </div>
+    ` : ''}
+
+    ${candidateName && candidateName !== 'System' ? `
+    <div class="info-box">
+      <p class="info-box-label">Candidate</p>
+      <p class="info-box-value">${candidateName}</p>
+    </div>
+    ` : ''}
+
+    <div class="btn-wrap">
+      <a href="${BRAND.appUrl}" class="btn-cta">Review & Decide &rarr;</a>
+    </div>
+
+    <hr class="divider" />
+    <p class="email-p" style="font-size:13px;color:${BRAND.textMuted};">
+      The agent has paused processing for this candidate until you make a decision.
+      Log in to advance or reject them.
+    </p>
+  `;
+
+  const html = buildEmail({
+    preheader: `🚨 Agent escalation: ${reasonLabel} — ${jobTitle} at ${company}`,
+    accentColor: BRAND.error,
+    body,
+  });
+
+  const text = buildPlainText([
+    `🚨 Agent Escalation — ${jobTitle}`,
+    '',
+    `Hi ${firstName},`,
+    `Your hiring agent needs your decision.`,
+    `Reason: ${reasonLabel}`,
+    details?.message || '',
+    '',
+    `Review at: ${BRAND.appUrl}`,
+  ]);
+
+  return send({
+    to,
+    subject: `🚨 Agent needs your decision — ${jobTitle} at ${company}`,
+    html,
+    text,
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Email #11 — Daily Digest (Agent → Recruiter)
+// Triggered: agentScheduler cron job at 9 PM IST
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Send daily hiring agent summary to the recruiter.
+ */
+async function sendDailyDigest(to, recruiterName, jobTitle, company, summary, highlights) {
+  const firstName = (recruiterName || 'there').split(' ')[0];
+
+  const highlightsList = (highlights || [])
+    .map(h => `<li>${h}</li>`)
+    .join('');
+
+  const body = `
+    <h1 class="email-heading">📊 Daily Agent Report</h1>
+    <p class="email-subheading">Hiring pipeline summary for ${jobTitle} at ${company}.</p>
+
+    <p class="email-p">Hi <strong>${firstName}</strong>,</p>
+    <p class="email-p">Here's what your hiring agent accomplished today:</p>
+
+    <div style="display:flex;gap:12px;margin:20px 0;flex-wrap:wrap;">
+      <div class="stat-item" style="min-width:100px;">
+        <p class="stat-value" style="color:${BRAND.accent};">${summary.newApplications || 0}</p>
+        <p class="stat-label">New Apps</p>
+      </div>
+      <div class="stat-item" style="min-width:100px;">
+        <p class="stat-value" style="color:${BRAND.success};">${summary.screeningPassed || 0}</p>
+        <p class="stat-label">Screened</p>
+      </div>
+      <div class="stat-item" style="min-width:100px;">
+        <p class="stat-value" style="color:${BRAND.accent};">${summary.mcqPassed || 0}</p>
+        <p class="stat-label">MCQ Pass</p>
+      </div>
+      <div class="stat-item" style="min-width:100px;">
+        <p class="stat-value" style="color:${BRAND.success};">${summary.techPassed || 0}</p>
+        <p class="stat-label">Tech Pass</p>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:12px;margin:20px 0;">
+      <div class="info-box" style="flex:1;margin:0;text-align:center;">
+        <p class="info-box-label">Finalist Progress</p>
+        <p class="stat-value" style="color:${BRAND.accent};font-size:28px;font-weight:900;margin:4px 0 0;">${summary.currentFinalists || 0}/${summary.targetFinalists || 5}</p>
+      </div>
+      <div class="info-box" style="flex:1;margin:0;text-align:center;">
+        <p class="info-box-label">Pending Escalations</p>
+        <p class="stat-value" style="color:${summary.pendingEscalations > 0 ? BRAND.error : BRAND.success};font-size:28px;font-weight:900;margin:4px 0 0;">${summary.pendingEscalations || 0}</p>
+      </div>
+    </div>
+
+    ${highlightsList ? `
+    <p class="email-p" style="margin-top:24px;"><strong>Highlights:</strong></p>
+    <ul style="color:${BRAND.textSecondary};font-size:15px;line-height:2;padding-left:20px;margin:0 0 28px;">
+      ${highlightsList}
+    </ul>
+    ` : ''}
+
+    <div class="btn-wrap">
+      <a href="${BRAND.appUrl}" class="btn-cta">${summary.pendingEscalations > 0 ? 'Review Escalations' : 'View Dashboard'} &rarr;</a>
+    </div>
+  `;
+
+  const html = buildEmail({
+    preheader: `📊 Daily report: ${summary.newApplications || 0} apps, ${summary.currentFinalists || 0}/${summary.targetFinalists || 5} finalists — ${jobTitle}`,
+    accentColor: BRAND.accent,
+    body,
+  });
+
+  const text = buildPlainText([
+    `📊 Daily Agent Report — ${jobTitle} at ${company}`,
+    '',
+    `Hi ${firstName},`,
+    '',
+    ...(highlights || []),
+    '',
+    `Review at: ${BRAND.appUrl}`,
+  ]);
+
+  return send({
+    to,
+    subject: `📊 Daily Hiring Report — ${jobTitle} at ${company}`,
+    html,
+    text,
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// Email #12 — Target Reached (Agent → Recruiter)
+// Triggered: when the finalist target is reached
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Notify the recruiter that the hiring agent has reached the finalist target.
+ */
+async function sendTargetReached(to, recruiterName, jobTitle, company, finalistCount, targetCount) {
+  const firstName = (recruiterName || 'there').split(' ')[0];
+
+  const body = `
+    <h1 class="email-heading">🎯 Target Reached!</h1>
+    <p class="email-subheading">Your finalist goal for ${jobTitle} at ${company} has been met.</p>
+
+    <p class="email-p">Hi <strong>${firstName}</strong>,</p>
+    <p class="email-p">
+      Your hiring agent has successfully identified <strong>${finalistCount} finalist${finalistCount > 1 ? 's' : ''}</strong>
+      for <strong>${jobTitle}</strong> at <strong>${company}</strong> — meeting your target of ${targetCount}.
+    </p>
+
+    <div class="info-box" style="text-align:center;">
+      <p class="info-box-label">Finalists Selected</p>
+      <p class="stat-value" style="color:${BRAND.success};font-size:40px;font-weight:900;margin:8px 0 0;">${finalistCount}/${targetCount}</p>
+    </div>
+
+    <div class="alert-box alert-success">
+      🎊 Your candidates are ready for final review! Log in to review rankings,
+      compare candidates, and make your final selection.
+    </div>
+
+    <div class="btn-wrap">
+      <a href="${BRAND.appUrl}" class="btn-cta">Review Finalists &rarr;</a>
+    </div>
+  `;
+
+  const html = buildEmail({
+    preheader: `🎯 Finalist target met — ${finalistCount}/${targetCount} for ${jobTitle} at ${company}`,
+    accentColor: BRAND.success,
+    body,
+  });
+
+  const text = buildPlainText([
+    `🎯 Target Reached — ${jobTitle}`,
+    '',
+    `Hi ${firstName},`,
+    `Your hiring agent found ${finalistCount}/${targetCount} finalists for ${jobTitle} at ${company}.`,
+    `Log in to review and make your final selection.`,
+    '',
+    BRAND.appUrl,
+  ]);
+
+  return send({
+    to,
+    subject: `🎯 Finalist target met — ${jobTitle} at ${company}`,
+    html,
+    text,
+  });
+}
+
 // ── Exports ─────────────────────────────────────────────────────────
 
 module.exports = {
@@ -958,4 +1427,11 @@ module.exports = {
   sendApplicationSubmitted,
   sendScreeningResult,
   sendPipelineNotification,
+  // Agent emails
+  sendMcqInvitation,
+  sendTechInterviewInvitation,
+  sendHrInterviewInvitation,
+  sendEscalationAlert,
+  sendDailyDigest,
+  sendTargetReached,
 };

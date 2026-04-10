@@ -6,6 +6,7 @@
 const Application = require('../models/Application');
 const JobPosting = require('../models/JobPosting');
 const Session = require('../models/Session');
+const agentService = require('../services/agentService');
 const logger = require('../utils/logger');
 
 /**
@@ -274,6 +275,10 @@ async function completeTechRound(req, res) {
       newStatus: application.status,
     });
 
+    // ── Agent hook: fire-and-forget ────────────────────────────────────
+    agentService.onApplicationStatusChanged(application._id)
+      .catch(err => logger.warn('Agent hook failed after tech round', { err: err.message }));
+
     return res.json({
       success: true,
       message: passed
@@ -461,6 +466,10 @@ async function completeHrRound(req, res) {
     await recalculateRankings(application.jobPostingId);
 
     logger.info('HR round completed', { appId, score, passed, newStatus: application.status });
+
+    // ── Agent hook: fire-and-forget ────────────────────────────────────
+    agentService.onApplicationStatusChanged(application._id)
+      .catch(err => logger.warn('Agent hook failed after HR round', { err: err.message }));
 
     return res.json({
       success: true,
