@@ -5,7 +5,7 @@ const config = require('../config/env');
 const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const SkillVector = require('../models/SkillVector');
-const { sendPasswordReset } = require('../services/emailService');
+const { sendPasswordReset, sendPasswordChanged, sendWelcome } = require('../services/emailService');
 const logger = require('../utils/logger');
 
 /**
@@ -144,6 +144,10 @@ async function register(req, res) {
     const user = await User.create({ email: email.toLowerCase(), passwordHash, name });
     await initSkillVectors(user._id);
     await issueSessionTokens(res, user);
+
+    // Send async welcome email
+    sendWelcome(user.email, user.name, null, 'email')
+      .catch(err => logger.warn('Welcome email failed', { err: err.message }));
 
     return res.status(201).json({
       success: true,
@@ -387,6 +391,10 @@ async function changePassword(req, res) {
 
     user.passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
     await user.save();
+
+    // Send async security notification
+    sendPasswordChanged(user.email, user.name)
+      .catch(err => logger.warn('Password changed email failed', { err: err.message }));
 
     logger.info('Password changed', { userId });
     return res.json({ success: true, message: 'Password changed successfully', data: null });

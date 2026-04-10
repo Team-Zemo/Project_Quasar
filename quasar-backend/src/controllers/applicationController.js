@@ -6,6 +6,7 @@ const Application = require('../models/Application');
 const JobPosting = require('../models/JobPosting');
 const User = require('../models/User');
 const { screenResume } = require('../services/resumeScreeningService');
+const { sendApplicationSubmitted, sendScreeningResult } = require('../services/emailService');
 const logger = require('../utils/logger');
 
 /**
@@ -153,6 +154,10 @@ async function applyToJob(req, res) {
     // Increment applicant count
     await JobPosting.findByIdAndUpdate(id, { $inc: { applicantCount: 1 } });
 
+    // Send async application submitted email
+    sendApplicationSubmitted(candidate.email, candidate.name, posting.title, posting.company, application._id)
+      .catch(err => logger.warn('Application submitted email failed', { err: err.message }));
+
     // Perform AI resume screening (async but we wait for result)
     if (posting.autoScreeningEnabled) {
       try {
@@ -188,6 +193,22 @@ async function applyToJob(req, res) {
 
         application.lastActivityAt = new Date();
         await application.save();
+
+        let nextStepLabel = '';
+        if (application.currentRound === 'mcq') nextStepLabel = 'MCQ Assessment';
+        else if (application.currentRound === 'tech') nextStepLabel = 'Technical Interview';
+        else if (application.currentRound === 'hr') nextStepLabel = 'HR Interview';
+        else nextStepLabel = 'Final Review';
+
+        sendScreeningResult(
+          candidate.email,
+          candidate.name,
+          posting.title,
+          posting.company,
+          screeningResult.passed,
+          screeningResult.matchScore,
+          nextStepLabel
+        ).catch(err => logger.warn('Screening result email failed', { err: err.message }));
       } catch (screenErr) {
         logger.warn('AI screening failed, advancing candidate anyway', { err: screenErr.message });
         // On screening failure, pass them through to the first round

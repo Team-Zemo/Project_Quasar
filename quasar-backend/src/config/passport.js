@@ -4,6 +4,7 @@ const GitHubStrategy = require('passport-github2').Strategy;
 const config = require('./env');
 const User = require('../models/User');
 const SkillVector = require('../models/SkillVector');
+const { sendWelcome } = require('../services/emailService');
 const logger = require('../utils/logger');
 
 const SKILLS = ['communication', 'technical_depth', 'leadership', 'problem_structuring', 'result_orientation', 'culture_fit'];
@@ -50,6 +51,12 @@ async function findOrCreateOAuthUser({ providerId, providerField, email, name, a
     avatarUrl,
   });
   await initSkillVectors(user._id);
+
+  // Send async welcome email
+  const providerName = providerField === 'googleId' ? 'google' : 'github';
+  sendWelcome(user.email, user.name, null, providerName)
+    .catch(err => logger.warn('Welcome email failed (OAuth)', { err: err.message }));
+
   return { id: user._id, email: user.email, name: user.name };
 }
 
