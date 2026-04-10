@@ -11,7 +11,8 @@ export type ViolationType =
   | 'keyboard_shortcut'
   | 'devtools_open'
   | 'multi_monitor'
-  | 'print_screen';
+  | 'print_screen'
+  | 'multiple_faces';  // 2+ faces detected in camera frame
 
 export type ProctoringRound = 'mcq' | 'tech' | 'hr';
 
@@ -40,19 +41,22 @@ interface ProctoringState {
   isFullscreen: boolean;
   violations: Violation[];
   requestFullscreen: () => void;
+  /** Inject an arbitrary violation from outside the hook (e.g. multi-face from EmotionAnalyzer) */
+  reportViolation: (type: ViolationType, details?: string) => void;
 }
 
 // ── Severity classification ──────────────────────────────────────────
 
 const SEVERITY_MAP: Record<ViolationType, 'warning' | 'critical'> = {
-  fullscreen_exit: 'critical',
-  right_click: 'warning',
-  tab_switch: 'critical',
-  copy_paste: 'warning',
-  keyboard_shortcut: 'warning',
-  devtools_open: 'critical',
-  multi_monitor: 'warning',
-  print_screen: 'warning',
+  fullscreen_exit:  'critical',
+  right_click:      'warning',
+  tab_switch:       'critical',
+  copy_paste:       'warning',
+  keyboard_shortcut:'warning',
+  devtools_open:    'critical',
+  multi_monitor:    'warning',
+  print_screen:     'warning',
+  multiple_faces:   'critical', // person getting help = immediate flag
 };
 
 const TRUST_PENALTY: Record<string, number> = {
@@ -98,7 +102,7 @@ export function useProctoring({
 
   // Queue for batching violations to avoid flooding the backend
   const violationQueue = useRef<Violation[]>([]);
-  const flushTimer = useRef<ReturnType<typeof setTimeout>>();
+  const flushTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const autoTerminated = useRef(false);
 
   // ── Stable refs for callbacks used inside the main effect ──────────
@@ -213,6 +217,9 @@ export function useProctoring({
       clearTimeout(flushTimer.current);
       flushTimer.current = setTimeout(flushBatch, 250);
     };
+
+    // ── Wire external reporter so reportViolation() works outside the effect
+    externalRecordRef.current = record;
 
     // -- Fullscreen change detection --
     const handleFullscreenChange = () => {
@@ -365,11 +372,22 @@ export function useProctoring({
         document.exitFullscreen().catch(() => {});
       }
 
+      // Clear external reporter so stale callers can't fire into dead effect
+      externalRecordRef.current = null;
+
       // Final flush
       flushBatch();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabled]); // Only re-run if enabled flag changes — all other deps are stable refs
+
+  // ── External violation reporter (stable ref, safe to call from effects) ──
+  // This ref is populated inside the main effect where `record` is in scope.
+  const externalRecordRef = useRef<((type: ViolationType, details?: string) => void) | null>(null);
+
+  const reportViolation = useCallback((type: ViolationType, details = '') => {
+    externalRecordRef.current?.(type, details);
+  }, []);
 
   return {
     violationCount,
@@ -378,5 +396,6 @@ export function useProctoring({
     isFullscreen,
     violations,
     requestFullscreen,
+    reportViolation,
   };
 }

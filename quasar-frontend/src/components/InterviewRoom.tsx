@@ -6,9 +6,10 @@ import { EmotionAnalyzer } from './EmotionAnalyzer';
 import { FillerDetector } from './FillerDetector';
 import { PostSessionResults } from './PostSessionResults';
 import { CodeEditor } from './CodeEditor';
+import { useProctoring } from '../hooks/useProctoring';
 import { apiPost, apiFetchRaw } from '../lib/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Square, Mic, MicOff, MessageSquare, CheckCircle2, RefreshCw, Loader2, AlertTriangle } from 'lucide-react';
+import { Square, Mic, MicOff, MessageSquare, CheckCircle2, RefreshCw, Loader2, AlertTriangle, Users } from 'lucide-react';
 
 const logger = (...args: unknown[]) => console.log('[InterviewRoom]', ...args);
 
@@ -57,6 +58,25 @@ export function InterviewRoom({
   const [reportDownloading, setReportDownloading] = useState(false);
   const [metricsReady, setMetricsReady] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+
+  // ── Proctoring: multi-face violation tracking for the HR interview round ──
+  // Only active when we have a sessionId (used as appId for the violation API)
+  const { violationCount, criticalCount, reportViolation } = useProctoring({
+    appId: sessionId ?? 'pending',
+    round: 'hr',
+    roundNumber: 1,
+    onAutoTerminate: onEnd, // end session on excessive violations
+    enabled: !!sessionId && status === 'active',
+  });
+
+  const handleFaceCountChange = useCallback((count: number) => {
+    if (count >= 2) {
+      reportViolation(
+        'multiple_faces',
+        `${count} faces detected simultaneously during HR interview`,
+      );
+    }
+  }, [reportViolation]);
 
   // Auto-scroll to latest message
   useEffect(() => {
@@ -253,6 +273,22 @@ export function InterviewRoom({
             onUpdate={handleFillerUpdate}
           />
 
+          {/* Proctoring: violation count badge */}
+          {violationCount > 0 && !isEnded && (
+            <div
+              title={`${criticalCount} critical violation${criticalCount !== 1 ? 's' : ''}`}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold"
+              style={{
+                background: criticalCount > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.05)',
+                borderColor: criticalCount > 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.1)',
+                color: criticalCount > 0 ? '#ef4444' : 'var(--c-text-mute)',
+              }}
+            >
+              <Users size={12} />
+              {violationCount}
+            </div>
+          )}
+
           {!isEnded && (
             <AnimatePresence mode="wait">
               {!showEndConfirm ? (
@@ -317,6 +353,7 @@ export function InterviewRoom({
                 <EmotionAnalyzer
                   isActive={status === 'active' && isRecording}
                   onSnapshot={handleEmotionSnapshot}
+                  onFaceCountChange={handleFaceCountChange}
                 />
 
                 {/* Session info below webcam */}

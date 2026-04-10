@@ -55,11 +55,28 @@ export type SessionStatus =
   | 'ended'
   | 'error';
 
+export interface HeadPose {
+  pitch: number; // degrees, positive = tilt down
+  yaw:   number; // degrees, positive = turn right
+  roll:  number; // degrees, positive = tilt right
+}
+
+/** Microanalysis frame captured every ~200ms during an interview session */
 export interface EmotionSnapshot {
-  t: number;
-  confidence: number;
-  nervousness: number;
-  eyeContact: boolean;
+  t: number;          // elapsed seconds since session start
+
+  // ── Core (v1, always present) ──────────────────────────────────
+  confidence:  number;  // 0–100
+  nervousness: number;  // 0–100
+  eyeContact:  boolean;
+
+  // ── Microanalysis (v2, present when MediaPipe is available) ────
+  faceDetected?:   boolean;
+  attentionScore?: number;  // 0–100  (head-pose centering)
+  stressScore?:    number;  // 0–100  (brow furrow + frown signals)
+  smileScore?:     number;  // 0–100  (ARKit mouthSmile blendshapes)
+  blinkRate?:      number;  // blinks per minute (rolling 60-s window)
+  headPose?:       HeadPose;
 }
 
 export interface FillerBucket {
