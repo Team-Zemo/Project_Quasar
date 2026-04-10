@@ -38,7 +38,7 @@ When presenting job search results, use this format for EACH job:
 - Show company name, location, employment type
 - Show salary range if available
 - Add a brief snippet of the job description (first 2-3 lines)
-- End each job card with: \`🔗 Job ID: <id>\` (so the user can refer to it)
+- End each job card with a clickable link: [View & Apply →](/jobs/<id>) — the frontend will render this as a button
 - Add your own analysis of how well the job matches the user's profile/skills
 - Offer to help them prepare for any specific role
 
@@ -293,11 +293,11 @@ function formatJobResults(jobs, searchMeta) {
     parts.push(`- **Applicants so far**: ${job.applicantCount || 0}`);
     parts.push(`- **Posted**: ${new Date(job.createdAt).toLocaleDateString()}`);
     parts.push(`- **Description snippet**: ${desc}…`);
-    parts.push(`- **Job ID**: ${job._id}`);
+    parts.push(`- [View & Apply →](/jobs/${job._id})`);
     parts.push('');
   });
 
-  parts.push(`IMPORTANT: Tell the user they can apply to any of these jobs from the "Jobs" section of the platform. Use the Job IDs as references.`);
+  parts.push(`IMPORTANT: Present these jobs to the user. Each job has a clickable "View & Apply" link. DO NOT add your own Job ID text — just use the link provided above. Give a brief match analysis per job.`);
 
   return parts.join('\n');
 }

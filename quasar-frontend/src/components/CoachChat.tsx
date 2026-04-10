@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { apiFetchRaw } from '../lib/api';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, LineChart, BookOpen, Lightbulb, Map, Send, Square, Target, Bot, Search } from 'lucide-react';
+import { Calendar, Clock, LineChart, BookOpen, Lightbulb, Map, Send, Square, Target, Bot, Search, ExternalLink } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -25,6 +26,7 @@ const SUGGESTIONS = [
 
 export function CoachChat() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [streaming, setStreaming] = useState(false);
@@ -243,7 +245,28 @@ export function CoachChat() {
                     <div className="text-[14px] sm:text-[15px] leading-relaxed [&_p]:mb-4 [&_p:last-child]:mb-0 [&_h1]:text-[18px] sm:[&_h1]:text-[20px] [&_h1]:font-extrabold [&_h1]:mb-4 [&_h2]:text-[16px] sm:[&_h2]:text-[17px] [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:mt-6 [&_h3]:text-[14px] sm:[&_h3]:text-[15px] [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:mt-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1 [&_li::marker]:text-[var(--c-text-mute)] [&_strong]:font-bold [&_strong]:text-[var(--c-text)] [&_a]:text-orange-500 [&_a]:underline [&_a:hover]:text-orange-400 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--c-border-2)] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-[var(--c-text-dim)] [&_code]:font-mono [&_code]:text-[13px] [&_code]:bg-[var(--c-surface-3)] [&_code]:text-orange-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_pre]:bg-[#0d0d12] [&_pre]:p-4 [&_pre]:rounded-xl [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre]:border [&_pre]:border-[var(--c-border)] [&_pre_code]:bg-transparent [&_pre_code]:px-0 [&_pre_code]:py-0 [&_pre_code]:text-[var(--c-text-dim)] [&_table]:w-full [&_table]:mb-4 [&_table]:border-collapse [&_th]:text-left [&_th]:border-b [&_th]:border-[var(--c-border-2)] [&_th]:p-2 [&_th]:text-[var(--c-text)] [&_td]:border-b [&_td]:border-[var(--c-border-2)] [&_td]:p-2 [&_td]:text-[var(--c-text-dim)] [&_hr]:border-none [&_hr]:border-t [&_hr]:border-[var(--c-border-2)] [&_hr]:my-6">
                       {msg.role === 'assistant' ? (
                         msg.content ? (
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              a: ({ href, children, ...props }) => {
+                                // Intercept /jobs/{id} links → render as styled button
+                                if (href && href.startsWith('/jobs/')) {
+                                  const jobId = href.replace('/jobs/', '');
+                                  return (
+                                    <button
+                                      onClick={() => navigate('/jobs', { state: { viewJobId: jobId } })}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 mt-1 mb-1 rounded-lg text-[12px] font-bold bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-400 hover:to-orange-500 transition-all shadow-sm shadow-orange-500/20 active:scale-95 cursor-pointer border-none"
+                                    >
+                                      <ExternalLink size={12} strokeWidth={2.5} />
+                                      {children}
+                                    </button>
+                                  );
+                                }
+                                // Default link rendering
+                                return <a href={href} target="_blank" rel="noopener noreferrer" {...props}>{children}</a>;
+                              },
+                            }}
+                          >
                             {msg.content}
                           </ReactMarkdown>
                         ) : (
