@@ -125,7 +125,7 @@ Make the resource links real and specific to "${stackStr}".`;
     const completion = await chatCompletion(
       SYSTEM_PROMPT,
       userPrompt,
-      { model: 'llama-3.3-70b-versatile', temperature: 0.4, maxTokens: 8192 }
+      { model: 'gpt-oss-120b', temperature: 0.4, maxTokens: 8192 }
     );
 
     // Simulate streaming by flushing in small chunks for progressive UI rendering

@@ -74,7 +74,7 @@ Transcript:
 ${transcript.substring(0, 8000)}`;
 
     const responseText = await chatCompletion(systemPrompt, userPrompt, {
-      model: 'llama-3.3-70b-versatile',
+      model: 'gpt-oss-120b',
       temperature: 0.3,
       maxTokens: 4096,
     });

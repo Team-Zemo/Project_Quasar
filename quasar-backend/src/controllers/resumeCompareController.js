@@ -87,7 +87,7 @@ Analyse the provided RESUME against the JOB DESCRIPTION and return ONLY valid JS
     const userPrompt = `--- RESUME ---\n${resumeText.slice(0, 6000)}\n\n--- JOB DESCRIPTION ---\n${jdContent.slice(0, 4000)}`;
 
     const responseText = await chatCompletion(systemPrompt, userPrompt, {
-      model: 'llama-3.3-70b-versatile',
+      model: 'gpt-oss-120b',
       temperature: 0.3,
       maxTokens: 4096,
     });

@@ -80,7 +80,7 @@ async function generateBatch(jobDescription, domain, seniority, skills, batchSiz
   }`;
 
   const responseText = await chatCompletion(systemPrompt, userPrompt, {
-    model: 'llama-3.3-70b-versatile',
+    model: 'gpt-oss-120b',
     temperature: 0.4 + (batchIndex * 0.05), // Slight temp variation for diversity
     maxTokens: 4096,
   });

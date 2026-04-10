@@ -24,7 +24,7 @@ const client = new OpenAI({
  */
 async function chatCompletion(systemPrompt, userPrompt, opts = {}) {
   const {
-    model = 'llama-3.3-70b-versatile',
+    model = 'gpt-oss-120b',
     temperature = 0.3,
     maxTokens = 4096,
   } = opts;

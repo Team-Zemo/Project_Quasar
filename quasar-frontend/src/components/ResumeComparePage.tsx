@@ -236,7 +236,7 @@ export function ResumeComparePage() {
       <div className="flex flex-col items-center text-center max-w-2xl mb-12">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--c-surface-2)] border border-[var(--c-border)] text-[var(--c-text-dim)] text-[12px] font-bold tracking-wider mb-6">
           <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-[pulse-dot_2s_infinite]" />
-          <span>Powered by Groq · Llama 3.3 70B</span>
+          <span>Powered by NeevCloud · GPT-OSS-120B</span>
         </div>
         <h1 className="text-[42px] leading-[1.1] font-black tracking-tight text-[var(--c-text)] m-0 mb-4 [text-wrap:balance]">
           Resume <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">vs</span> JD
