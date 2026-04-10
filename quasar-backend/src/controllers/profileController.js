@@ -6,6 +6,7 @@ const User = require('../models/User');
 const { extractTextFromPDF } = require('../utils/pdfExtract');
 const { parseResume } = require('../services/resumeScreeningService');
 const { uploadFile, getPresignedUrl, deleteFile, fileExists } = require('../services/storageService');
+const platformSyncService = require('../services/platformSyncService');
 const logger = require('../utils/logger');
 
 /**
@@ -284,4 +285,46 @@ async function deleteResume(req, res) {
   }
 }
 
-module.exports = { getProfile, updateProfile, uploadResume, downloadResume, deleteResume };
+/**
+ * POST /api/profile/sync-platforms
+ * Manually trigger platform synchronization and optionally update URLs.
+ */
+async function syncPlatforms(req, res) {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found', data: null });
+    }
+
+    if (user.role !== 'candidate') {
+      return res.status(403).json({ success: false, message: 'Only candidates can sync platforms', data: null });
+    }
+
+    const { githubUrl, leetcodeUrl } = req.body;
+    
+    // Update urls if provided
+    if (githubUrl !== undefined) user.githubUrl = githubUrl ? githubUrl.trim() : null;
+    if (leetcodeUrl !== undefined) user.leetcodeUrl = leetcodeUrl ? leetcodeUrl.trim() : null;
+
+    if (!user.githubUrl && !user.leetcodeUrl) {
+      return res.status(400).json({ success: false, message: 'Please provide at least one platform URL to sync', data: null });
+    }
+
+    await user.save();
+
+    platformSyncService.fetchAndSyncUserPlatforms(user._id).catch(err => {
+      logger.error('Unhandled background error in manual platform sync', { err: err.message });
+    });
+
+    return res.json({ 
+      success: true, 
+      message: 'Platform sync initiated successfully', 
+      data: { platformSyncStatus: 'syncing' } 
+    });
+  } catch (err) {
+    logger.error('Sync platforms error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to initiate sync', data: null });
+  }
+}
+
+module.exports = { getProfile, updateProfile, uploadResume, downloadResume, deleteResume, syncPlatforms };

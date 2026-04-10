@@ -25,6 +25,7 @@ import { JobDetail } from './components/candidate/JobDetail';
 import { MyApplications } from './components/candidate/MyApplications';
 import { McqTestPage } from './components/candidate/McqTestPage';
 import { PipelineInterviewPage } from './components/candidate/PipelineInterviewPage';
+import { PlatformContextPage } from './components/PlatformContextPage';
 import { useInterviewSession } from './hooks/useInterviewSession';
 import { useAuth } from './hooks/useAuth';
 import { logout } from './lib/auth';
@@ -395,6 +396,7 @@ function AppShell() {
           <Route path="/my-applications" element={<ProtectedRoute><ApplicationsPage /></ProtectedRoute>} />
           <Route path="/pipeline-interview" element={<ProtectedRoute><PipelineInterviewPage /></ProtectedRoute>} />
           <Route path="/mcq-test" element={<ProtectedRoute><McqTestRoute /></ProtectedRoute>} />
+          <Route path="/platforms" element={<ProtectedRoute><PlatformContextPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>

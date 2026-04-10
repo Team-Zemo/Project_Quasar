@@ -31,6 +31,7 @@ router.post('/onboarding/resume',  requireAuth, upload.single('resume'), onboard
 // ── Profile Management ───────────────────────────────────────
 router.get('/profile',           requireAuth, profileController.getProfile);
 router.put('/profile',           requireAuth, profileController.updateProfile);
+router.post('/profile/sync-platforms', requireAuth, profileController.syncPlatforms);
 router.post('/profile/resume',   requireAuth, upload.single('resume'), profileController.uploadResume);
 router.get('/profile/resume',    requireAuth, profileController.downloadResume);
 router.delete('/profile/resume', requireAuth, profileController.deleteResume);

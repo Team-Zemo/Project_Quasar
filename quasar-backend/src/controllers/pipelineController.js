@@ -6,6 +6,7 @@
 const Application = require('../models/Application');
 const JobPosting = require('../models/JobPosting');
 const Session = require('../models/Session');
+const User = require('../models/User');
 const logger = require('../utils/logger');
 
 /**
@@ -128,10 +129,26 @@ async function startTechRound(req, res) {
       sessionId: session._id,
     });
 
-    // Build the system prompt for the AI interviewer based on JD context
+    // Build the system prompt for the AI interviewer based on JD + candidate context
     const jdContext = posting.jobDescription
       ? `\n\nJob Context:\nTitle: ${posting.title}\nCompany: ${posting.company}\nKey Skills: ${(posting.parsedJd?.requiredSkills || []).join(', ')}\n\nFull JD:\n${posting.jobDescription.substring(0, 2000)}`
       : '';
+
+    // Append candidate platform context if available
+    let candidateContext = '';
+    try {
+      const candidate = await User.findById(candidateId)
+        .select('platformContext')
+        .lean();
+      if (candidate?.platformContext) {
+        candidateContext =
+          '\n\n## Candidate Background (from verified external platforms)\n' +
+          'Use this to tailor questions to their actual experience and projects.\n' +
+          candidate.platformContext;
+      }
+    } catch (ctxErr) {
+      logger.warn('Failed to load candidate platform context for tech round', { err: ctxErr.message });
+    }
 
     return res.json({
       success: true,
@@ -142,7 +159,7 @@ async function startTechRound(req, res) {
         personaId: roundConfig.personaId || 'faang_engineer',
         title: roundConfig.title,
         durationMinutes: roundConfig.durationMinutes,
-        jdContext,
+        jdContext: jdContext + candidateContext,
       },
     });
   } catch (err) {
@@ -375,6 +392,22 @@ async function startHrRound(req, res) {
 
     logger.info('HR round started', { appId, candidateId, sessionId: session._id });
 
+    // Append candidate platform context if available
+    let candidateContext = '';
+    try {
+      const candidate = await User.findById(candidateId)
+        .select('platformContext')
+        .lean();
+      if (candidate?.platformContext) {
+        candidateContext =
+          '\n\n## Candidate Background (from verified external platforms)\n' +
+          'Use this to tailor behavioral and culture-fit questions to their actual background.\n' +
+          candidate.platformContext;
+      }
+    } catch (ctxErr) {
+      logger.warn('Failed to load candidate platform context for HR round', { err: ctxErr.message });
+    }
+
     return res.json({
       success: true,
       message: 'HR round started',
@@ -383,6 +416,7 @@ async function startHrRound(req, res) {
         domain: 'HR / Culture Fit',
         personaId: 'hr_manager',
         durationMinutes: hrConfig.durationMinutes,
+        jdContext: candidateContext,
       },
     });
   } catch (err) {

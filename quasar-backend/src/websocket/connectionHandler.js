@@ -1,5 +1,6 @@
 const GeminiService = require('../services/geminiService');
 const Persona = require('../models/Persona');
+const User = require('../models/User');
 const logger = require('../utils/logger');
 const WebSocket = require('ws');
 
@@ -7,9 +8,11 @@ class ConnectionHandler {
   /**
    * Represents an abstraction around a single browser -> backend WebSocket
    * @param {WebSocket} ws 
+   * @param {object} user - Authenticated user object from JWT ({ id, email, name })
    */
-  constructor(ws) {
+  constructor(ws, user) {
     this.ws = ws;
+    this.user = user || null;
     this.geminiService = null;
     this.isClientConnected = true;
     this.sessionId = null;
@@ -109,6 +112,27 @@ class ConnectionHandler {
     // Use custom system prompt (from JD questions) if provided
     if (customSystemPrompt) {
       systemPrompt = customSystemPrompt;
+    }
+
+    // Append candidate platform context (GitHub + LeetCode) to the system prompt
+    // so the AI interviewer knows their actual projects and coding history.
+    if (this.user?.id) {
+      try {
+        const candidate = await User.findById(this.user.id)
+          .select('platformContext leetcodeStats projects githubUsername leetcodeUsername skills')
+          .lean();
+
+        if (candidate?.platformContext) {
+          const contextNote =
+            '\n\n## Candidate Background (from verified external platforms)\n' +
+            'Use this to tailor questions to their actual experience. ' +
+            'Reference specific projects or skills they have demonstrated.\n' +
+            candidate.platformContext;
+          systemPrompt = (systemPrompt || '') + contextNote;
+        }
+      } catch (err) {
+        logger.warn('Failed to fetch candidate platform context for interview', { err: err.message });
+      }
     }
 
     this.geminiService = new GeminiService(domain, {

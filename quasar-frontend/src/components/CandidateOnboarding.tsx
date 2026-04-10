@@ -16,6 +16,8 @@ export function CandidateOnboarding() {
   const [phone, setPhone] = useState('');
   const [headline, setHeadline] = useState('');
   const [location, setLocation] = useState('');
+  const [githubUrl, setGithubUrl] = useState('');
+  const [leetcodeUrl, setLeetcodeUrl] = useState('');
 
   // Resume state
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -29,7 +31,7 @@ export function CandidateOnboarding() {
     setError('');
 
     try {
-      const res = await apiPost('/api/onboarding/profile', { name, phone, headline, location });
+      const res = await apiPost('/api/onboarding/profile', { name, phone, headline, location, githubUrl, leetcodeUrl });
       if (res.success) {
         setStep('resume');
       } else {
@@ -105,7 +107,7 @@ export function CandidateOnboarding() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-lg"
+        className="w-full max-w-lg relative z-10"
       >
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-3 mb-8">
@@ -180,6 +182,33 @@ export function CandidateOnboarding() {
                       className="w-full px-4 py-3 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-xl text-[var(--c-text)] text-[14px] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
                       placeholder="Bangalore, India"
                     />
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-[var(--c-border)] mt-4">
+                  <p className="text-[14px] font-bold text-[var(--c-text)] mb-3">Optional: Platform Links</p>
+                  <p className="text-[12px] text-[var(--c-text-mute)] mb-4 -mt-2">We will automatically extract your projects and tech stack asynchronously.</p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[12px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-2">GitHub URL</label>
+                      <input
+                        type="url"
+                        value={githubUrl}
+                        onChange={e => setGithubUrl(e.target.value)}
+                        className="w-full px-4 py-3 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-xl text-[var(--c-text)] text-[14px] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
+                        placeholder="https://github.com/..."
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[12px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-2">LeetCode URL</label>
+                      <input
+                        type="url"
+                        value={leetcodeUrl}
+                        onChange={e => setLeetcodeUrl(e.target.value)}
+                        className="w-full px-4 py-3 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-xl text-[var(--c-text)] text-[14px] focus:outline-none focus:border-[var(--c-accent)] transition-colors"
+                        placeholder="https://leetcode.com/..."
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

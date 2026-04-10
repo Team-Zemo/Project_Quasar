@@ -68,7 +68,7 @@ If the user just says "jobs" or "find jobs" without specifics, use their profile
 async function buildUserContext(userId) {
   try {
     const [user, sessions, stats, skillVectors, applications] = await Promise.all([
-      User.findById(userId).select('name headline skills experience resumeParsed location role').lean(),
+      User.findById(userId).select('name headline skills experience resumeParsed location role platformContext leetcodeStats projects githubUsername leetcodeUsername').lean(),
       Session.find({ userId, overallScore: { $exists: true } })
         .sort({ createdAt: -1 })
         .limit(10)
@@ -151,6 +151,11 @@ async function buildUserContext(userId) {
         .forEach(sv => {
           parts.push(`- ${sv.skill.replace(/_/g, ' ')}: **${parseFloat(sv.score).toFixed(1)}/10** (${sv.attempt_count} attempts)`);
         });
+    }
+
+    // ── Platform context (GitHub + LeetCode detailed data) ──
+    if (user?.platformContext) {
+      parts.push(user.platformContext);
     }
 
     return parts.join('\n');

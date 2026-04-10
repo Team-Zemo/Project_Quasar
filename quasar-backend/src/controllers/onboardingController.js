@@ -5,6 +5,7 @@
 const User = require('../models/User');
 const { extractTextFromPDF } = require('../utils/pdfExtract');
 const { parseResume } = require('../services/resumeScreeningService');
+const platformSyncService = require('../services/platformSyncService');
 const logger = require('../utils/logger');
 
 /**
@@ -62,7 +63,7 @@ async function setRole(req, res) {
 async function completeProfile(req, res) {
   try {
     const userId = req.user?.id;
-    const { name, phone, headline, location, company } = req.body;
+    const { name, phone, headline, location, company, githubUrl, leetcodeUrl } = req.body;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -94,12 +95,21 @@ async function completeProfile(req, res) {
     // Role-specific fields
     if (user.role === 'candidate') {
       if (headline) user.headline = headline.trim();
+      if (githubUrl) user.githubUrl = githubUrl.trim();
+      if (leetcodeUrl) user.leetcodeUrl = leetcodeUrl.trim();
     } else if (user.role === 'recruiter') {
       if (company) user.company = company.trim();
     }
 
     user.profileComplete = true;
     await user.save();
+
+    // Trigger async platform parsing if candidate provided urls
+    if (user.role === 'candidate' && (user.githubUrl || user.leetcodeUrl)) {
+      platformSyncService.fetchAndSyncUserPlatforms(user._id).catch(err => {
+        logger.error('Unhandled background error in platform sync', { err: err.message });
+      });
+    }
 
     logger.info('Profile completed', { userId, role: user.role });
 

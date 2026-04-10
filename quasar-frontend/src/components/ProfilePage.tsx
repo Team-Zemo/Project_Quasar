@@ -7,18 +7,24 @@ import {
 } from 'lucide-react';
 import { changePassword } from '../lib/auth';
 import { authState } from '../lib/auth';
+import { useNavigate } from 'react-router-dom';
 import type { User } from '../lib/auth';
 
 interface ProfileData extends User {
   resumeUrl?: string | null;
+  githubUrl?: string | null;
+  leetcodeUrl?: string | null;
+  platformSyncStatus?: 'pending' | 'syncing' | 'completed' | 'failed_fetching' | null;
 }
 
 export function ProfilePage() {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [uploadingResume, setUploadingResume] = useState(false);
+  const [syncingPlatform, setSyncingPlatform] = useState(false);
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -36,6 +42,7 @@ export function ProfilePage() {
     name: '', phone: '', headline: '', location: '',
     skills: [] as string[], experience: null as number | null,
     company: '', designation: '', companyWebsite: '',
+    githubUrl: '', leetcodeUrl: ''
   });
   const [newSkill, setNewSkill] = useState('');
 
@@ -60,6 +67,8 @@ export function ProfilePage() {
           company: json.data.company || '',
           designation: json.data.designation || '',
           companyWebsite: json.data.companyWebsite || '',
+          githubUrl: json.data.githubUrl || '',
+          leetcodeUrl: json.data.leetcodeUrl || '',
         });
       }
     } finally {
@@ -157,6 +166,30 @@ export function ProfilePage() {
       }
     } catch {
       setMessage({ type: 'error', text: 'Failed to delete resume' });
+    }
+  };
+
+  const handleSyncPlatforms = async () => {
+    setSyncingPlatform(true);
+    setMessage(null);
+    try {
+      const res = await fetch('/api/profile/sync-platforms', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ githubUrl: form.githubUrl, leetcodeUrl: form.leetcodeUrl }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setProfile(prev => prev ? { ...prev, platformSyncStatus: 'syncing' } : prev);
+        setMessage({ type: 'success', text: 'Platform sync started in background' });
+      } else {
+        setMessage({ type: 'error', text: json.message || 'Failed to start sync' });
+      }
+    } catch {
+      setMessage({ type: 'error', text: 'Something went wrong while syncing' });
+    } finally {
+      setSyncingPlatform(false);
     }
   };
 
@@ -366,6 +399,49 @@ export function ProfilePage() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {/* External Platforms (Candidate only) */}
+      {isCandidate && (
+        <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] p-6 mb-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[16px] font-bold text-[var(--c-text)] flex items-center gap-2">
+              <Globe size={18} className="text-[var(--c-accent)]" />
+              External Platforms
+            </h2>
+            {profile.platformSyncStatus && (
+              <span className={`text-[12px] font-semibold px-2.5 py-1 rounded-lg ${
+                profile.platformSyncStatus === 'completed' ? 'bg-[var(--c-success-dim)] text-[var(--c-success)]' :
+                profile.platformSyncStatus === 'syncing' ? 'bg-blue-500/10 text-blue-500' :
+                profile.platformSyncStatus === 'failed_fetching' ? 'bg-[var(--c-error-dim)] text-[var(--c-error)]' :
+                'bg-[var(--c-surface-2)] text-[var(--c-text-mute)]'
+              }`}>
+                {profile.platformSyncStatus === 'syncing' ? 'Syncing...' : 
+                 profile.platformSyncStatus === 'completed' ? 'Synced' : 
+                 profile.platformSyncStatus === 'failed_fetching' ? 'Sync Failed' : 'Pending'}
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <EditableField label="GitHub URL" value={form.githubUrl} editing={editing}
+              onChange={v => setForm(prev => ({ ...prev, githubUrl: v }))} icon={Globe} placeholder="https://github.com/..." />
+            <EditableField label="LeetCode URL" value={form.leetcodeUrl} editing={editing}
+              onChange={v => setForm(prev => ({ ...prev, leetcodeUrl: v }))} icon={Globe} placeholder="https://leetcode.com/..." />
+          </div>
+          
+          <div className="mt-4 pt-4 border-t border-[var(--c-border)] flex items-center justify-between">
+             <button
+               onClick={() => navigate('/platforms')}
+               className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold text-[var(--c-text-mute)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-all border border-[var(--c-border)]"
+             >
+               <Globe size={14} /> View Details
+             </button>
+             <button onClick={handleSyncPlatforms} disabled={syncingPlatform} className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[12px] font-bold bg-[var(--c-accent-dim)] text-[var(--c-accent)] hover:bg-[var(--c-accent)] hover:text-white transition-all">
+               {syncingPlatform ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />} 
+               {profile.platformSyncStatus === 'completed' ? 'Force Resync' : 'Sync Platforms'}
+             </button>
+          </div>
         </div>
       )}
 
