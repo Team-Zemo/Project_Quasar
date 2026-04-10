@@ -167,14 +167,14 @@ Requirements:
   const labelClass = "block text-[12px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-2";
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-6">
         <button onClick={onCancel} className="p-2 rounded-xl hover:bg-[var(--c-surface-2)] text-[var(--c-text-mute)] hover:text-[var(--c-text)] transition-colors">
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-2xl font-black text-[var(--c-text)] tracking-tight">Create Job Posting</h1>
+          <h1 className="text-xl sm:text-2xl font-black text-[var(--c-text)] tracking-tight">Create Job Posting</h1>
           <p className="text-[var(--c-text-dim)] text-[13px]">Step {step === 'details' ? '1 of 3' : step === 'pipeline' ? '2 of 3' : '3 of 3'}</p>
         </div>
       </div>
@@ -197,7 +197,7 @@ Requirements:
         ))}
       </div>
 
-      <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-8 shadow-[var(--shadow-glass)]">
+      <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-4 sm:p-6 lg:p-8 shadow-[var(--shadow-glass)]">
         {/* Step 1: Details */}
         {step === 'details' && (
           <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
@@ -213,7 +213,7 @@ Requirements:
             <div className="space-y-4">
               <div><label className={labelClass}>Job Title *</label>
                 <input type="text" value={title} onChange={e => setTitle(e.target.value)} className={inputClass} placeholder="Senior Full Stack Developer" /></div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div><label className={labelClass}>Company *</label>
                   <input type="text" value={company} onChange={e => setCompany(e.target.value)} className={inputClass} placeholder="Acme Corp" /></div>
                 <div><label className={labelClass}>Location</label>
@@ -266,7 +266,7 @@ Requirements:
                 </label>
               </div>
               {mcqEnabled && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className={labelClass}>Duration (min)</label>
                     <input type="number" value={mcqDuration} onChange={e => setMcqDuration(+e.target.value)} className={inputClass} min={5} max={180} /></div>
                   <div><label className={labelClass}>Passing Score (%)</label>
@@ -293,7 +293,7 @@ Requirements:
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className={labelClass}>Round Title</label>
                     <input type="text" value={round.title} onChange={e => updateTechRound(index, 'title', e.target.value)} className={inputClass} /></div>
                   <div><label className={labelClass}>Domain</label>
@@ -327,7 +327,7 @@ Requirements:
                 </label>
               </div>
               {hrEnabled && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div><label className={labelClass}>Duration (min)</label>
                     <input type="number" value={hrDuration} onChange={e => setHrDuration(+e.target.value)} className={inputClass} min={10} max={60} /></div>
                   <div><label className={labelClass}>Passing Score (/10)</label>
@@ -361,7 +361,7 @@ Requirements:
                 <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-1">Job Title</p>
                 <p className="text-[15px] font-bold text-[var(--c-text)]">{title}</p>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 bg-[var(--c-surface-2)] rounded-xl">
                   <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-1">Company</p>
                   <p className="text-[14px] text-[var(--c-text)]">{company}</p>

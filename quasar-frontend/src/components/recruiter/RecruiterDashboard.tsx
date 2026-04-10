@@ -55,10 +55,10 @@ export function RecruiterDashboard({ onNavigate, dummyStats }: Props) {
   }
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
       {/* Page header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-black text-[var(--c-text)] tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl sm:text-3xl font-black text-[var(--c-text)] tracking-tight">Dashboard</h1>
         <p className="text-[var(--c-text-dim)] text-[14px] mt-1">Your recruitment pipeline at a glance</p>
       </div>
 
@@ -94,16 +94,16 @@ export function RecruiterDashboard({ onNavigate, dummyStats }: Props) {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
-        className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-6 mb-8"
+        className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8"
       >
         <h2 className="text-[15px] font-bold text-[var(--c-text)] mb-5">Pipeline Funnel</h2>
         <div className="space-y-3">
           {funnelStages.map((stage) => (
-            <div key={stage.label} className="flex items-center gap-4">
-              <span className="w-16 text-[12px] font-semibold text-[var(--c-text-dim)] text-right">
+            <div key={stage.label} className="flex items-center gap-2 sm:gap-4">
+              <span className="w-12 sm:w-16 text-[11px] sm:text-[12px] font-semibold text-[var(--c-text-dim)] text-right">
                 {stage.label}
               </span>
-              <div className="flex-1 h-8 bg-[var(--c-surface-2)] rounded-lg overflow-hidden">
+              <div className="flex-1 h-6 sm:h-8 bg-[var(--c-surface-2)] rounded-lg overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
                   animate={{ width: `${(stage.count / maxFunnel) * 100}%` }}
@@ -122,7 +122,7 @@ export function RecruiterDashboard({ onNavigate, dummyStats }: Props) {
       </motion.div>
 
       {/* ── Quick actions — tour target ───────────────────────────────── */}
-      <div id="tour-quick-actions" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div id="tour-quick-actions" className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

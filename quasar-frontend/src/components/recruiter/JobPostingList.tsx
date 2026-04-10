@@ -45,21 +45,21 @@ export function JobPostingList({ onViewJob, onCreateJob, dummyJobs }: Props) {
   const filters = ['all', 'published', 'draft', 'closed'];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-3xl font-black text-[var(--c-text)] tracking-tight">Job Postings</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-[var(--c-text)] tracking-tight">Job Postings</h1>
           <p className="text-[var(--c-text-dim)] text-[14px] mt-1">{postings.length} total postings</p>
         </div>
         {/* ── Create button — tour target ───────────────────────────── */}
-        <button id="tour-create-job-btn" onClick={onCreateJob} className="btn-primary flex items-center gap-2">
+        <button id="tour-create-job-btn" onClick={onCreateJob} className="btn-primary flex items-center gap-2 self-start sm:self-auto">
           <Plus size={16} /> New Posting
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
         {filters.map(f => (
           <button
             key={f}
@@ -100,35 +100,36 @@ export function JobPostingList({ onViewJob, onCreateJob, dummyJobs }: Props) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
                 onClick={() => onViewJob(posting._id)}
-                className="flex items-center gap-5 p-5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl hover:border-[var(--c-border-2)] hover:bg-[var(--c-surface-2)] transition-all cursor-pointer group"
+                className="flex items-center gap-3 sm:gap-5 p-3 sm:p-5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-xl sm:rounded-2xl hover:border-[var(--c-border-2)] hover:bg-[var(--c-surface-2)] transition-all cursor-pointer group"
               >
-                <div className="w-11 h-11 rounded-xl bg-[var(--c-accent-dim)] flex items-center justify-center flex-shrink-0">
-                  <Briefcase size={20} className="text-[var(--c-accent)]" />
+                <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-lg sm:rounded-xl bg-[var(--c-accent-dim)] flex items-center justify-center flex-shrink-0">
+                  <Briefcase size={18} className="text-[var(--c-accent)] sm:hidden" />
+                  <Briefcase size={20} className="text-[var(--c-accent)] hidden sm:block" />
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className="text-[15px] font-bold text-[var(--c-text)] truncate">{posting.title}</h3>
+                  <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+                    <h3 className="text-[13px] sm:text-[15px] font-bold text-[var(--c-text)] truncate max-w-[180px] sm:max-w-none">{posting.title}</h3>
                     <span
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+                      className="inline-flex items-center px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase tracking-wider flex-shrink-0"
                       style={{ color: badge.color, background: badge.bg }}
                     >
                       {badge.label}
                     </span>
                   </div>
-                  <div className="flex items-center gap-4 text-[12px] text-[var(--c-text-mute)]">
-                    <span>{posting.company}</span>
-                    {posting.location && <span>• {posting.location}</span>}
-                    <span>• {posting.employmentType}</span>
+                  <div className="flex items-center gap-2 sm:gap-4 text-[11px] sm:text-[12px] text-[var(--c-text-mute)] flex-wrap">
+                    <span className="truncate max-w-[100px] sm:max-w-none">{posting.company}</span>
+                    {posting.location && <span className="hidden sm:inline">• {posting.location}</span>}
+                    <span className="hidden sm:inline">• {posting.employmentType}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6 flex-shrink-0">
-                  <div className="flex items-center gap-1.5 text-[var(--c-text-dim)]">
-                    <Users size={14} />
-                    <span className="text-[13px] font-semibold">{posting.applicantCount || 0}</span>
+                <div className="flex items-center gap-3 sm:gap-6 flex-shrink-0">
+                  <div className="flex items-center gap-1 sm:gap-1.5 text-[var(--c-text-dim)]">
+                    <Users size={13} />
+                    <span className="text-[12px] sm:text-[13px] font-semibold">{posting.applicantCount || 0}</span>
                   </div>
-                  <Eye size={16} className="text-[var(--c-text-mute)] group-hover:text-[var(--c-accent)] transition-colors" />
+                  <Eye size={14} className="text-[var(--c-text-mute)] group-hover:text-[var(--c-accent)] transition-colors hidden sm:block" />
                 </div>
               </motion.div>
             );

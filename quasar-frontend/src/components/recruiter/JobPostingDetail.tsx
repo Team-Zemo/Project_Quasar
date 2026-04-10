@@ -215,16 +215,16 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
   ];
 
   return (
-    <div className="p-8 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-6xl mx-auto">
       {/* Header */}
-      <div className="flex items-start gap-4 mb-6">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-[var(--c-surface-2)] text-[var(--c-text-mute)] hover:text-[var(--c-text)] transition-colors mt-1">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4 mb-6">
+        <button onClick={onBack} className="p-2 rounded-xl hover:bg-[var(--c-surface-2)] text-[var(--c-text-mute)] hover:text-[var(--c-text)] transition-colors self-start">
           <ArrowLeft size={20} />
         </button>
-        <div className="flex-1">
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-black text-[var(--c-text)] tracking-tight">{posting.title}</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider"
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+            <h1 className="text-xl sm:text-2xl font-black text-[var(--c-text)] tracking-tight">{posting.title}</h1>
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0"
               style={{
                 color: posting.status === 'published' ? 'var(--c-success)' : 'var(--c-text-mute)',
                 background: posting.status === 'published' ? 'var(--c-success-dim)' : 'var(--c-surface-3)',
@@ -232,9 +232,9 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
               {posting.status}
             </span>
           </div>
-          <p className="text-[var(--c-text-dim)] text-[13px]">{posting.company} {posting.location && `• ${posting.location}`} • {posting.employmentType}</p>
+          <p className="text-[var(--c-text-dim)] text-[12px] sm:text-[13px]">{posting.company} {posting.location && `• ${posting.location}`} • {posting.employmentType}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 self-start">
           {posting.status === 'draft' && (
             <button onClick={handlePublish} disabled={publishing} className="btn-primary flex items-center gap-2">
               {publishing ? <div className="spinner" /> : <><Play size={14} /> Publish</>}
@@ -249,12 +249,12 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 border-b border-[var(--c-border)] pb-px">
+      <div className="flex gap-1 mb-6 border-b border-[var(--c-border)] pb-px overflow-x-auto">
         {tabs.map(t => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-4 py-3 text-[13px] font-semibold transition-all border-b-2 ${
+            className={`px-3 sm:px-4 py-2.5 sm:py-3 text-[12px] sm:text-[13px] font-semibold transition-all border-b-2 whitespace-nowrap ${
               tab === t.id
                 ? 'text-[var(--c-accent)] border-[var(--c-accent)]'
                 : 'text-[var(--c-text-mute)] border-transparent hover:text-[var(--c-text-dim)]'
@@ -267,7 +267,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
 
       {/* Tab Content */}
       {tab === 'overview' && (
-        <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-6">
+        <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-4 sm:p-6">
           <h3 className="text-[14px] font-bold text-[var(--c-text)] mb-3">Job Description</h3>
           <div className="text-[13px] text-[var(--c-text-dim)] leading-relaxed whitespace-pre-wrap max-h-[500px] overflow-y-auto">
             {posting.jobDescription}
@@ -293,7 +293,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
         <div>
           {/* Export button */}
           {applicants.length > 0 && (
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
               <p className="text-[13px] text-[var(--c-text-dim)]">{applicants.length} applicant{applicants.length !== 1 ? 's' : ''}</p>
               <button onClick={handleExportCSV} className="btn-secondary flex items-center gap-2">
                 <Download size={14} /> Export CSV
@@ -307,49 +307,98 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
             </div>
           ) : (
             <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl overflow-hidden">
-              {/* Table header */}
-              <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 bg-[var(--c-surface-2)] text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)]">
-                <span>#</span><span>Candidate</span><span>Screening</span><span>MCQ</span><span>Tech</span><span>HR</span><span>Status</span><span>Actions</span>
+              {/* ── Desktop table (hidden on mobile) ── */}
+              <div className="hidden md:block">
+                {/* Table header */}
+                <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 bg-[var(--c-surface-2)] text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)]">
+                  <span>#</span><span>Candidate</span><span>Screening</span><span>MCQ</span><span>Tech</span><span>HR</span><span>Status</span><span>Actions</span>
+                </div>
+                {applicants.map((app, i) => {
+                  const st = statusColors[app.status] || { color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)', label: app.status };
+                  return (
+                    <div key={app._id}
+                      className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-4 border-t border-[var(--c-border)] items-center hover:bg-[var(--c-surface-2)] transition-colors cursor-pointer"
+                      onClick={() => setSelectedApplicantId(app._id)}
+                    >
+                      <span className="text-[12px] font-bold text-[var(--c-text-mute)] w-5">{app.rank || i + 1}</span>
+                      <div>
+                        <p className="text-[13px] font-semibold text-[var(--c-text)]">{app.candidate?.name || 'Unknown'}</p>
+                        <p className="text-[11px] text-[var(--c-text-mute)]">{app.candidate?.headline || app.candidate?.email}</p>
+                      </div>
+                      <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{app.screeningScore != null ? `${app.screeningScore}%` : '—'}</span>
+                      <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{app.mcqPercentage != null ? `${app.mcqPercentage}%` : '—'}</span>
+                      <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">
+                        {app.techScores?.length > 0 ? app.techScores.map(t => t.score != null ? t.score.toFixed(1) : '—').join('/') : '—'}
+                      </span>
+                      <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{app.hrScore != null ? app.hrScore.toFixed(1) : '—'}</span>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" style={{ color: st.color, background: st.bg }}>
+                        {st.label}
+                      </span>
+                      <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setSelectedApplicantId(app._id)} className="p-1.5 rounded-lg hover:bg-[var(--c-accent-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-accent)]" title="View Details">
+                          <Eye size={14} />
+                        </button>
+                        {!['selected', 'rejected'].includes(app.status) && (
+                          <>
+                            <button onClick={() => handleShortlist(app._id, 'shortlist')} className="p-1.5 rounded-lg hover:bg-[var(--c-success-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-success)]" title="Shortlist">
+                              <CheckCircle size={14} />
+                            </button>
+                            <button onClick={() => handleShortlist(app._id, 'reject')} className="p-1.5 rounded-lg hover:bg-[var(--c-error-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-error)]" title="Reject">
+                              <XCircle size={14} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              {applicants.map((app, i) => {
-                const st = statusColors[app.status] || { color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)', label: app.status };
-                return (
-                  <div key={app._id}
-                    className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-4 border-t border-[var(--c-border)] items-center hover:bg-[var(--c-surface-2)] transition-colors cursor-pointer"
-                    onClick={() => setSelectedApplicantId(app._id)}
-                  >
-                    <span className="text-[12px] font-bold text-[var(--c-text-mute)] w-5">{app.rank || i + 1}</span>
-                    <div>
-                      <p className="text-[13px] font-semibold text-[var(--c-text)]">{app.candidate?.name || 'Unknown'}</p>
-                      <p className="text-[11px] text-[var(--c-text-mute)]">{app.candidate?.headline || app.candidate?.email}</p>
+
+              {/* ── Mobile card list (shown only on mobile) ── */}
+              <div className="md:hidden divide-y divide-[var(--c-border)]">
+                {applicants.map((app, i) => {
+                  const st = statusColors[app.status] || { color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)', label: app.status };
+                  return (
+                    <div
+                      key={app._id}
+                      className="p-4 hover:bg-[var(--c-surface-2)] transition-colors cursor-pointer"
+                      onClick={() => setSelectedApplicantId(app._id)}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-[11px] font-bold text-[var(--c-text-mute)] w-5">#{app.rank || i + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[13px] font-semibold text-[var(--c-text)] truncate">{app.candidate?.name || 'Unknown'}</p>
+                          <p className="text-[11px] text-[var(--c-text-mute)] truncate">{app.candidate?.headline || app.candidate?.email}</p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider flex-shrink-0" style={{ color: st.color, background: st.bg }}>
+                          {st.label}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-[11px] text-[var(--c-text-mute)] ml-8">
+                        {app.screeningScore != null && <span>Screen: <strong className="text-[var(--c-text-dim)]">{app.screeningScore}%</strong></span>}
+                        {app.mcqPercentage != null && <span>MCQ: <strong className="text-[var(--c-text-dim)]">{app.mcqPercentage}%</strong></span>}
+                        {app.techScores?.length > 0 && <span>Tech: <strong className="text-[var(--c-text-dim)]">{app.techScores.map(t => t.score != null ? t.score.toFixed(1) : '—').join('/')}</strong></span>}
+                        {app.hrScore != null && <span>HR: <strong className="text-[var(--c-text-dim)]">{app.hrScore.toFixed(1)}</strong></span>}
+                      </div>
+                      <div className="flex gap-1 mt-2 ml-8" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => setSelectedApplicantId(app._id)} className="p-1.5 rounded-lg hover:bg-[var(--c-accent-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-accent)]" title="View">
+                          <Eye size={13} />
+                        </button>
+                        {!['selected', 'rejected'].includes(app.status) && (
+                          <>
+                            <button onClick={() => handleShortlist(app._id, 'shortlist')} className="p-1.5 rounded-lg hover:bg-[var(--c-success-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-success)]" title="Select">
+                              <CheckCircle size={13} />
+                            </button>
+                            <button onClick={() => handleShortlist(app._id, 'reject')} className="p-1.5 rounded-lg hover:bg-[var(--c-error-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-error)]" title="Reject">
+                              <XCircle size={13} />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                    <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{app.screeningScore != null ? `${app.screeningScore}%` : '—'}</span>
-                    <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{app.mcqPercentage != null ? `${app.mcqPercentage}%` : '—'}</span>
-                    <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">
-                      {app.techScores?.length > 0 ? app.techScores.map(t => t.score != null ? t.score.toFixed(1) : '—').join('/') : '—'}
-                    </span>
-                    <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{app.hrScore != null ? app.hrScore.toFixed(1) : '—'}</span>
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider" style={{ color: st.color, background: st.bg }}>
-                      {st.label}
-                    </span>
-                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => setSelectedApplicantId(app._id)} className="p-1.5 rounded-lg hover:bg-[var(--c-accent-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-accent)]" title="View Details">
-                        <Eye size={14} />
-                      </button>
-                      {!['selected', 'rejected'].includes(app.status) && (
-                        <>
-                          <button onClick={() => handleShortlist(app._id, 'shortlist')} className="p-1.5 rounded-lg hover:bg-[var(--c-success-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-success)]" title="Shortlist">
-                            <CheckCircle size={14} />
-                          </button>
-                          <button onClick={() => handleShortlist(app._id, 'reject')} className="p-1.5 rounded-lg hover:bg-[var(--c-error-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-error)]" title="Reject">
-                            <XCircle size={14} />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
@@ -357,9 +406,9 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
 
       {tab === 'mcqs' && (
         <div>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <p className="text-[13px] text-[var(--c-text-dim)]">{mcqs.length} questions</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={() => setShowAddForm(!showAddForm)}
                 className="btn-secondary flex items-center gap-2"
@@ -542,7 +591,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                   </button>
                 </div>
                 <p className="text-[13px] font-medium text-[var(--c-text)] mb-3">{mcq.question}</p>
-                <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {mcq.options.map((opt, oi) => (
                     <div
                       key={oi}
@@ -568,7 +617,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
       )}
 
       {tab === 'pipeline' && (
-        <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-6">
+        <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-4 sm:p-6">
           <h3 className="text-[14px] font-bold text-[var(--c-text)] mb-4">Pipeline Configuration</h3>
           <div className="space-y-3">
             <div className="flex items-center gap-3 p-4 bg-[var(--c-surface-2)] rounded-xl">

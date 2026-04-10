@@ -180,8 +180,8 @@ function TranscriptViewer({ transcript }: { transcript: string }) {
         const isAI = line.toLowerCase().startsWith('ai:') || line.toLowerCase().startsWith('interviewer:');
         const isCandidate = line.toLowerCase().startsWith('candidate:') || line.toLowerCase().startsWith('user:');
         return (
-          <div key={i} className={`text-[12px] leading-relaxed rounded-lg px-3 py-2 ${isAI ? 'bg-[var(--c-accent-dim)] text-[var(--c-text)] ml-0 mr-8' :
-              isCandidate ? 'bg-[var(--c-surface-2)] text-[var(--c-text)] ml-8 mr-0' :
+          <div key={i} className={`text-[12px] leading-relaxed rounded-lg px-3 py-2 ${isAI ? 'bg-[var(--c-accent-dim)] text-[var(--c-text)] ml-0 mr-4 sm:mr-8' :
+              isCandidate ? 'bg-[var(--c-surface-2)] text-[var(--c-text)] ml-4 sm:ml-8 mr-0' :
                 'text-[var(--c-text-dim)]'
             }`}>
             {line}
@@ -288,27 +288,29 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
     <motion.div
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      className="p-6 lg:p-8 max-w-5xl mx-auto space-y-5"
+      className="p-4 sm:p-6 lg:p-8 max-w-5xl mx-auto space-y-4 sm:space-y-5"
     >
       {/* Header */}
-      <div className="flex items-center gap-3 mb-2">
-        <button onClick={onBack} className="p-2 rounded-xl hover:bg-[var(--c-surface-2)] text-[var(--c-text-mute)] hover:text-[var(--c-text)] transition-colors">
-          <ArrowLeft size={18} />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-xl font-black text-[var(--c-text)]">Candidate Details</h1>
-          <p className="text-[12px] text-[var(--c-text-mute)]">Application #{applicationId.slice(-6).toUpperCase()}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+        <div className="flex items-center gap-3">
+          <button onClick={onBack} className="p-2 rounded-xl hover:bg-[var(--c-surface-2)] text-[var(--c-text-mute)] hover:text-[var(--c-text)] transition-colors">
+            <ArrowLeft size={18} />
+          </button>
+          <div className="flex-1">
+            <h1 className="text-lg sm:text-xl font-black text-[var(--c-text)]">Candidate Details</h1>
+            <p className="text-[11px] sm:text-[12px] text-[var(--c-text-mute)]">Application #{applicationId.slice(-6).toUpperCase()}</p>
+          </div>
         </div>
         {/* Actions */}
         {!['selected', 'rejected'].includes(app.status) && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 ml-0 sm:ml-auto">
             <button onClick={() => handleShortlist('reject')} disabled={actionLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold border border-[var(--c-error)]/30 text-[var(--c-error)] hover:bg-[var(--c-error-dim)] transition-all"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-[12px] font-bold border border-[var(--c-error)]/30 text-[var(--c-error)] hover:bg-[var(--c-error-dim)] transition-all"
             >
               <ThumbsDown size={14} /> Reject
             </button>
             <button onClick={() => handleShortlist('shortlist')} disabled={actionLoading}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold bg-gradient-to-r from-[var(--c-success)] to-[#34d399] text-white hover:brightness-110 transition-all"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 rounded-xl text-[12px] font-bold bg-gradient-to-r from-[var(--c-success)] to-[#34d399] text-white hover:brightness-110 transition-all"
             >
               <ThumbsUp size={14} /> Select
             </button>
@@ -317,14 +319,14 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
       </div>
 
       {/* Candidate Profile Card */}
-      <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-5">
-        <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[var(--c-accent)] to-[#fb923c] flex items-center justify-center text-white text-xl font-black flex-shrink-0">
+      <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-4 sm:p-5">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+          <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[var(--c-accent)] to-[#fb923c] flex items-center justify-center text-white text-lg sm:text-xl font-black flex-shrink-0">
             {candidate?.name?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-[18px] font-bold text-[var(--c-text)]">{candidate?.name || 'Unknown'}</h2>
+            <div className="flex items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+              <h2 className="text-[16px] sm:text-[18px] font-bold text-[var(--c-text)]">{candidate?.name || 'Unknown'}</h2>
               {status && (
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase" style={{ color: status.color, background: status.bg }}>
                   {status.label}
@@ -354,7 +356,7 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
         </div>
 
         {/* Score overview bar */}
-        <div className="flex items-center gap-6 mt-5 pt-4 border-t border-[var(--c-border)]">
+        <div className="flex items-center gap-3 sm:gap-6 mt-4 sm:mt-5 pt-3 sm:pt-4 border-t border-[var(--c-border)] overflow-x-auto pb-1">
           <div className="relative">
             <ScoreRing score={app.totalScore} max={10} label="Total" />
           </div>
@@ -403,7 +405,7 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
                 <p className="text-[12px] text-[var(--c-text-dim)] leading-relaxed">{screening.summary}</p>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <h5 className="text-[11px] font-bold uppercase text-[var(--c-success)] mb-2 flex items-center gap-1"><CheckCircle size={12} /> Matched Skills</h5>
                 <div className="flex flex-wrap gap-1.5">
@@ -436,7 +438,7 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
           }
         >
           <div className="pt-4">
-            <div className="grid grid-cols-4 gap-3 mb-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3">
               {[
                 { label: 'Correct', value: `${mcq.correctAnswers}/${mcq.totalQuestions}`, color: 'var(--c-success)' },
                 { label: 'Percentage', value: `${mcq.percentage.toFixed(1)}%`, color: mcq.passed ? 'var(--c-success)' : 'var(--c-error)' },
@@ -549,7 +551,7 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
         >
           <div className="pt-4 space-y-4">
             {/* Trust Score + Stats */}
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
               <div className="relative">
                 <ScoreRing score={app.proctoringFlags?.trustScore ?? 100} label="Trust" />
               </div>
@@ -709,7 +711,7 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
                 </a>
               </div>
               <div className="rounded-xl overflow-hidden border border-[var(--c-border)] bg-white">
-                <iframe src={resumeUrl} className="w-full h-[600px]" title="Candidate Resume" />
+                <iframe src={resumeUrl} className="w-full h-[300px] sm:h-[400px] lg:h-[600px]" title="Candidate Resume" />
               </div>
             </div>
           ) : (
