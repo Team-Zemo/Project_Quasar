@@ -11,6 +11,18 @@
 
 > **The AI-powered hiring platform that replaces the entire interview pipeline — from resume screening to final selection — with a single, autonomous system.**
 
+<p align="center">
+  <br/>
+  <a href="https://drive.google.com/file/d/1MY-Bs8JCHpTB1WAPr6taUkbO6-WxZcSh/view?usp=sharing">
+    <img src="https://img.shields.io/badge/🎥_Watch_Demo_Video-Click_Here-FF0000?style=for-the-badge&logoColor=white&labelColor=1a1a2e&color=e94560" alt="Demo Video" />
+  </a>
+  <br/><br/>
+  <b>👆 See the full platform in action — live AI interviews, autonomous agent, proctoring &amp; more</b>
+  <br/><br/>
+</p>
+
+---
+
 Interview Quasar is a full-stack platform with two parallel product surfaces:
 
 1. **For Candidates** — Practice with a real-time AI interviewer powered by **Gemini 3.1 Flash Live API** (voice-to-voice), get STAR-scored evaluations, built-in code editor, emotion analysis, and an AI career coach.
