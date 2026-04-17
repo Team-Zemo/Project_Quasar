@@ -290,7 +290,7 @@ export function CoachChat() {
       </div>
 
       {/* Input bar */}
-      <div className="border-t border-[var(--c-border)] bg-[var(--c-surface)] shrink-0 w-full px-4 py-3 md:px-6 md:py-4">
+      <div className="border-t border-[var(--c-border)]  shrink-0 w-full px-4 py-3 md:px-6 md:py-4">
         <form className="flex items-end gap-3 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-[18px] transition-colors duration-200 focus-within:border-orange-500/50 focus-within:ring-2 focus-within:ring-orange-500/10 shadow-sm p-1.5 px-3 md:p-2 md:px-3" onSubmit={handleSubmit}>
           <textarea
             ref={inputRef}
