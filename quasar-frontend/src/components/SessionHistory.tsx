@@ -1,6 +1,9 @@
 import { useState, useEffect, Fragment } from 'react';
 import { apiGet } from '../lib/api';
 import { Loader2, ArrowRight, Star, Award, MessageSquare, X } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { apiGet } from "../lib/api";
+import { Loader2 } from "lucide-react";
 
 interface SessionRecord {
   id: string;
@@ -21,31 +24,14 @@ export function SessionHistory() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [sessionDetails, setSessionDetails] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-
-  const openModal = async (id: string) => {
-    setSelectedSessionId(id);
-    setSessionDetails(null);
-    setLoadingDetails(true);
-    try {
-      const res = await apiGet<any>(`/api/sessions/${id}`);
-      if (res.success) {
-        setSessionDetails(res.data);
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingDetails(false);
-    }
-  };
-
-  const closeModal = () => {
+    const closeModal = () => {
     setSelectedSessionId(null);
     setSessionDetails(null);
   };
 
   useEffect(() => {
-    apiGet<SessionRecord[]>('/api/user/sessions')
-      .then(res => {
+    apiGet<SessionRecord[]>("/api/user/sessions")
+      .then((res) => {
         if (res.success && Array.isArray(res.data)) {
           setSessions(res.data);
         }
@@ -55,26 +41,35 @@ export function SessionHistory() {
   }, []);
 
   const formatDuration = (seconds: number | null) => {
-    if (!seconds) return '—';
+    if (!seconds) return "—";
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
   const formatDate = (iso: string) => {
     const d = new Date(iso);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
   };
 
   if (loading) {
     return (
       <div className="flex flex-col gap-5 w-full">
-        <h3 className="text-[18px] font-extrabold text-[var(--c-text)] m-0">Session History</h3>
-        <div 
-          className="flex flex-col items-center justify-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] shadow-sm w-full p-8 sm:p-16"
-        >
-          <Loader2 className="animate-spin text-[var(--c-accent)] mb-3" size={32} />
-          <p className="text-[14px] font-medium text-[var(--c-text-dim)]">Loading history...</p>
+        <h3 className="text-[18px] font-extrabold text-[var(--c-text)] m-0">
+          Session History
+        </h3>
+        <div className="flex flex-col items-center justify-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] shadow-sm w-full p-8 sm:p-16">
+          <Loader2
+            className="animate-spin text-[var(--c-accent)] mb-3"
+            size={32}
+          />
+          <p className="text-[14px] font-medium text-[var(--c-text-dim)]">
+            Loading history...
+          </p>
         </div>
       </div>
     );
@@ -83,11 +78,15 @@ export function SessionHistory() {
   if (sessions.length === 0) {
     return (
       <div className="flex flex-col gap-5 w-full">
-        <h3 className="text-[18px] font-extrabold text-[var(--c-text)] m-0">Session History</h3>
-        <div 
-          className="flex flex-col items-center justify-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] shadow-sm w-full p-8 sm:p-16"
-        >
-          <p className="text-[14px] font-medium text-[var(--c-text-dim)] text-center">No sessions yet.<br />Start an interview to see your history here.</p>
+        <h3 className="text-[18px] font-extrabold text-[var(--c-text)] m-0">
+          Session History
+        </h3>
+        <div className="flex flex-col items-center justify-center bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] shadow-sm w-full p-8 sm:p-16">
+          <p className="text-[14px] font-medium text-[var(--c-text-dim)] text-center">
+            No sessions yet.
+            <br />
+            Start an interview to see your history here.
+          </p>
         </div>
       </div>
     );
@@ -95,77 +94,92 @@ export function SessionHistory() {
 
   return (
     <div className="flex flex-col gap-5 w-full">
-      <h3 className="text-[18px] font-extrabold text-[var(--c-text)] m-0">Session History</h3>
+      <h3 className="text-[18px] font-extrabold text-[var(--c-text)] m-0">
+        Session History
+      </h3>
       <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[16px] overflow-x-auto shadow-sm w-full">
         <table className="w-full text-left border-collapse min-w-[700px]">
           <thead>
             <tr className="bg-[var(--c-surface-2)]">
-              {['Date', 'Domain', 'Persona', 'Duration', 'Score', 'Status'].map(h => (
-                <th key={h} className="text-[11px] font-bold text-[var(--c-text-mute)] uppercase tracking-wider border-b border-[var(--c-border)] whitespace-nowrap" style={{ padding: '16px 20px' }}>
-                  {h}
-                </th>
-              ))}
+              {["Date", "Domain", "Persona", "Duration", "Score", "Status"].map(
+                (h) => (
+                  <th
+                    key={h}
+                    className="text-[11px] font-bold text-[var(--c-text-mute)] uppercase tracking-wider border-b border-[var(--c-border)] whitespace-nowrap"
+                    style={{ padding: "16px 20px" }}
+                  >
+                    {h}
+                  </th>
+                ),
+              )}
             </tr>
           </thead>
           <tbody>
             {sessions.map((s, idx) => (
-              <Fragment key={s.id}>
-                <tr 
-                  className={`group transition-colors hover:bg-[var(--c-surface-2)] cursor-pointer ${idx !== sessions.length - 1 ? 'border-b border-[var(--c-border)]/50' : ''} ${selectedSessionId === s.id ? 'bg-[var(--c-surface-2)]/30' : ''}`}
-                  onClick={() => openModal(s.id)}
+              <tr
+                key={s.id}
+                className={`group transition-colors hover:bg-[var(--c-surface-2)] ${idx !== sessions.length - 1 ? "border-b border-[var(--c-border)]/50" : ""}`}
+              >
+                <td
+                  className="text-[13px] font-medium text-[var(--c-text-dim)] whitespace-nowrap"
+                  style={{ padding: "16px 20px" }}
                 >
-                  <td className="text-[13px] font-medium text-[var(--c-text-dim)] whitespace-nowrap" style={{ padding: '16px 20px' }}>
-                    {formatDate(s.started_at)}
-                  </td>
-                  <td className="text-[14px] font-bold text-[var(--c-text)]" style={{ padding: '16px 20px' }}>
-                    {s.domain}
-                  </td>
-                  <td className="text-[13px] text-[var(--c-text-mute)]" style={{ padding: '16px 20px' }}>
-                    {s.persona_name || '—'}
-                  </td>
-                  <td className="text-[13px] font-medium text-[var(--c-text-dim)]" style={{ padding: '16px 20px' }}>
-                    {formatDuration(s.duration_seconds)}
-                  </td>
-                  <td style={{ padding: '16px 20px' }}>
-                    {s.overall_score != null ? (
-                      <span 
-                        className={`inline-flex items-center justify-center min-w-[36px] h-[24px] rounded-full text-[12px] font-bold border ${
-                          s.overall_score >= 6.5 
-                            ? 'bg-green-500/10 text-green-500 border-green-500/20 shadow-sm' 
-                            : 'bg-red-500/10 text-red-500 border-red-500/20 shadow-sm'
-                        }`}
-                        style={{ padding: '0 8px' }}
-                      >
-                        {s.overall_score.toFixed(1)}
-                      </span>
-                    ) : (
-                      <span 
-                        className="inline-flex items-center justify-center min-w-[36px] h-[24px] rounded-full text-[12px] font-bold bg-[var(--c-surface-3)] text-[var(--c-text-dim)] border border-[var(--c-border)]"
-                        style={{ padding: '0 8px' }}
-                      >
-                        —
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: '16px 20px' }}>
-                    <div className="flex items-center justify-between">
-                      <span 
-                        className={`inline-flex items-center gap-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest border shadow-sm ${
-                          s.status === 'completed' 
-                            ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                            : s.status === 'error'
-                            ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                            : 'bg-[var(--c-surface-3)] text-[var(--c-text-dim)] border-[var(--c-border)]'
-                        }`}
-                        style={{ padding: '4px 10px' }}
-                      >
-                        {s.status}
-                      </span>
-                      <ArrowRight size={16} className="text-[var(--c-text-mute)] opacity-0 group-hover:opacity-100 transition-opacity ml-2" />
-                    </div>
-                  </td>
-                </tr>
-              </Fragment>
+                  {formatDate(s.started_at)}
+                </td>
+                <td
+                  className="text-[14px] font-bold text-[var(--c-text)]"
+                  style={{ padding: "16px 20px" }}
+                >
+                  {s.domain}
+                </td>
+                <td
+                  className="text-[13px] text-[var(--c-text-mute)]"
+                  style={{ padding: "16px 20px" }}
+                >
+                  {s.persona_name || "—"}
+                </td>
+                <td
+                  className="text-[13px] font-medium text-[var(--c-text-dim)]"
+                  style={{ padding: "16px 20px" }}
+                >
+                  {formatDuration(s.duration_seconds)}
+                </td>
+                <td style={{ padding: "16px 20px" }}>
+                  {s.overall_score != null ? (
+                    <span
+                      className={`inline-flex items-center justify-center min-w-[36px] h-[24px] rounded-full text-[12px] font-bold border ${
+                        s.overall_score >= 6.5
+                          ? "bg-[var(--c-surface-2)] text-[var(--c-text)] border-[var(--c-border)]"
+                          : "bg-[var(--c-surface-2)] text-[var(--c-text-dim)] border-[var(--c-border)]"
+                      }`}
+                      style={{ padding: "0 8px" }}
+                    >
+                      {s.overall_score.toFixed(1)}
+                    </span>
+                  ) : (
+                    <span
+                      className="inline-flex items-center justify-center min-w-[36px] h-[24px] rounded-full text-[12px] font-bold bg-[var(--c-surface-3)] text-[var(--c-text-dim)] border border-[var(--c-border)]"
+                      style={{ padding: "0 8px" }}
+                    >
+                      —
+                    </span>
+                  )}
+                </td>
+                <td style={{ padding: "16px 20px" }}>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest border shadow-sm ${
+                      s.status === "completed"
+                        ? "bg-[var(--c-surface-2)] text-[var(--c-text)] border-[var(--c-border)]"
+                        : s.status === "error"
+                          ? "bg-[var(--c-surface-2)] text-[var(--c-text-dim)] border-[var(--c-border)]"
+                          : "bg-[var(--c-surface-3)] text-[var(--c-text-dim)] border-[var(--c-border)]"
+                    }`}
+                    style={{ padding: "4px 10px" }}
+                  >
+                    {s.status}
+                  </span>
+                </td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -173,11 +187,11 @@ export function SessionHistory() {
 
       {/* Floating Modal for Details */}
       {selectedSessionId && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
           onClick={closeModal}
         >
-          <div 
+          <div
             className="flex flex-col bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] w-full max-w-4xl max-h-[90vh] shadow-2xl overflow-hidden relative animate-in zoom-in-95 duration-200"
             onClick={e => e.stopPropagation()}
           >
@@ -187,8 +201,8 @@ export function SessionHistory() {
                 <MessageSquare size={20} className="text-[var(--c-accent)]" />
                 Diagnostic Session Details
               </h3>
-              <button 
-                onClick={closeModal} 
+              <button
+                onClick={closeModal}
                 className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--c-surface-2)] text-[var(--c-text-mute)] hover:text-[var(--c-text)] transition-colors focus:outline-none"
               >
                 <X size={20} />
@@ -226,7 +240,7 @@ export function SessionHistory() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Stats Grid Column */}
                     <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                       {['situation', 'task', 'action', 'result'].map(k => (
@@ -240,7 +254,7 @@ export function SessionHistory() {
                           </span>
                         </div>
                       ))}
-                      
+
                       <div className="flex flex-col justify-center bg-blue-500/5 p-4 rounded-[20px] border border-blue-500/20">
                         <span className="text-[11px] font-black text-blue-500/70 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                           <Award size={14} className="text-blue-500" />
@@ -250,7 +264,7 @@ export function SessionHistory() {
                           {sessionDetails.clarityScore != null ? Number(sessionDetails.clarityScore).toFixed(1) : '—'}
                         </span>
                       </div>
-                      
+
                       <div className="flex flex-col justify-center bg-orange-500/5 p-4 rounded-[20px] border border-orange-500/20">
                         <span className="text-[11px] font-black text-orange-500/70 uppercase tracking-wider mb-1 flex items-center gap-1.5">
                           <Star size={14} className="text-orange-500" />
