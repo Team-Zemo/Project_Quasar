@@ -1,9 +1,7 @@
-import { useState, useEffect, Fragment } from 'react';
-import { apiGet } from '../lib/api';
-import { Loader2, ArrowRight, Star, Award, MessageSquare, X } from 'lucide-react';
+import { Loader2, Star, Award, MessageSquare, X } from 'lucide-react';
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { apiGet } from "../lib/api";
-import { Loader2 } from "lucide-react";
 
 interface SessionRecord {
   id: string;
@@ -24,7 +22,24 @@ export function SessionHistory() {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [sessionDetails, setSessionDetails] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-    const closeModal = () => {
+
+  const openModal = async (id: string) => {
+    setSelectedSessionId(id);
+    setSessionDetails(null);
+    setLoadingDetails(true);
+    try {
+      const res = await apiGet<any>(`/api/sessions/${id}`);
+      if (res.success) {
+        setSessionDetails(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const closeModal = () => {
     setSelectedSessionId(null);
     setSessionDetails(null);
   };
@@ -118,7 +133,8 @@ export function SessionHistory() {
             {sessions.map((s, idx) => (
               <tr
                 key={s.id}
-                className={`group transition-colors hover:bg-[var(--c-surface-2)] ${idx !== sessions.length - 1 ? "border-b border-[var(--c-border)]/50" : ""}`}
+                className={`group transition-colors hover:bg-[var(--c-surface-2)] cursor-pointer ${idx !== sessions.length - 1 ? "border-b border-[var(--c-border)]/50" : ""} ${selectedSessionId === s.id ? "bg-[var(--c-surface-2)]/30" : ""}`}
+                onClick={() => openModal(s.id)}
               >
                 <td
                   className="text-[13px] font-medium text-[var(--c-text-dim)] whitespace-nowrap"
@@ -186,9 +202,10 @@ export function SessionHistory() {
       </div>
 
       {/* Floating Modal for Details */}
-      {selectedSessionId && (
+      {selectedSessionId && createPortal(
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+          style={{ zIndex: 999999 }}
           onClick={closeModal}
         >
           <div
@@ -311,7 +328,8 @@ export function SessionHistory() {
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
