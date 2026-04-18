@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { apiGet, apiPost } from '../../lib/api';
 import type { ApplicationStatus } from '../../types/recruitment';
+import { ApplicantFullProfile } from './ApplicantFullProfile';
 
 interface CandidateInfo {
   _id: string;
@@ -228,6 +229,7 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
   const [resumeUrl, setResumeUrl] = useState<string | null>(null);
   const [resumeLoading, setResumeLoading] = useState(false);
   const [resumeFilename, setResumeFilename] = useState<string>('resume.pdf');
+  const [viewingFullProfile, setViewingFullProfile] = useState(false);
 
   useEffect(() => {
     apiGet<{ application: ApplicationDetail }>(`/api/recruiter/jobs/${jobId}/applicants/${applicationId}`)
@@ -276,6 +278,16 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
         </button>
         <p className="text-[var(--c-error)]">Application not found</p>
       </div>
+    );
+  }
+
+  if (viewingFullProfile) {
+    return (
+      <ApplicantFullProfile 
+        jobId={jobId} 
+        applicationId={app._id} 
+        onBack={() => setViewingFullProfile(false)} 
+      />
     );
   }
 
@@ -352,6 +364,11 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
                 ))}
               </div>
             )}
+            <div className="mt-4">
+              <button onClick={() => setViewingFullProfile(true)} className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[12px] font-bold bg-gradient-to-r from-[var(--c-accent)] to-purple-500 text-white shadow-lg shadow-[var(--c-accent)]/20 hover:shadow-xl hover:brightness-110 transition-all">
+                <User size={14} /> View Full Profile (inc. Platform Stats)
+              </button>
+            </div>
           </div>
         </div>
 

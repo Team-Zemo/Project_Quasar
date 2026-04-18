@@ -40,6 +40,7 @@ router.delete('/jobs/:id/dsa-questions/:qId', jobPostingController.deleteDsaQues
 // ── Applicant Management ──────────────────────────────────────────────
 router.get('/jobs/:id/applicants', dashboardController.getApplicants);
 router.get('/jobs/:id/applicants/:appId', dashboardController.getApplicantDetail);
+router.get('/jobs/:id/applicants/:appId/profile', dashboardController.getApplicantProfile);
 router.post('/jobs/:id/applicants/:appId/shortlist', dashboardController.shortlistCandidate);
 router.get('/jobs/:id/applicants/:appId/resume', dashboardController.getApplicantResume);
 router.get('/jobs/:id/rankings', dashboardController.getRankings);

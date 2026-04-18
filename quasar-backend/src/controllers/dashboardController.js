@@ -467,6 +467,59 @@ async function getApplicantResume(req, res) {
   }
 }
 
+/**
+ * GET /api/recruiter/jobs/:id/applicants/:appId/profile
+ * Get full profile of a candidate (including platform stats like LeetCode/GitHub)
+ */
+async function getApplicantProfile(req, res) {
+  try {
+    const recruiterId = req.user?.id;
+    const { id, appId } = req.params;
+
+    // Verify ownership of the job
+    const posting = await JobPosting.findOne({ _id: id, recruiterId }).select('_id').lean();
+    if (!posting) {
+      return res.status(404).json({ success: false, message: 'Job posting not found', data: null });
+    }
+
+    const application = await Application.findOne({ _id: appId, jobPostingId: id }).select('candidateId').lean();
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found', data: null });
+    }
+
+    const user = await User.findById(application.candidateId)
+      .select('-passwordHash -passwordResetToken -passwordResetExpires -__v')
+      .lean();
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Candidate not found', data: null });
+    }
+
+    // Generate presigned resume URL if they have one
+    let resumeUrl = null;
+    if (user.resumeKey) {
+      try {
+        resumeUrl = await getPresignedUrl(user.resumeKey, 3600);
+      } catch {
+        logger.warn('Failed to generate resume presigned URL for applicant profile', { userId: user._id });
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: 'Candidate profile retrieved',
+      data: {
+        ...user,
+        _id: user._id,
+        resumeUrl,
+      },
+    });
+  } catch (err) {
+    logger.error('Get applicant profile error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to get applicant profile', data: null });
+  }
+}
+
 module.exports = {
   getDashboardStats,
   getApplicants,
@@ -475,4 +528,5 @@ module.exports = {
   getRankings,
   exportApplicantsCSV,
   getApplicantResume,
+  getApplicantProfile,
 };
