@@ -11,6 +11,7 @@ const JobPosting = require('./JobPosting');
 const McqQuestion = require('./McqQuestion');
 const DsaQuestion = require('./DsaQuestion');
 const Application = require('./Application');
+const LatexResume = require('./LatexResume');
 const logger = require('../utils/logger');
 
 /**
@@ -84,5 +85,6 @@ module.exports = {
   McqQuestion,
   DsaQuestion,
   Application,
+  LatexResume,
   seedPersonas,
 };

@@ -18,11 +18,7 @@ interface Props {
 const LANG_OPTIONS: { key: string; label: string; monacoLang: string }[] = [
   { key: 'javascript', label: 'JavaScript', monacoLang: 'javascript' },
   { key: 'java', label: 'Java', monacoLang: 'java' },
-  { key: 'c', label: 'C', monacoLang: 'c' },
   { key: 'cpp', label: 'C++', monacoLang: 'cpp' },
-  { key: 'kotlin', label: 'Kotlin', monacoLang: 'kotlin' },
-  { key: 'go', label: 'Go', monacoLang: 'go' },
-  { key: 'python', label: 'Python', monacoLang: 'python' },
 ];
 
 const DIFFICULTY_COLORS = {
@@ -390,6 +386,8 @@ export function DsaTestPage({ appId, onComplete, onBack }: Props) {
           {/* Monaco editor */}
           <div className="flex-1 min-h-0 bg-[#1e1e1e] relative">
             <Editor
+              key={`${question._id}-${currentLang}`}
+              path={`${question._id}-${currentLang}`}
               height="100%"
               language={LANG_OPTIONS.find(l => l.key === currentLang)?.monacoLang || 'javascript'}
               value={currentCode}
@@ -399,6 +397,7 @@ export function DsaTestPage({ appId, onComplete, onBack }: Props) {
                 fontSize: 14,
                 fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
                 minimap: { enabled: false },
+                readOnly: submittedSet.has(question._id),
                 scrollBeyondLastLine: false,
                 lineNumbers: 'on',
                 padding: { top: 12, bottom: 12 },
@@ -504,7 +503,7 @@ export function DsaTestPage({ appId, onComplete, onBack }: Props) {
               {/* Run (sample tests only) */}
               <button
                 onClick={handleRun}
-                disabled={running || !currentCode.trim()}
+                disabled={running || !currentCode.trim() || submittedSet.has(question._id)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-bold text-[#e4e4e7] bg-[#1f1f26] hover:bg-[#2a2a33] border border-[#2a2a33] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
@@ -514,7 +513,7 @@ export function DsaTestPage({ appId, onComplete, onBack }: Props) {
               {/* Submit (all test cases) */}
               <button
                 onClick={handleSubmit}
-                disabled={submitting || !currentCode.trim()}
+                disabled={submitting || !currentCode.trim() || submittedSet.has(question._id)}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-[13px] font-bold text-white bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 shadow-[0_4px_12px_rgba(139,92,246,0.25)] transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
               >
                 {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}

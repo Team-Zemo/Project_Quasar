@@ -53,6 +53,16 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
   const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addingMcq, setAddingMcq] = useState(false);
+  const [showSelectDsa, setShowSelectDsa] = useState(false);
+  const [showAddDsaForm, setShowAddDsaForm] = useState(false);
+  const [addingDsa, setAddingDsa] = useState(false);
+  const [newDsa, setNewDsa] = useState({
+    title: '',
+    description: '',
+    difficulty: 'medium' as 'easy' | 'medium' | 'hard',
+    domain: '',
+    testCases: [{ input: '', expectedOutput: '' }]
+  });
   const [newMcq, setNewMcq] = useState({
     question: '',
     options: [
@@ -87,7 +97,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
       if (res.success) {
         setMcqs(prev => [...prev, ...res.data]);
       }
-    } catch {} finally {
+    } catch { } finally {
       setGenerating(false);
     }
   };
@@ -124,8 +134,61 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
         });
         setShowAddForm(false);
       }
-    } catch {} finally {
+    } catch { } finally {
       setAddingMcq(false);
+    }
+  };
+
+  const handleSelectSystemDsa = async (sysQ: any) => {
+    setAddingDsa(true);
+    try {
+      const res = await apiPost<any>(`/api/recruiter/jobs/${jobId}/dsa-questions`, {
+        title: sysQ.title,
+        description: sysQ.description,
+        difficulty: sysQ.difficulty,
+        domain: sysQ.domain,
+        constraints: sysQ.constraints,
+        inputFormat: sysQ.inputFormat,
+        outputFormat: sysQ.outputFormat,
+        sampleInput: sysQ.sampleInput,
+        sampleOutput: sysQ.sampleOutput,
+        testCases: sysQ.testCases,
+        starterCode: sysQ.starterCode,
+        tags: sysQ.tags,
+      });
+      if (res.success) {
+        setDsaQuestions(prev => [...prev, res.data]);
+        setShowSelectDsa(false);
+      }
+    } catch { } finally {
+      setAddingDsa(false);
+    }
+  };
+
+  const submitNewDsaQuestion = async () => {
+    if (!newDsa.title.trim() || !newDsa.description.trim() || newDsa.testCases.length === 0) return;
+    setAddingDsa(true);
+    try {
+      const res = await apiPost<any>(`/api/recruiter/jobs/${jobId}/dsa-questions`, {
+        title: newDsa.title.trim(),
+        description: newDsa.description.trim(),
+        difficulty: newDsa.difficulty,
+        domain: newDsa.domain.trim() || 'General',
+        testCases: newDsa.testCases.filter(tc => tc.expectedOutput.trim())
+      });
+      if (res.success) {
+        setDsaQuestions(prev => [...prev, res.data]);
+        setShowAddDsaForm(false);
+        setNewDsa({
+          title: '',
+          description: '',
+          difficulty: 'medium',
+          domain: '',
+          testCases: [{ input: '', expectedOutput: '' }]
+        });
+      }
+    } catch { } finally {
+      setAddingDsa(false);
     }
   };
 
@@ -172,7 +235,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
     try {
       await apiPost(`/api/recruiter/jobs/${jobId}/applicants/${appId}/shortlist`, { action });
       setApplicants(prev => prev.map(a => a._id === appId ? { ...a, status: action === 'shortlist' ? 'selected' : 'rejected' } : a));
-    } catch {}
+    } catch { }
   };
 
   const handleExportCSV = async () => {
@@ -214,11 +277,14 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
     return <div className="p-8 text-center text-[var(--c-text-dim)]">Job posting not found</div>;
   }
 
+  const jobDsaQuestions = dsaQuestions.filter(q => q.jobPostingId === jobId);
+  const systemDsaQuestions = dsaQuestions.filter(q => !q.jobPostingId);
+
   const tabs: { id: Tab; label: string; count?: number }[] = [
     { id: 'overview', label: 'Overview' },
     { id: 'applicants', label: 'Applicants', count: applicants.length },
     { id: 'mcqs', label: 'MCQ Questions', count: mcqs.length },
-    ...(posting?.pipeline?.dsaRound?.enabled ? [{ id: 'dsa_questions' as Tab, label: 'DSA Questions', count: dsaQuestions.length }] : []),
+    ...(posting?.pipeline?.dsaRound?.enabled ? [{ id: 'dsa_questions' as Tab, label: 'DSA Questions', count: jobDsaQuestions.length }] : []),
     { id: 'pipeline', label: 'Pipeline Config' },
   ];
 
@@ -262,11 +328,10 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`px-3 sm:px-4 py-2.5 sm:py-3 text-[12px] sm:text-[13px] font-semibold transition-all border-b-2 whitespace-nowrap ${
-              tab === t.id
+            className={`px-3 sm:px-4 py-2.5 sm:py-3 text-[12px] sm:text-[13px] font-semibold transition-all border-b-2 whitespace-nowrap ${tab === t.id
                 ? 'text-[var(--c-accent)] border-[var(--c-accent)]'
                 : 'text-[var(--c-text-mute)] border-transparent hover:text-[var(--c-text-dim)]'
-            }`}
+              }`}
           >
             {t.label} {t.count !== undefined && <span className="ml-1.5 px-1.5 py-0.5 rounded-md text-[10px] bg-[var(--c-surface-3)]">{t.count}</span>}
           </button>
@@ -474,19 +539,17 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                     <label className="block text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-2">Options * (click radio to mark correct)</label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {newMcq.options.map((opt, oi) => (
-                        <div key={oi} className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${
-                          opt.isCorrect
+                        <div key={oi} className={`flex items-center gap-2 p-2.5 rounded-xl border transition-all ${opt.isCorrect
                             ? 'bg-[var(--c-success-dim)] border-[var(--c-success)]/30'
                             : 'bg-[var(--c-surface-2)] border-[var(--c-border)]'
-                        }`}>
+                          }`}>
                           <button
                             type="button"
                             onClick={() => setCorrectOption(oi)}
-                            className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                              opt.isCorrect
+                            className={`flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${opt.isCorrect
                                 ? 'border-[var(--c-success)] bg-[var(--c-success)]'
                                 : 'border-[var(--c-border)] hover:border-[var(--c-text-mute)]'
-                            }`}
+                              }`}
                           >
                             {opt.isCorrect && <CheckCircle size={12} className="text-white" />}
                           </button>
@@ -512,13 +575,12 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                           <button
                             key={d}
                             onClick={() => setNewMcq(prev => ({ ...prev, difficulty: d }))}
-                            className={`flex-1 py-2 rounded-lg text-[11px] font-bold uppercase transition-all ${
-                              newMcq.difficulty === d
+                            className={`flex-1 py-2 rounded-lg text-[11px] font-bold uppercase transition-all ${newMcq.difficulty === d
                                 ? d === 1 ? 'bg-[var(--c-success-dim)] text-[var(--c-success)] border border-[var(--c-success)]/30'
                                   : d === 3 ? 'bg-[var(--c-error-dim)] text-[var(--c-error)] border border-[var(--c-error)]/30'
-                                  : 'bg-[var(--c-accent-dim)] text-[var(--c-accent)] border border-[var(--c-accent)]/30'
+                                    : 'bg-[var(--c-accent-dim)] text-[var(--c-accent)] border border-[var(--c-accent)]/30'
                                 : 'bg-[var(--c-surface-2)] text-[var(--c-text-mute)] border border-[var(--c-border)] hover:bg-[var(--c-surface-3)]'
-                            }`}
+                              }`}
                           >
                             {d === 1 ? 'Easy' : d === 3 ? 'Hard' : 'Medium'}
                           </button>
@@ -560,11 +622,10 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                     <button
                       onClick={handleAddMcq}
                       disabled={addingMcq || !newMcq.question.trim() || newMcq.options.filter(o => o.text.trim()).length < 2}
-                      className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-bold transition-all ${
-                        addingMcq || !newMcq.question.trim() || newMcq.options.filter(o => o.text.trim()).length < 2
+                      className={`flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-bold transition-all ${addingMcq || !newMcq.question.trim() || newMcq.options.filter(o => o.text.trim()).length < 2
                           ? 'bg-[var(--c-surface-3)] text-[var(--c-text-mute)] cursor-not-allowed'
                           : 'bg-gradient-to-r from-[var(--c-accent)] to-[#fb923c] text-white hover:brightness-110 shadow-md active:scale-95'
-                      }`}
+                        }`}
                     >
                       {addingMcq ? <div className="spinner !w-4 !h-4 !border-white !border-t-transparent" /> : <Plus size={14} />}
                       {addingMcq ? 'Adding...' : 'Add Question'}
@@ -586,11 +647,10 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <span className="text-[11px] font-bold text-[var(--c-text-mute)]">Q{i + 1}</span>
-                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      mcq.difficulty === 1 ? 'bg-[var(--c-success-dim)] text-[var(--c-success)]' :
-                      mcq.difficulty === 3 ? 'bg-[var(--c-error-dim)] text-[var(--c-error)]' :
-                      'bg-[var(--c-accent-dim)] text-[var(--c-accent)]'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${mcq.difficulty === 1 ? 'bg-[var(--c-success-dim)] text-[var(--c-success)]' :
+                        mcq.difficulty === 3 ? 'bg-[var(--c-error-dim)] text-[var(--c-error)]' :
+                          'bg-[var(--c-accent-dim)] text-[var(--c-accent)]'
+                      }`}>
                       {mcq.difficulty === 1 ? 'Easy' : mcq.difficulty === 3 ? 'Hard' : 'Medium'}
                     </span>
                     {mcq.topic && <span className="text-[10px] text-[var(--c-text-mute)]">{mcq.topic}</span>}
@@ -601,15 +661,14 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                   </button>
                 </div>
                 <p className="text-[13px] font-medium text-[var(--c-text)] mb-3">{mcq.question}</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {mcq.options.map((opt, oi) => (
                     <div
                       key={oi}
-                      className={`px-3 py-2 rounded-lg text-[12px] ${
-                        opt.isCorrect
+                      className={`px-3 py-2 rounded-lg text-[12px] ${opt.isCorrect
                           ? 'bg-[var(--c-success-dim)] text-[var(--c-success)] border border-[var(--c-success)]/20'
                           : 'bg-[var(--c-surface-2)] text-[var(--c-text-dim)]'
-                      }`}
+                        }`}
                     >
                       <span className="font-bold mr-2">{String.fromCharCode(65 + oi)}.</span>
                       {opt.text}
@@ -654,7 +713,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                   <p className="text-[11px] text-[var(--c-text-mute)]">
                     Duration: {posting.pipeline.dsaRound.durationMinutes}min • Pass: {posting.pipeline.dsaRound.passingScore}%
                     {' • '}{(posting.pipeline.dsaRound as any).easyCount || 0}E + {(posting.pipeline.dsaRound as any).mediumCount || 0}M + {(posting.pipeline.dsaRound as any).hardCount || 0}H questions
-                    {' • '}{dsaQuestions.length} job-specific Qs
+                    {' • '}{jobDsaQuestions.length} job-specific Qs
                   </p>
                 </div>
               </div>
@@ -687,20 +746,138 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <p className="text-[13px] text-[var(--c-text-dim)]">
-              {dsaQuestions.length} job-specific questions
-              <span className="text-[var(--c-text-mute)] ml-2">(system pool questions are added automatically based on difficulty counts)</span>
+              {jobDsaQuestions.length} job-specific questions
+              <span className="text-[var(--c-text-mute)] ml-2">(system pool questions are added automatically if more are needed)</span>
             </p>
+            <div className="flex gap-2">
+              <button onClick={() => { setShowSelectDsa(!showSelectDsa); setShowAddDsaForm(false); }} className="btn-secondary flex items-center gap-2">
+                <Code2 size={14} /> Select from Pool
+              </button>
+              <button onClick={() => { setShowAddDsaForm(!showAddDsaForm); setShowSelectDsa(false); }} className="btn-secondary flex items-center gap-2">
+                <Plus size={14} /> Add Manually
+              </button>
+            </div>
           </div>
 
-          {dsaQuestions.length === 0 ? (
+          <AnimatePresence>
+            {showSelectDsa && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-4 overflow-hidden">
+                <div className="bg-[var(--c-surface-2)] rounded-xl border border-[var(--c-border)] p-4 max-h-[300px] overflow-y-auto custom-scrollbar">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-[12px] font-bold text-[var(--c-text)]">System Pool Questions</h4>
+                    <button onClick={() => setShowSelectDsa(false)} className="p-1 hover:bg-[var(--c-surface-3)] rounded text-[var(--c-text-mute)]"><XCircle size={14} /></button>
+                  </div>
+                  {systemDsaQuestions.length === 0 ? <p className="text-[11px] text-[var(--c-text-mute)]">No system questions available.</p> : (
+                    <div className="space-y-2">
+                      {systemDsaQuestions.map(q => (
+                        <div key={q._id} className="flex items-center justify-between p-3 rounded-lg bg-[var(--c-surface)] border border-[var(--c-border)]">
+                          <div>
+                            <p className="text-[13px] font-semibold text-[var(--c-text)]">{q.title}</p>
+                            <div className="flex gap-2 mt-1 text-[10px] text-[var(--c-text-mute)] uppercase font-bold">
+                              <span>{q.difficulty}</span> • <span>{q.domain}</span>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => handleSelectSystemDsa(q)}
+                            disabled={addingDsa || jobDsaQuestions.some(jq => jq.title === q.title)}
+                            className="px-3 py-1.5 rounded-lg text-[11px] font-bold bg-[var(--c-accent-dim)] text-[var(--c-accent)] hover:brightness-110 disabled:opacity-50"
+                          >
+                            {jobDsaQuestions.some(jq => jq.title === q.title) ? 'Added' : 'Add to Job'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {showAddDsaForm && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mb-4 overflow-hidden">
+                <div className="bg-[var(--c-surface)] border border-[var(--c-accent)]/30 rounded-2xl p-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[14px] font-bold text-[var(--c-text)] flex items-center gap-2">
+                      <Plus size={16} className="text-[var(--c-accent)]" />
+                      Add Manual DSA Question
+                    </h4>
+                    <button onClick={() => setShowAddDsaForm(false)} className="p-1.5 rounded-lg hover:bg-[var(--c-surface-2)] text-[var(--c-text-mute)]">
+                      <XCircle size={16} />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase text-[var(--c-text-mute)] mb-1.5">Title *</label>
+                      <input type="text" value={newDsa.title} onChange={e => setNewDsa(prev => ({ ...prev, title: e.target.value }))} className="w-full bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-lg text-[13px] px-3 py-2 text-[var(--c-text)] focus:border-[var(--c-accent)] outline-none" placeholder="e.g. Reverse Linked List" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-[var(--c-text-mute)] mb-1.5">Domain</label>
+                        <input type="text" value={newDsa.domain} onChange={e => setNewDsa(prev => ({ ...prev, domain: e.target.value }))} className="w-full bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-lg text-[13px] px-3 py-2 text-[var(--c-text)] focus:border-[var(--c-accent)] outline-none" placeholder="e.g. Linked Lists" />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold uppercase text-[var(--c-text-mute)] mb-1.5">Difficulty</label>
+                        <select value={newDsa.difficulty} onChange={e => setNewDsa(prev => ({ ...prev, difficulty: e.target.value as any }))} className="w-full bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-lg text-[13px] px-3 py-2 text-[var(--c-text)] focus:border-[var(--c-accent)] outline-none">
+                          <option value="easy">Easy</option>
+                          <option value="medium">Medium</option>
+                          <option value="hard">Hard</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-[var(--c-text-mute)] mb-1.5">Description (Markdown) *</label>
+                    <textarea value={newDsa.description} onChange={e => setNewDsa(prev => ({ ...prev, description: e.target.value }))} rows={4} className="w-full bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-lg text-[13px] px-3 py-2 text-[var(--c-text)] focus:border-[var(--c-accent)] outline-none resize-y" placeholder="Problem statement..." />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-[11px] font-bold uppercase text-[var(--c-text-mute)]">Test Cases *</label>
+                      <button onClick={() => setNewDsa(prev => ({ ...prev, testCases: [...prev.testCases, { input: '', expectedOutput: '' }] }))} className="text-[11px] font-bold text-[var(--c-accent)] hover:brightness-110 flex items-center gap-1"><Plus size={12} /> Add Test Case</button>
+                    </div>
+                    <div className="space-y-2">
+                      {newDsa.testCases.map((tc, i) => (
+                        <div key={i} className="flex gap-2 items-start">
+                          <textarea value={tc.input} onChange={e => {
+                            const newTc = [...newDsa.testCases];
+                            newTc[i].input = e.target.value;
+                            setNewDsa(prev => ({ ...prev, testCases: newTc }));
+                          }} placeholder="Input" rows={2} className="flex-1 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-lg text-[12px] p-2 text-[var(--c-text)] font-mono outline-none" />
+                          <textarea value={tc.expectedOutput} onChange={e => {
+                            const newTc = [...newDsa.testCases];
+                            newTc[i].expectedOutput = e.target.value;
+                            setNewDsa(prev => ({ ...prev, testCases: newTc }));
+                          }} placeholder="Expected Output" rows={2} className="flex-1 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-lg text-[12px] p-2 text-[var(--c-text)] font-mono outline-none" />
+                          <button onClick={() => {
+                            if (newDsa.testCases.length <= 1) return;
+                            const newTc = newDsa.testCases.filter((_, idx) => idx !== i);
+                            setNewDsa(prev => ({ ...prev, testCases: newTc }));
+                          }} className="p-2 text-[var(--c-text-mute)] hover:text-[var(--c-error)] mt-1"><Trash2 size={14} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-2 border-t border-[var(--c-border)]">
+                    <button onClick={() => setShowAddDsaForm(false)} className="px-4 py-2 text-[13px] font-semibold text-[var(--c-text-mute)] hover:bg-[var(--c-surface-2)] rounded-xl">Cancel</button>
+                    <button onClick={submitNewDsaQuestion} disabled={addingDsa || !newDsa.title.trim() || !newDsa.description.trim() || !newDsa.testCases[0].expectedOutput.trim()} className="flex items-center gap-2 px-5 py-2 rounded-xl text-[13px] font-bold bg-[var(--c-accent)] text-white hover:brightness-110 disabled:opacity-50">
+                      {addingDsa ? <div className="spinner !w-4 !h-4 !border-white !border-t-transparent" /> : <Plus size={14} />} Add Question
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {jobDsaQuestions.length === 0 ? (
             <div className="text-center py-16">
               <Code2 size={48} className="mx-auto text-[var(--c-text-mute)] mb-4" />
               <p className="text-[var(--c-text-dim)] mb-2">No job-specific DSA questions yet</p>
-              <p className="text-[var(--c-text-mute)] text-[12px]">System pool questions ({(posting.pipeline.dsaRound as any)?.easyCount || 0} easy, {(posting.pipeline.dsaRound as any)?.mediumCount || 0} medium, {(posting.pipeline.dsaRound as any)?.hardCount || 0} hard) will be used automatically.</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {dsaQuestions.map((q, i) => (
+              {jobDsaQuestions.map((q, i) => (
                 <motion.div
                   key={q._id}
                   initial={{ opacity: 0, y: 5 }}
@@ -711,11 +888,10 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <span className="text-[11px] font-bold text-[var(--c-text-mute)]">Q{i + 1}</span>
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        q.difficulty === 'easy' ? 'bg-[var(--c-success-dim)] text-[var(--c-success)]' :
-                        q.difficulty === 'hard' ? 'bg-[var(--c-error-dim)] text-[var(--c-error)]' :
-                        'bg-[var(--c-accent-dim)] text-[var(--c-accent)]'
-                      }`}>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${q.difficulty === 'easy' ? 'bg-[var(--c-success-dim)] text-[var(--c-success)]' :
+                          q.difficulty === 'hard' ? 'bg-[var(--c-error-dim)] text-[var(--c-error)]' :
+                            'bg-[var(--c-accent-dim)] text-[var(--c-accent)]'
+                        }`}>
                         {q.difficulty}
                       </span>
                       <span className="text-[10px] text-[var(--c-text-mute)]">{q.domain}</span>
@@ -725,7 +901,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                         try {
                           await fetch(`/api/recruiter/jobs/${jobId}/dsa-questions/${q._id}`, { method: 'DELETE', credentials: 'include' });
                           setDsaQuestions(prev => prev.filter(dq => dq._id !== q._id));
-                        } catch {}
+                        } catch { }
                       }}
                       className="p-1.5 rounded-lg hover:bg-[var(--c-error-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-error)]"
                     >

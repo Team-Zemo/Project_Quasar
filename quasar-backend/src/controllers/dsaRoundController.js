@@ -180,9 +180,13 @@ async function runDsaCode(req, res) {
 
     const sampleTestCases = question.testCases.filter(tc => !tc.isHidden);
 
+    const finalCode = question.driverCode?.[language]
+      ? `${code}\n\n${question.driverCode[language]}`
+      : code;
+
     if (sampleTestCases.length === 0) {
       // Just execute and return stdout/stderr
-      const result = await executeCode(code, language, '', 2, 262144);
+      const result = await executeCode(finalCode, language, '', 2);
       return res.json({
         success: true,
         message: 'Code executed',
@@ -199,7 +203,7 @@ async function runDsaCode(req, res) {
     }
 
     // Run against sample test cases
-    const { results, passedCount, totalCount } = await executeTestSuite(code, language, sampleTestCases);
+    const { results, passedCount, totalCount } = await executeTestSuite(finalCode, language, sampleTestCases);
 
     return res.json({
       success: true,
@@ -276,15 +280,24 @@ async function submitDsaSolution(req, res) {
       return res.status(404).json({ success: false, message: 'Question not found', data: null });
     }
 
-    // Execute against all test cases
-    const { results, passedCount, totalCount } = await executeTestSuite(code, language, question.testCases);
-
-    const questionScore = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 0;
-
-    // Update the question result in the application
+    // Prevent resubmission
     const qIndex = application.dsaResult.questions.findIndex(
       q => q.questionId.toString() === questionId
     );
+    if (qIndex >= 0 && application.dsaResult.questions[qIndex].submittedAt) {
+      return res.status(400).json({ success: false, message: 'Question already submitted', data: null });
+    }
+
+    const finalCode = question.driverCode?.[language]
+      ? `${code}\n\n${question.driverCode[language]}`
+      : code;
+
+    // Execute against all test cases
+    const { results, passedCount, totalCount } = await executeTestSuite(finalCode, language, question.testCases);
+
+    const questionScore = totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 0;
+
+
 
     if (qIndex >= 0) {
       application.dsaResult.questions[qIndex].language = language;
@@ -459,22 +472,37 @@ async function selectQuestions(jobPostingId, easyCount, mediumCount, hardCount) 
   for (const [difficulty, count] of [['easy', easyCount], ['medium', mediumCount], ['hard', hardCount]]) {
     if (count <= 0) continue;
 
-    // Find questions: job-specific OR system-wide
-    const pool = await DsaQuestion.find({
+    // First pick job-specific questions of this difficulty
+    const jobPool = await DsaQuestion.find({
       difficulty,
-      $or: [
-        { jobPostingId },
-        { jobPostingId: null, source: 'system' },
-      ],
+      jobPostingId,
     }).lean();
 
-    // Shuffle pool
-    for (let i = pool.length - 1; i > 0; i--) {
+    // Shuffle job pool
+    for (let i = jobPool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
+      [jobPool[i], jobPool[j]] = [jobPool[j], jobPool[i]];
     }
 
-    questions.push(...pool.slice(0, count));
+    const selectedForDiff = jobPool.slice(0, count);
+    questions.push(...selectedForDiff);
+
+    // If we need more, fetch from system pool
+    const remaining = count - selectedForDiff.length;
+    if (remaining > 0) {
+      const systemPool = await DsaQuestion.find({
+        difficulty,
+        jobPostingId: null,
+        source: 'system',
+      }).lean();
+
+      for (let i = systemPool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [systemPool[i], systemPool[j]] = [systemPool[j], systemPool[i]];
+      }
+
+      questions.push(...systemPool.slice(0, remaining));
+    }
   }
 
   return questions;

@@ -21,6 +21,15 @@ const starterCodeSchema = new mongoose.Schema({
   go: { type: String, default: '' },
 }, { _id: false });
 
+const driverCodeSchema = new mongoose.Schema({
+  javascript: { type: String, default: '' },
+  java: { type: String, default: '' },
+  c: { type: String, default: '' },
+  cpp: { type: String, default: '' },
+  kotlin: { type: String, default: '' },
+  go: { type: String, default: '' },
+}, { _id: false });
+
 // ── Main DsaQuestion schema ──────────────────────────────────────────
 
 const dsaQuestionSchema = new mongoose.Schema({
@@ -53,6 +62,7 @@ const dsaQuestionSchema = new mongoose.Schema({
     },
   },
   starterCode: { type: starterCodeSchema, default: () => ({}) },
+  driverCode: { type: driverCodeSchema, default: () => ({}) },
   tags: { type: [String], default: [] },
   source: {
     type: String,

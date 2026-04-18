@@ -22,6 +22,7 @@ import {
   X,
   Briefcase,
   FolderOpen,
+  PenTool,
 } from "lucide-react";
 import { DomainSelector } from "./components/DomainSelector";
 import { InterviewRoom } from "./components/InterviewRoom";
@@ -47,6 +48,7 @@ import { McqTestPage } from "./components/candidate/McqTestPage";
 import { DsaTestPage } from "./components/candidate/DsaTestPage";
 import { PipelineInterviewPage } from "./components/candidate/PipelineInterviewPage";
 import { PlatformContextPage } from "./components/PlatformContextPage";
+import { ResumeEditorPage } from "./components/candidate/ResumeEditorPage";
 import { useInterviewSession } from "./hooks/useInterviewSession";
 import { useAuth } from "./hooks/useAuth";
 import { logout } from "./lib/auth";
@@ -431,6 +433,13 @@ function AppShell() {
                       <FolderOpen size={16} strokeWidth={2.5} />
                       Applications
                     </Link>
+                    <Link
+                      to="/resume-editor"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[13px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors"
+                    >
+                      <PenTool size={16} strokeWidth={2.5} />
+                      Resume Edit
+                    </Link>
                   </>
                 )}
                 <Link
@@ -545,6 +554,17 @@ function AppShell() {
                     strokeWidth={2.5}
                   />
                   Study Plan
+                </Link>
+                <Link
+                  to="/resume-editor"
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-xl text-[15px] font-bold text-[var(--c-text)] hover:bg-[var(--c-surface-2)] transition-colors bg-[var(--c-surface-2)]/50"
+                >
+                  <PenTool
+                    size={20}
+                    className="text-[var(--c-text-dim)]"
+                    strokeWidth={2.5}
+                  />
+                  Resume Edit
                 </Link>
                 <div className="h-px bg-[var(--c-border)] my-2"></div>
                 <Link
@@ -721,6 +741,14 @@ function AppShell() {
             element={
               <ProtectedRoute>
                 <PlatformContextPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/resume-editor"
+            element={
+              <ProtectedRoute>
+                <ResumeEditorPage />
               </ProtectedRoute>
             }
           />

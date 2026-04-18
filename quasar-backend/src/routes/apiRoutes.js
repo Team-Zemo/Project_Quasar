@@ -16,6 +16,7 @@ const coachController        = require('../controllers/coachController');
 const studyPlanController    = require('../controllers/studyPlanController');
 const onboardingController   = require('../controllers/onboardingController');
 const profileController      = require('../controllers/profileController');
+const latexResumeController  = require('../controllers/latexResumeController');
 
 // New route modules
 const recruiterRoutes = require('./recruiterRoutes');
@@ -94,5 +95,19 @@ router.post('/study-plan/generate', requireAuth, studyPlanController.generatePla
 
 // ── PDF Report ────────────────────────────────────────────────
 router.get('/sessions/:sessionId/report', requireAuth, reportController.generateReport);
+
+// ── LaTeX Resume Editor ───────────────────────────────────────
+router.get('/latex-resume/templates',                    requireAuth, latexResumeController.getTemplates);
+router.get('/latex-resume/templates/:templateId/skeleton', requireAuth, latexResumeController.getTemplateSkeleton);
+router.post('/latex-resume/transform',                   requireAuth, latexResumeController.transformResume);
+router.post('/latex-resume/compile-raw',                 requireAuth, latexResumeController.compileRaw);
+router.get('/latex-resume',                              requireAuth, latexResumeController.listResumes);
+router.post('/latex-resume',                             requireAuth, latexResumeController.createResume);
+router.get('/latex-resume/:id',                          requireAuth, latexResumeController.getResume);
+router.put('/latex-resume/:id',                          requireAuth, latexResumeController.updateResume);
+router.delete('/latex-resume/:id',                       requireAuth, latexResumeController.deleteResume);
+router.post('/latex-resume/:id/compile',                 requireAuth, latexResumeController.compileResume);
+router.get('/latex-resume/:id/download',                 requireAuth, latexResumeController.downloadResume);
+router.put('/latex-resume/:id/default',                  requireAuth, latexResumeController.setDefault);
 
 module.exports = router;
