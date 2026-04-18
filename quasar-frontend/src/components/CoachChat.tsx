@@ -315,82 +315,104 @@ export function CoachChat() {
                         : user?.name || "You"}
                     </span>
                     <div className="text-[14px] sm:text-[15px] leading-relaxed [&_p]:mb-4 [&_p:last-child]:mb-0 [&_h1]:text-[18px] sm:[&_h1]:text-[20px] [&_h1]:font-extrabold [&_h1]:mb-4 [&_h2]:text-[16px] sm:[&_h2]:text-[17px] [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:mt-6 [&_h3]:text-[14px] sm:[&_h3]:text-[15px] [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:mt-5 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-4 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-4 [&_li]:mb-1 [&_li::marker]:text-[var(--c-text-mute)] [&_strong]:font-bold [&_strong]:text-[var(--c-text)] [&_a]:text-orange-500 [&_a]:underline [&_a:hover]:text-orange-400 [&_blockquote]:border-l-2 [&_blockquote]:border-[var(--c-border-2)] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-[var(--c-text-dim)] [&_code]:font-mono [&_code]:text-[13px] [&_code]:bg-[var(--c-surface-3)] [&_code]:text-orange-300 [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded-md [&_pre]:bg-[#0d0d12] [&_pre]:p-4 [&_pre]:rounded-xl [&_pre]:overflow-x-auto [&_pre]:mb-4 [&_pre]:border [&_pre]:border-[var(--c-border)] [&_pre_code]:bg-transparent [&_pre_code]:px-0 [&_pre_code]:py-0 [&_pre_code]:text-[var(--c-text-dim)] [&_table]:w-full [&_table]:mb-4 [&_table]:border-collapse [&_th]:text-left [&_th]:border-b [&_th]:border-[var(--c-border-2)] [&_th]:p-2 [&_th]:text-[var(--c-text)] [&_td]:border-b [&_td]:border-[var(--c-border-2)] [&_td]:p-2 [&_td]:text-[var(--c-text-dim)] [&_hr]:border-none [&_hr]:border-t [&_hr]:border-[var(--c-border-2)] [&_hr]:my-6">
-                      {msg.role === "assistant" ? (
-                        msg.content ? (
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            components={{
-                              a: ({ href, children, ...props }) => {
-                                // Intercept /jobs/{id} links → render as styled button
-                                if (href && href.startsWith("/jobs/")) {
-                                  const jobId = href.replace("/jobs/", "");
-                                  return (
-                                    <button
-                                      onClick={() =>
-                                        navigate("/jobs", {
-                                          state: { viewJobId: jobId },
-                                        })
+                      {(() => {
+                        const isStreamingThisMsg =
+                          streaming &&
+                          msg.id === messages[messages.length - 1]?.id &&
+                          msg.role === "assistant";
+
+                        if (msg.role === "assistant") {
+                          if (!msg.content) {
+                            // Waiting dots — no content yet
+                            return (
+                              <div className="flex items-center gap-1.5 py-3 h-6">
+                                <motion.div
+                                  animate={{ y: [0, -4, 0] }}
+                                  transition={{ duration: 0.6, repeat: Infinity, delay: 0 }}
+                                  className="w-[5px] h-[5px] rounded-full bg-orange-400"
+                                />
+                                <motion.div
+                                  animate={{ y: [0, -4, 0] }}
+                                  transition={{ duration: 0.6, repeat: Infinity, delay: 0.2 }}
+                                  className="w-[5px] h-[5px] rounded-full bg-orange-400"
+                                />
+                                <motion.div
+                                  animate={{ y: [0, -4, 0] }}
+                                  transition={{ duration: 0.6, repeat: Infinity, delay: 0.4 }}
+                                  className="w-[5px] h-[5px] rounded-full bg-orange-400"
+                                />
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <>
+                              {isStreamingThisMsg ? (
+                                // ── Streaming: plain text, zero markdown overhead ──
+                                // Tokens appear instantly; no re-parse on every character.
+                                // Switches to ReactMarkdown automatically when done.
+                                <p className="m-0 whitespace-pre-wrap text-[var(--c-text)] leading-relaxed">
+                                  {msg.content}
+                                </p>
+                              ) : (
+                                // ── Done: full rich markdown rendering ──
+                                <ReactMarkdown
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    a: ({ href, children, ...props }) => {
+                                      if (href && href.startsWith("/jobs/")) {
+                                        const jobId = href.replace("/jobs/", "");
+                                        return (
+                                          <button
+                                            onClick={() =>
+                                              navigate("/jobs", {
+                                                state: { viewJobId: jobId },
+                                              })
+                                            }
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 mt-1 mb-1 rounded-lg text-[12px] font-bold bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-400 hover:to-orange-500 transition-all shadow-sm shadow-orange-500/20 active:scale-95 cursor-pointer border-none"
+                                          >
+                                            <ExternalLink size={12} strokeWidth={2.5} />
+                                            {children}
+                                          </button>
+                                        );
                                       }
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 mt-1 mb-1 rounded-lg text-[12px] font-bold bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-400 hover:to-orange-500 transition-all shadow-sm shadow-orange-500/20 active:scale-95 cursor-pointer border-none"
-                                    >
-                                      <ExternalLink
-                                        size={12}
-                                        strokeWidth={2.5}
-                                      />
-                                      {children}
-                                    </button>
-                                  );
-                                }
-                                // Default link rendering
-                                return (
-                                  <a
-                                    href={href}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    {...props}
-                                  >
-                                    {children}
-                                  </a>
-                                );
-                              },
-                            }}
-                          >
-                            {msg.content}
-                          </ReactMarkdown>
-                        ) : (
-                          <div className="flex items-center gap-1.5 py-3 h-6">
-                            <motion.div
-                              animate={{ y: [0, -4, 0] }}
-                              transition={{
-                                duration: 0.6,
-                                repeat: Infinity,
-                                delay: 0,
-                              }}
-                              className="w-[5px] h-[5px] rounded-full bg-orange-400"
-                            />
-                            <motion.div
-                              animate={{ y: [0, -4, 0] }}
-                              transition={{
-                                duration: 0.6,
-                                repeat: Infinity,
-                                delay: 0.2,
-                              }}
-                              className="w-[5px] h-[5px] rounded-full bg-orange-400"
-                            />
-                            <motion.div
-                              animate={{ y: [0, -4, 0] }}
-                              transition={{
-                                duration: 0.6,
-                                repeat: Infinity,
-                                delay: 0.4,
-                              }}
-                              className="w-[5px] h-[5px] rounded-full bg-orange-400"
-                            />
-                          </div>
-                        )
-                      ) : (
-                        <p className="text-[var(--c-text)]">{msg.content}</p>
-                      )}
+                                      return (
+                                        <a
+                                          href={href}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          {...props}
+                                        >
+                                          {children}
+                                        </a>
+                                      );
+                                    },
+                                  }}
+                                >
+                                  {msg.content}
+                                </ReactMarkdown>
+                              )}
+
+                              {/* Blinking cursor — visible only while this message streams */}
+                              {isStreamingThisMsg && (
+                                <motion.span
+                                  animate={{ opacity: [1, 0] }}
+                                  transition={{
+                                    duration: 0.5,
+                                    repeat: Infinity,
+                                    repeatType: "reverse",
+                                    ease: "linear",
+                                  }}
+                                  className="inline-block w-[2px] h-[1.1em] bg-orange-400 ml-[2px] align-middle rounded-sm"
+                                />
+                              )}
+                            </>
+                          );
+                        }
+
+                        // User message
+                        return <p className="text-[var(--c-text)]">{msg.content}</p>;
+                      })()}
                     </div>
                   </div>
                 </motion.div>

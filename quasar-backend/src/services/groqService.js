@@ -42,4 +42,39 @@ async function chatCompletion(systemPrompt, userPrompt, opts = {}) {
   return completion.choices[0]?.message?.content?.trim() ?? '';
 }
 
-module.exports = { client, chatCompletion };
+/**
+ * Run a streaming chat completion against Groq.
+ * Yields each content delta string as it arrives from the API.
+ * @param {string} systemPrompt  – system message
+ * @param {Array<{role: string, content: string}>} messages – full conversation history
+ * @param {object} [opts]
+ * @param {string} [opts.model]
+ * @param {number} [opts.temperature]
+ * @param {number} [opts.maxTokens]
+ * @returns {AsyncGenerator<string>}
+ */
+async function* chatCompletionStream(systemPrompt, messages, opts = {}) {
+  const {
+    model = 'llama-3.3-70b-versatile',
+    temperature = 0.5,
+    maxTokens = 4096,
+  } = opts;
+
+  const stream = await client.chat.completions.create({
+    model,
+    temperature,
+    max_tokens: maxTokens,
+    stream: true,
+    messages: [
+      { role: 'system', content: systemPrompt },
+      ...messages,
+    ],
+  });
+
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta?.content;
+    if (delta) yield delta;
+  }
+}
+
+module.exports = { client, chatCompletion, chatCompletionStream };

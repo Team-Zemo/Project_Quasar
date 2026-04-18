@@ -49,6 +49,7 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
   const [dsaMediumCount, setDsaMediumCount] = useState(1);
   const [dsaHardCount, setDsaHardCount] = useState(0);
 
+  const [techEnabled, setTechEnabled] = useState(true);
   const [techRounds, setTechRounds] = useState<
     Array<
       Omit<TechRoundConfig, "window"> & {
@@ -142,6 +143,7 @@ Requirements:
     setMcqWindowStart(start);
     setMcqWindowEnd(end);
 
+    setTechEnabled(true);
     setTechRounds([
       {
         roundNumber: 1,
@@ -192,7 +194,7 @@ Requirements:
           allowedLanguages: ["javascript", "java", "c", "cpp", "kotlin", "go"],
         }
       : null,
-    techInterviewRounds: techRounds.map((r) => ({
+    techInterviewRounds: techEnabled ? techRounds.map((r) => ({
       roundNumber: r.roundNumber,
       title: r.title,
       domain: r.domain,
@@ -200,7 +202,7 @@ Requirements:
       durationMinutes: r.durationMinutes,
       passingScore: r.passingScore,
       window: { start: r.windowStart, end: r.windowEnd },
-    })),
+    })) : [],
     hrRound: hrEnabled
       ? {
           enabled: true,
@@ -582,123 +584,145 @@ Requirements:
             </div>
 
             {/* Tech Rounds */}
-            {techRounds.map((round, index) => (
-              <div
-                key={index}
-                className="border border-[var(--c-border)] bg-[var(--c-surface-2)]/40 rounded-xl p-5 mb-4"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[var(--c-surface-2)] border border-[var(--c-border)] flex items-center justify-center text-[var(--c-accent)] text-[12px] font-bold">
-                      {(mcqEnabled ? 1 : 0) + (dsaEnabled ? 1 : 0) + 1 + index}
-                    </div>
-                    <h3 className="text-[14px] font-bold text-[var(--c-text)]">
-                      Tech Round {round.roundNumber}
-                    </h3>
+            <div className="border border-[var(--c-border)] bg-[var(--c-surface-2)]/40 rounded-xl p-5 mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[var(--c-accent-dim)] border border-[var(--c-accent)]/25 flex items-center justify-center text-[var(--c-accent)] text-[12px] font-bold">
+                    {(mcqEnabled ? 1 : 0) + (dsaEnabled ? 1 : 0) + 1}
                   </div>
-                  {techRounds.length > 1 && (
-                    <button
-                      onClick={() => removeTechRound(index)}
-                      className="p-1.5 rounded-lg hover:bg-[var(--c-error-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-error)] transition-colors"
-                    >
-                      <Minus size={14} />
-                    </button>
-                  )}
+                  <h3 className="text-[14px] font-bold text-[var(--c-text)]">
+                    Technical Interview Rounds
+                  </h3>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className={labelClass}>Round Title</label>
-                    <input
-                      type="text"
-                      value={round.title}
-                      onChange={(e) =>
-                        updateTechRound(index, "title", e.target.value)
-                      }
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Domain</label>
-                    <input
-                      type="text"
-                      value={round.domain}
-                      onChange={(e) =>
-                        updateTechRound(index, "domain", e.target.value)
-                      }
-                      className={inputClass}
-                      placeholder="DSA, System Design..."
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Duration (min)</label>
-                    <input
-                      type="number"
-                      value={round.durationMinutes}
-                      onChange={(e) =>
-                        updateTechRound(
-                          index,
-                          "durationMinutes",
-                          +e.target.value,
-                        )
-                      }
-                      className={inputClass}
-                      min={10}
-                      max={120}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Passing Score (/10)</label>
-                    <input
-                      type="number"
-                      value={round.passingScore}
-                      onChange={(e) =>
-                        updateTechRound(index, "passingScore", +e.target.value)
-                      }
-                      className={inputClass}
-                      min={0}
-                      max={10}
-                      step={0.5}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Window Start</label>
-                    <input
-                      type="datetime-local"
-                      value={round.windowStart}
-                      onChange={(e) =>
-                        updateTechRound(index, "windowStart", e.target.value)
-                      }
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Window End</label>
-                    <input
-                      type="datetime-local"
-                      value={round.windowEnd}
-                      onChange={(e) =>
-                        updateTechRound(index, "windowEnd", e.target.value)
-                      }
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={techEnabled}
+                    onChange={(e) => setTechEnabled(e.target.checked)}
+                    className="accent-[var(--c-accent)]"
+                  />
+                  <span className="text-[12px] text-[var(--c-text-dim)]">
+                    Enable
+                  </span>
+                </label>
               </div>
-            ))}
 
-            <button
-              onClick={addTechRound}
-              className="btn-secondary mb-4 flex items-center gap-2 w-full justify-center"
-            >
-              <Plus size={14} /> Add Tech Round
-            </button>
+              {techEnabled && (
+                <>
+                  {techRounds.map((round, index) => (
+                    <div
+                      key={index}
+                      className="border border-[var(--c-border)] bg-[var(--c-surface-3)]/50 rounded-xl p-4 mb-3"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-[13px] font-bold text-[var(--c-text)]">
+                          Tech Round {round.roundNumber}
+                        </h4>
+                        {techRounds.length > 1 && (
+                          <button
+                            onClick={() => removeTechRound(index)}
+                            className="p-1.5 rounded-lg hover:bg-[var(--c-error-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-error)] transition-colors"
+                          >
+                            <Minus size={14} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className={labelClass}>Round Title</label>
+                          <input
+                            type="text"
+                            value={round.title}
+                            onChange={(e) =>
+                              updateTechRound(index, "title", e.target.value)
+                            }
+                            className={inputClass}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Domain</label>
+                          <input
+                            type="text"
+                            value={round.domain}
+                            onChange={(e) =>
+                              updateTechRound(index, "domain", e.target.value)
+                            }
+                            className={inputClass}
+                            placeholder="DSA, System Design..."
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Duration (min)</label>
+                          <input
+                            type="number"
+                            value={round.durationMinutes}
+                            onChange={(e) =>
+                              updateTechRound(
+                                index,
+                                "durationMinutes",
+                                +e.target.value,
+                              )
+                            }
+                            className={inputClass}
+                            min={10}
+                            max={120}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Passing Score (/10)</label>
+                          <input
+                            type="number"
+                            value={round.passingScore}
+                            onChange={(e) =>
+                              updateTechRound(index, "passingScore", +e.target.value)
+                            }
+                            className={inputClass}
+                            min={0}
+                            max={10}
+                            step={0.5}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Window Start</label>
+                          <input
+                            type="datetime-local"
+                            value={round.windowStart}
+                            onChange={(e) =>
+                              updateTechRound(index, "windowStart", e.target.value)
+                            }
+                            className={inputClass}
+                          />
+                        </div>
+                        <div>
+                          <label className={labelClass}>Window End</label>
+                          <input
+                            type="datetime-local"
+                            value={round.windowEnd}
+                            onChange={(e) =>
+                              updateTechRound(index, "windowEnd", e.target.value)
+                            }
+                            className={inputClass}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  <button
+                    onClick={addTechRound}
+                    className="btn-secondary flex items-center gap-2 w-full justify-center mt-2"
+                  >
+                    <Plus size={14} /> Add Tech Round
+                  </button>
+                </>
+              )}
+            </div>
 
             {/* HR Round */}
             <div className="border border-[var(--c-border)] bg-[var(--c-surface-2)]/40 rounded-xl p-5 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-lg bg-[var(--c-surface-2)] border border-[var(--c-border)] flex items-center justify-center text-[var(--c-accent)] text-[12px] font-bold">
-                    {(mcqEnabled ? 2 : 1) + techRounds.length}
+                    {(mcqEnabled ? 1 : 0) + (dsaEnabled ? 1 : 0) + (techEnabled ? 1 : 0) + 1}
                   </div>
                   <h3 className="text-[14px] font-bold text-[var(--c-text)]">
                     HR Round (AI)
@@ -763,15 +787,30 @@ Requirements:
               )}
             </div>
 
+            {error && step === "pipeline" && (
+              <p className="text-[var(--c-error)] text-[13px] font-medium mb-4">
+                {error}
+              </p>
+            )}
             <div className="flex gap-3">
               <button
-                onClick={() => setStep("details")}
+                onClick={() => {
+                  setError("");
+                  setStep("details");
+                }}
                 className="btn-secondary flex items-center gap-2"
               >
                 <ArrowLeft size={14} /> Back
               </button>
               <button
-                onClick={() => setStep("review")}
+                onClick={() => {
+                  if (!mcqEnabled && !dsaEnabled && !techEnabled && !hrEnabled) {
+                    setError("Please enable at least one interview round.");
+                    return;
+                  }
+                  setError("");
+                  setStep("review");
+                }}
                 className="btn-primary flex-1 flex items-center gap-2 justify-center"
               >
                 Review & Create <ArrowRight size={16} />
@@ -841,7 +880,7 @@ Requirements:
                       </span>
                     </>
                   )}
-                  {techRounds.map((r) => (
+                  {techEnabled && techRounds.map((r) => (
                     <Fragment key={r.roundNumber}>
                       <span className="text-[var(--c-text-mute)]">→</span>
                       <span className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase bg-[var(--c-surface-3)] text-[var(--c-text-dim)]">

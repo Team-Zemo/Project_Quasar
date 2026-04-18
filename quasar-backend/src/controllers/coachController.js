@@ -4,7 +4,7 @@
  * Context-aware: injects user's progress, skill vector, gamification stats, and profile data.
  * Tool-augmented: can search the platform's active job postings when the user asks about opportunities.
  */
-const { chatCompletion } = require('../services/groqService');
+const { chatCompletion, chatCompletionStream } = require('../services/groqService');
 const { Session, UserStats } = require('../models');
 const SkillVector = require('../models/SkillVector');
 const User = require('../models/User');
@@ -375,25 +375,31 @@ async function chat(req, res) {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    // Non-streaming completion (simulated streaming via chunked writes)
-    const completion = await chatCompletion(
-      fullSystemPrompt,
-      sanitized.map(m => `${m.role}: ${m.content}`).join('\n'),
-      { model: 'llama-3.3-70b-versatile', temperature: 0.5, maxTokens: 4096 }
-    );
+    // Real token-by-token streaming from Groq
+    try {
+      const groqStream = chatCompletionStream(
+        fullSystemPrompt,
+        sanitized,
+        { model: 'llama-3.3-70b-versatile', temperature: 0.5, maxTokens: 4096 }
+      );
 
-    // Simulate streaming by flushing in small chunks for progressive UI rendering
-    const CHUNK_SIZE = 80;
-    for (let i = 0; i < completion.length; i += CHUNK_SIZE) {
-      const chunk = completion.slice(i, i + CHUNK_SIZE);
-      res.write(`data: ${JSON.stringify({ content: chunk })}\n\n`);
+      for await (const delta of groqStream) {
+        if (res.writableEnded) break;
+        res.write(`data: ${JSON.stringify({ content: delta })}\n\n`);
+      }
+    } catch (streamErr) {
+      logger.error('Groq coach stream error', { err: streamErr.message });
+      if (!res.writableEnded) {
+        res.write(`data: ${JSON.stringify({ error: 'Stream interrupted' })}\n\n`);
+      }
     }
 
-    res.write('data: [DONE]\n\n');
-    res.end();
+    if (!res.writableEnded) {
+      res.write('data: [DONE]\n\n');
+      res.end();
+    }
   } catch (err) {
     logger.error('Coach chat error', { err: err.message });
-    // If headers already sent, just end
     if (res.headersSent) {
       res.write(`data: ${JSON.stringify({ error: 'An error occurred' })}\n\n`);
       res.end();
