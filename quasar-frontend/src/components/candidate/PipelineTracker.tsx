@@ -443,12 +443,12 @@ export function PipelineTracker({
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.06 }}
-              className="relative"
+              className="relative mb-3"
             >
               {/* Connector line */}
               {!isLast && (
                 <div
-                  className="absolute left-[23px] top-[56px] w-[2px] h-[calc(100%-32px)]"
+                  className="absolute left-[39px] top-[63px] w-[2px] h-[calc(100%-34px)] z-0"
                   style={{
                     background:
                       stageStatus === "passed" || stageStatus === "failed"
@@ -459,7 +459,7 @@ export function PipelineTracker({
               )}
 
               <div
-                className="flex items-start gap-4 p-4 rounded-2xl mb-3 border transition-all"
+                className="flex items-start gap-4 p-4 rounded-2xl border transition-all relative z-10"
                 style={{
                   background: colors.bg,
                   borderColor: colors.border,
