@@ -72,15 +72,7 @@ export function HeroSection() {
           className="flex justify-center"
           style={{ marginBottom: '32px' }}
         >
-          <div className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#f97316] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#f97316]" style={{ boxShadow: '0 0 8px #f97316' }} />
-            </span>
-            <span className="text-xs font-mono font-medium tracking-widest text-white/50 uppercase">
-              Powered by Gemini Live API
-            </span>
-          </div>
+     
         </motion.div>
 
         {/* Main heading */}

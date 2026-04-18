@@ -205,7 +205,9 @@ function ApplicationsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [view, setView] = useState<
-    { type: "list" } | { type: "mcq"; appId: string } | { type: "dsa"; appId: string }
+    | { type: "list" }
+    | { type: "mcq"; appId: string }
+    | { type: "dsa"; appId: string }
   >({ type: "list" });
 
   // When returning from /pipeline-interview, the route state carries activeAppId + refreshKey
@@ -756,8 +758,8 @@ function AppShell() {
         </Routes>
       </main>
 
-      {/* Footer — hidden during interview and coach */}
-      {!isFullScreenApp && !isCoach && (
+      {/* Footer — show only for logged-out/public routes */}
+      {!isAuthenticated && !isFullScreenApp && !isCoach && (
         <footer className="flex items-center justify-center gap-2 mb-4 p-4 text-[11px] uppercase tracking-wider font-bold text-[var(--c-text-mute)] z-10 relative mt-auto border-t border-[var(--c-border)] backdrop-blur-sm bg-black/20">
           <span>Powered by</span>
           <span className="text-[var(--c-accent)] text-shadow-sm shadow-orange-500/20">

@@ -31,7 +31,7 @@ export function LandingFooter() {
               AI
             </div>
             <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>
-              Interview <strong style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Quasar</strong>
+              <strong style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>Quasar</strong>
             </span>
           </div>
 

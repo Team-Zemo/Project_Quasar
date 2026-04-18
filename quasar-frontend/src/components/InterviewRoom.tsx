@@ -1,17 +1,33 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import type { Message, SessionStatus, EmotionSnapshot, CodingQuestion } from '../types/interview';
-import { MessageBubble } from './MessageBubble';
-import { AudioVisualizer } from './AudioVisualizer';
-import { EmotionAnalyzer } from './EmotionAnalyzer';
-import { FillerDetector } from './FillerDetector';
-import { PostSessionResults } from './PostSessionResults';
-import { CodeEditor } from './CodeEditor';
-import { useProctoring } from '../hooks/useProctoring';
-import { apiPost, apiFetchRaw } from '../lib/api';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Square, Mic, MicOff, MessageSquare, CheckCircle2, RefreshCw, Loader2, AlertTriangle, Users, Radio } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback } from "react";
+import type {
+  Message,
+  SessionStatus,
+  EmotionSnapshot,
+  CodingQuestion,
+} from "../types/interview";
+import { MessageBubble } from "./MessageBubble";
+import { AudioVisualizer } from "./AudioVisualizer";
+import { EmotionAnalyzer } from "./EmotionAnalyzer";
+import { FillerDetector } from "./FillerDetector";
+import { PostSessionResults } from "./PostSessionResults";
+import { CodeEditor } from "./CodeEditor";
+import { useProctoring } from "../hooks/useProctoring";
+import { apiPost, apiFetchRaw } from "../lib/api";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Square,
+  Mic,
+  MicOff,
+  MessageSquare,
+  CheckCircle2,
+  RefreshCw,
+  Loader2,
+  AlertTriangle,
+  Users,
+  Radio,
+} from "lucide-react";
 
-const logger = (...args: unknown[]) => console.log('[InterviewRoom]', ...args);
+const logger = (...args: unknown[]) => console.log("[InterviewRoom]", ...args);
 
 interface InterviewRoomProps {
   messages: Message[];
@@ -51,10 +67,12 @@ export function InterviewRoom({
   setPttEnabled,
 }: InterviewRoomProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
-  const isEnded = status === 'ended' || status === 'error';
+  const isEnded = status === "ended" || status === "error";
   const metricsSubmittedRef = useRef(false);
 
-  const [emotionSnapshots, setEmotionSnapshots] = useState<EmotionSnapshot[]>([]);
+  const [emotionSnapshots, setEmotionSnapshots] = useState<EmotionSnapshot[]>(
+    [],
+  );
   const [fillerData, setFillerData] = useState<{
     totalFillers: number;
     fillerRate: number;
@@ -68,25 +86,28 @@ export function InterviewRoom({
   // ── Proctoring: multi-face violation tracking for the HR interview round ──
   // Only active when we have a sessionId (used as appId for the violation API)
   const { violationCount, criticalCount, reportViolation } = useProctoring({
-    appId: sessionId ?? 'pending',
-    round: 'hr',
+    appId: sessionId ?? "pending",
+    round: "hr",
     roundNumber: 1,
     onAutoTerminate: onEnd, // end session on excessive violations
-    enabled: !!sessionId && status === 'active',
+    enabled: !!sessionId && status === "active",
   });
 
-  const handleFaceCountChange = useCallback((count: number) => {
-    if (count >= 2) {
-      reportViolation(
-        'multiple_faces',
-        `${count} faces detected simultaneously during HR interview`,
-      );
-    }
-  }, [reportViolation]);
+  const handleFaceCountChange = useCallback(
+    (count: number) => {
+      if (count >= 2) {
+        reportViolation(
+          "multiple_faces",
+          `${count} faces detected simultaneously during HR interview`,
+        );
+      }
+    },
+    [reportViolation],
+  );
 
   // Auto-scroll to latest message
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   // ── Push-to-Talk: spacebar hold to unmute ──────────────────────────
@@ -96,16 +117,16 @@ export function InterviewRoom({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Only handle Space key
-      if (e.code !== 'Space') return;
+      if (e.code !== "Space") return;
 
       // Don't intercept if user is typing in an input/textarea/contenteditable
       const target = e.target as HTMLElement;
       const isTypable =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
         target.isContentEditable ||
-        target.closest('.monaco-editor') !== null ||
+        target.closest(".monaco-editor") !== null ||
         target.closest('[role="textbox"]') !== null;
 
       if (isTypable) return;
@@ -121,15 +142,15 @@ export function InterviewRoom({
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code !== 'Space') return;
+      if (e.code !== "Space") return;
 
       const target = e.target as HTMLElement;
       const isTypable =
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.tagName === 'SELECT' ||
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.tagName === "SELECT" ||
         target.isContentEditable ||
-        target.closest('.monaco-editor') !== null ||
+        target.closest(".monaco-editor") !== null ||
         target.closest('[role="textbox"]') !== null;
 
       if (isTypable) return;
@@ -145,29 +166,32 @@ export function InterviewRoom({
       setMuted(true);
     };
 
-    document.addEventListener('keydown', handleKeyDown, true);
-    document.addEventListener('keyup', handleKeyUp, true);
-    window.addEventListener('blur', handleBlur);
+    document.addEventListener("keydown", handleKeyDown, true);
+    document.addEventListener("keyup", handleKeyUp, true);
+    window.addEventListener("blur", handleBlur);
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown, true);
-      document.removeEventListener('keyup', handleKeyUp, true);
-      window.removeEventListener('blur', handleBlur);
+      document.removeEventListener("keydown", handleKeyDown, true);
+      document.removeEventListener("keyup", handleKeyUp, true);
+      window.removeEventListener("blur", handleBlur);
     };
   }, [activeCodingQuestion, isEnded, setMuted, pttEnabled]);
 
   const handleEmotionSnapshot = useCallback((snapshot: EmotionSnapshot) => {
-    setEmotionSnapshots(prev => [...prev, snapshot]);
+    setEmotionSnapshots((prev) => [...prev, snapshot]);
   }, []);
 
-  const handleFillerUpdate = useCallback((data: {
-    totalFillers: number;
-    fillerRate: number;
-    transcript: string;
-    fillerBuckets: { t: number; count: number; words?: string[] }[];
-  }) => {
-    setFillerData(data);
-  }, []);
+  const handleFillerUpdate = useCallback(
+    (data: {
+      totalFillers: number;
+      fillerRate: number;
+      transcript: string;
+      fillerBuckets: { t: number; count: number; words?: string[] }[];
+    }) => {
+      setFillerData(data);
+    },
+    [],
+  );
 
   // Save metrics when session ends (run once), then signal readiness for evaluation
   useEffect(() => {
@@ -175,16 +199,18 @@ export function InterviewRoom({
     metricsSubmittedRef.current = true;
 
     const saveAllMetrics = async () => {
-      logger('Session ended — saving metrics before evaluation…');
+      logger("Session ended — saving metrics before evaluation…");
 
       const promises: Promise<unknown>[] = [];
 
       // Save emotion metrics
       if (emotionSnapshots.length > 0) {
         promises.push(
-          apiPost(`/api/sessions/${sessionId}/emotion-metrics`, { metrics: emotionSnapshots })
-            .then(() => logger('Emotion metrics saved'))
-            .catch((err) => logger('Emotion metrics save failed:', err))
+          apiPost(`/api/sessions/${sessionId}/emotion-metrics`, {
+            metrics: emotionSnapshots,
+          })
+            .then(() => logger("Emotion metrics saved"))
+            .catch((err) => logger("Emotion metrics save failed:", err)),
         );
       }
 
@@ -197,8 +223,8 @@ export function InterviewRoom({
           totalFillers: fillerData?.totalFillers || 0,
           wordsPerMinute: 0,
         })
-          .then(() => logger('Speech metrics saved'))
-          .catch((err) => logger('Speech metrics save failed:', err))
+          .then(() => logger("Speech metrics saved"))
+          .catch((err) => logger("Speech metrics save failed:", err)),
       );
 
       // Also save the transcript directly to the session as a fallback,
@@ -209,13 +235,13 @@ export function InterviewRoom({
             transcript,
             durationSeconds: 0, // will be recalculated by evaluator
           })
-            .then(() => logger('Session transcript persisted'))
-            .catch((err) => logger('Session transcript persist failed:', err))
+            .then(() => logger("Session transcript persisted"))
+            .catch((err) => logger("Session transcript persist failed:", err)),
         );
       }
 
       await Promise.allSettled(promises);
-      logger('All metrics saved — evaluation can proceed');
+      logger("All metrics saved — evaluation can proceed");
       setMetricsReady(true);
     };
 
@@ -229,11 +255,11 @@ export function InterviewRoom({
     try {
       const response = await apiFetchRaw(`/api/sessions/${sessionId}/report`);
 
-      if (!response.ok) throw new Error('Failed to generate report');
+      if (!response.ok) throw new Error("Failed to generate report");
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `interview-report-${sessionId}.pdf`;
       document.body.appendChild(a);
@@ -241,54 +267,86 @@ export function InterviewRoom({
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Report download failed:', err);
+      console.error("Report download failed:", err);
     } finally {
       setReportDownloading(false);
     }
   };
 
   return (
-    <div className={`flex flex-col w-full h-full overflow-hidden ${isEnded ? 'max-w-4xl mx-auto' : ''}`}>
+    <div
+      className={`flex flex-col w-full h-full overflow-hidden ${isEnded ? "max-w-4xl mx-auto" : ""}`}
+    >
       {/* Header bar */}
       <header className="flex items-center justify-between shrink-0 p-3 sm:p-4 lg:p-6 bg-[var(--c-surface)] border-b border-[var(--c-border)] z-10 sticky top-0 shadow-sm backdrop-blur-md bg-opacity-90 gap-2">
         <div className="flex flex-col justify-center flex-1 min-w-0 pr-2">
           <div className="flex items-center gap-2.5">
             <div className="relative flex items-center justify-center w-2.5 h-2.5 shrink-0">
-              <div className={`absolute inset-0 rounded-full transition-colors ${isRecording ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-[pulse-dot_1.5s_infinite]' : 'bg-[var(--c-text-mute)]'
-                }`} />
+              <div
+                className={`absolute inset-0 rounded-full transition-colors ${
+                  isRecording
+                    ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] animate-[pulse-dot_1.5s_infinite]"
+                    : "bg-[var(--c-text-mute)]"
+                }`}
+              />
             </div>
             <p className="text-[15px] sm:text-[16px] font-bold tracking-tight text-[var(--c-text)] m-0 leading-tight truncate">
               {domain}
             </p>
           </div>
           <p className="text-[11px] sm:text-[12px] font-medium text-[var(--c-text-dim)] m-0 mt-0.5 ml-5 truncate max-w-full sm:max-w-[300px]">
-            {status === 'active' && activeCodingQuestion && 'Write your code solution — microphone paused'}
-            {status === 'active' && !activeCodingQuestion && isRecording && !isMuted && 'Listening — speak now'}
-            {status === 'active' && !activeCodingQuestion && isRecording && isMuted && pttEnabled && 'Hold Space to talk'}
-            {status === 'active' && !activeCodingQuestion && isRecording && isMuted && !pttEnabled && 'Connecting audio…'}
-            {status === 'active' && !activeCodingQuestion && !isRecording && 'Connecting audio…'}
-            {status === 'connecting' && 'Connecting to Gemini…'}
-            {status === 'ended' && 'Session completed — reviewing performance'}
-            {status === 'error' && 'Connection error'}
+            {status === "active" &&
+              activeCodingQuestion &&
+              "Write your code solution — microphone paused"}
+            {status === "active" &&
+              !activeCodingQuestion &&
+              isRecording &&
+              !isMuted &&
+              "Listening — speak now"}
+            {status === "active" &&
+              !activeCodingQuestion &&
+              isRecording &&
+              isMuted &&
+              pttEnabled &&
+              "Hold Space to talk"}
+            {status === "active" &&
+              !activeCodingQuestion &&
+              isRecording &&
+              isMuted &&
+              !pttEnabled &&
+              "Connecting audio…"}
+            {status === "active" &&
+              !activeCodingQuestion &&
+              !isRecording &&
+              "Connecting audio…"}
+            {status === "connecting" && "Connecting to Gemini…"}
+            {status === "ended" && "Session completed — reviewing performance"}
+            {status === "error" && "Connection error"}
           </p>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4 shrink-0">
           {/* Filler counter inline in header */}
           <FillerDetector
-            isActive={status === 'active' && isRecording}
+            isActive={status === "active" && isRecording}
             onUpdate={handleFillerUpdate}
           />
 
           {/* Proctoring: violation count badge */}
           {violationCount > 0 && !isEnded && (
             <div
-              title={`${criticalCount} critical violation${criticalCount !== 1 ? 's' : ''}`}
+              title={`${criticalCount} critical violation${criticalCount !== 1 ? "s" : ""}`}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-bold"
               style={{
-                background: criticalCount > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.05)',
-                borderColor: criticalCount > 0 ? 'rgba(239,68,68,0.35)' : 'rgba(255,255,255,0.1)',
-                color: criticalCount > 0 ? '#ef4444' : 'var(--c-text-mute)',
+                background:
+                  criticalCount > 0
+                    ? "rgba(239,68,68,0.12)"
+                    : "rgba(255,255,255,0.05)",
+                borderColor:
+                  criticalCount > 0
+                    ? "rgba(239,68,68,0.35)"
+                    : "rgba(255,255,255,0.1)",
+                color: criticalCount > 0 ? "#ef4444" : "var(--c-text-mute)",
               }}
             >
               <Users size={12} />
@@ -321,8 +379,13 @@ export function InterviewRoom({
                   className="flex items-center gap-2 bg-[var(--c-surface)] p-1.5 pr-2 rounded-xl border border-[var(--c-border)] shadow-lg"
                 >
                   <span className="flex items-center gap-1.5 pl-2.5 pr-1">
-                    <AlertTriangle size={13} className="text-red-400 shrink-0" />
-                    <span className="text-[12px] font-bold text-[var(--c-text)] hidden sm:inline whitespace-nowrap">End interview?</span>
+                    <AlertTriangle
+                      size={13}
+                      className="text-red-400 shrink-0"
+                    />
+                    <span className="text-[12px] font-bold text-[var(--c-text)] hidden sm:inline whitespace-nowrap">
+                      End interview?
+                    </span>
                   </span>
                   <button
                     className="px-3 py-1.5 text-[12px] font-semibold rounded-lg bg-[var(--c-surface-2)] hover:bg-[var(--c-surface-3)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] transition-colors"
@@ -333,7 +396,10 @@ export function InterviewRoom({
                   <button
                     id="end-confirm-btn"
                     className="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-bold rounded-lg bg-red-500 hover:bg-red-600 text-white shadow-[0_2px_8px_rgba(239,68,68,0.3)] transition-colors active:scale-95"
-                    onClick={() => { setShowEndConfirm(false); onEnd(); }}
+                    onClick={() => {
+                      setShowEndConfirm(false);
+                      onEnd();
+                    }}
                   >
                     <Square size={11} fill="currentColor" />
                     Confirm
@@ -354,53 +420,67 @@ export function InterviewRoom({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="flex flex-col shrink-0 w-full md:w-[280px] border-b md:border-b-0 md:border-r border-[var(--c-border)] bg-[var(--c-surface-2)] overflow-y-auto md:flex custom-scrollbar max-h-[30vh] md:max-h-none"
+              className="flex flex-col shrink-0 w-full md:w-[360px] lg:w-[390px] border-b md:border-b-0 md:border-r border-[var(--c-border)] bg-[var(--c-surface)] overflow-y-auto md:flex custom-scrollbar max-h-[42vh] md:max-h-none"
             >
               <div className="p-4 flex flex-col gap-4 sticky top-0">
                 <EmotionAnalyzer
-                  isActive={status === 'active' && isRecording}
+                  isActive={status === "active" && isRecording}
                   onSnapshot={handleEmotionSnapshot}
                   onFaceCountChange={handleFaceCountChange}
                 />
 
                 {/* Session info below webcam */}
-                <div className="flex items-center gap-4 p-3.5 bg-[var(--c-surface-3)] border border-[var(--c-border)] rounded-2xl shadow-sm">
+                <div className="flex items-center gap-4 p-3.5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl shadow-sm">
                   <div className="shrink-0 flex items-center justify-center p-2 rounded-xl bg-[var(--c-surface)] text-[var(--c-text)]">
                     <AudioVisualizer isActive={isRecording} size={32} />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] m-0">Microphone</p>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] m-0">
+                      Microphone
+                    </p>
                     <p className="text-[13px] font-semibold text-[var(--c-text)] m-0 mt-0.5 truncate">
-                      {!pttEnabled ? 'Always on — speak freely' : isRecording && !isMuted ? 'Listening…' : isRecording && isMuted ? 'Muted — Hold Space' : 'Connecting…'}
+                      {!pttEnabled
+                        ? "Always on — speak freely"
+                        : isRecording && !isMuted
+                          ? "Listening…"
+                          : isRecording && isMuted
+                            ? "Muted — Hold Space"
+                            : "Connecting…"}
                     </p>
                   </div>
                 </div>
 
                 {/* Push-to-Talk toggle */}
-                <div className="flex items-center justify-between p-3.5 bg-[var(--c-surface-3)] border border-[var(--c-border)] rounded-2xl shadow-sm">
+                <div className="flex items-center justify-between p-3.5 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl shadow-sm">
                   <div className="flex items-center gap-2.5 min-w-0">
                     <div className="shrink-0 flex items-center justify-center p-2 rounded-xl bg-[var(--c-surface)] text-[var(--c-text)]">
                       <Radio size={16} />
                     </div>
                     <div className="flex flex-col min-w-0">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] m-0">Mic Mode</p>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] m-0">
+                        Mic Mode
+                      </p>
                       <p className="text-[12px] font-semibold text-[var(--c-text)] m-0 mt-0.5 truncate">
-                        {pttEnabled ? 'Push to Talk' : 'Free Talk'}
+                        {pttEnabled ? "Push to Talk" : "Free Talk"}
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={() => setPttEnabled(!pttEnabled)}
-                    title={pttEnabled ? 'Switch to Free Talk (always-on mic)' : 'Switch to Push-to-Talk (hold Space)'}
+                    title={
+                      pttEnabled
+                        ? "Switch to Free Talk (always-on mic)"
+                        : "Switch to Push-to-Talk (hold Space)"
+                    }
                     className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 transition-colors duration-200 ease-in-out focus:outline-none ${
                       pttEnabled
-                        ? 'bg-[var(--c-surface)] border-[var(--c-border-2)]'
-                        : 'bg-green-500 border-green-500'
+                        ? "bg-[var(--c-surface)] border-[var(--c-border-2)]"
+                        : "bg-[var(--c-accent-dim)] border-[var(--c-accent)]/50"
                     }`}
                   >
                     <span
                       className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform duration-200 ease-in-out ${
-                        pttEnabled ? 'translate-x-0' : 'translate-x-5'
+                        pttEnabled ? "translate-x-0" : "translate-x-5"
                       }`}
                     />
                   </button>
@@ -424,7 +504,9 @@ export function InterviewRoom({
                   <div className="flex items-center justify-center w-16 h-16 rounded-[20px] bg-orange-500/10 text-orange-500 border border-orange-500/20 shadow-inner">
                     <MessageSquare size={32} strokeWidth={2} />
                   </div>
-                  <p className="text-[15px] font-medium text-[var(--c-text)] m-0 mt-2">Waiting for the interviewer to speak…</p>
+                  <p className="text-[15px] font-medium text-[var(--c-text)] m-0 mt-2">
+                    Waiting for the interviewer to speak…
+                  </p>
                   <span className="flex items-center gap-1.5 text-[13px] text-[var(--c-text-dim)] bg-[var(--c-surface-2)] px-3 py-1.5 border border-[var(--c-border)] rounded-full">
                     <Mic size={14} className="text-orange-400" />
                     Make sure your microphone is enabled
@@ -454,7 +536,11 @@ export function InterviewRoom({
                     >
                       <MicOff size={16} className="text-[var(--c-text-mute)]" />
                       <span className="text-[13px] font-bold text-[var(--c-text-dim)]">
-                        Hold&nbsp;<kbd className="inline-flex items-center justify-center px-2 py-0.5 bg-[var(--c-surface-3)] border border-[var(--c-border-2)] rounded-md text-[11px] font-black text-[var(--c-text)] mx-0.5 min-w-[3rem]">SPACE</kbd>&nbsp;to talk
+                        Hold&nbsp;
+                        <kbd className="inline-flex items-center justify-center px-2 py-0.5 bg-[var(--c-surface-3)] border border-[var(--c-border-2)] rounded-md text-[11px] font-black text-[var(--c-text)] mx-0.5 min-w-[3rem]">
+                          SPACE
+                        </kbd>
+                        &nbsp;to talk
                       </span>
                     </motion.div>
                   ) : (
@@ -467,7 +553,10 @@ export function InterviewRoom({
                     >
                       <div className="relative flex items-center justify-center">
                         <Mic size={18} className="text-red-400" />
-                        <div className="absolute inset-0 rounded-full border-2 border-red-400/40 animate-ping" style={{ animationDuration: '1.5s' }} />
+                        <div
+                          className="absolute inset-0 rounded-full border-2 border-red-400/40 animate-ping"
+                          style={{ animationDuration: "1.5s" }}
+                        />
                       </div>
                       <span className="text-[14px] font-bold text-red-400 tracking-wide">
                         Listening…
@@ -485,7 +574,10 @@ export function InterviewRoom({
                   >
                     <div className="relative flex items-center justify-center">
                       <Mic size={16} className="text-green-400" />
-                      <div className="absolute inset-0 rounded-full border-2 border-green-400/30 animate-ping" style={{ animationDuration: '2s' }} />
+                      <div
+                        className="absolute inset-0 rounded-full border-2 border-green-400/30 animate-ping"
+                        style={{ animationDuration: "2s" }}
+                      />
                     </div>
                     <span className="text-[13px] font-bold text-green-400">
                       Free Talk — speak anytime
@@ -508,8 +600,12 @@ export function InterviewRoom({
                   <Loader2 size={32} className="animate-spin" />
                 </div>
                 <div>
-                  <h3 className="text-[20px] font-bold text-[var(--c-text)] m-0 mb-2">Saving session data…</h3>
-                  <p className="text-[14px] text-[var(--c-text-dim)] m-0">Preparing your responses for evaluation</p>
+                  <h3 className="text-[20px] font-bold text-[var(--c-text)] m-0 mb-2">
+                    Saving session data…
+                  </h3>
+                  <p className="text-[14px] text-[var(--c-text-dim)] m-0">
+                    Preparing your responses for evaluation
+                  </p>
                 </div>
               </motion.div>
             </div>
@@ -541,8 +637,12 @@ export function InterviewRoom({
                 <div className="flex items-center justify-center w-16 h-16 rounded-full bg-[var(--c-success-dim)] text-[var(--c-success)] text-[28px] font-bold mb-4">
                   <CheckCircle2 size={32} />
                 </div>
-                <h3 className="text-[20px] font-bold text-[var(--c-text)] mb-2">Interview Complete</h3>
-                <p className="text-[14px] text-[var(--c-text-dim)] mb-6">Session successfully ended.</p>
+                <h3 className="text-[20px] font-bold text-[var(--c-text)] mb-2">
+                  Interview Complete
+                </h3>
+                <p className="text-[14px] text-[var(--c-text-dim)] mb-6">
+                  Session successfully ended.
+                </p>
                 <button
                   id="new-interview-btn"
                   onClick={onNewInterview}
@@ -560,10 +660,7 @@ export function InterviewRoom({
       {/* Code editor overlay — shown when AI presents a coding question */}
       <AnimatePresence>
         {activeCodingQuestion && (
-          <CodeEditor
-            question={activeCodingQuestion}
-            onSubmit={onSubmitCode}
-          />
+          <CodeEditor question={activeCodingQuestion} onSubmit={onSubmitCode} />
         )}
       </AnimatePresence>
     </div>
