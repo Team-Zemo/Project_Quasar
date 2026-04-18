@@ -43,7 +43,40 @@ const hrResultSchema = new mongoose.Schema({
   completedAt: { type: Date, default: null },
 }, { _id: false });
 
+// ── DSA result sub-schema ─────────────────────────────────────────────
+
+const dsaTestCaseResultSchema = new mongoose.Schema({
+  passed: { type: Boolean, default: false },
+  input: { type: String, default: '' },
+  expected: { type: String, default: '' },
+  actual: { type: String, default: '' },
+  time: { type: Number, default: 0 },    // ms
+  memory: { type: Number, default: 0 },  // KB
+  status: { type: String, default: '' },  // e.g. 'Accepted', 'Wrong Answer', 'TLE', 'MLE', 'Runtime Error'
+}, { _id: false });
+
+const dsaQuestionResultSchema = new mongoose.Schema({
+  questionId: { type: mongoose.Schema.Types.ObjectId, ref: 'DsaQuestion', required: true },
+  language: { type: String, default: 'javascript' },
+  code: { type: String, default: '' },
+  testCaseResults: { type: [dsaTestCaseResultSchema], default: [] },
+  passedCount: { type: Number, default: 0 },
+  totalCount: { type: Number, default: 0 },
+  score: { type: Number, default: 0 }, // percentage for this question
+  submittedAt: { type: Date, default: null },
+}, { _id: false });
+
+const dsaResultSchema = new mongoose.Schema({
+  questions: { type: [dsaQuestionResultSchema], default: [] },
+  totalScore: { type: Number, default: 0 },
+  percentage: { type: Number, default: 0 },
+  passed: { type: Boolean, default: false },
+  startedAt: { type: Date, default: null },
+  completedAt: { type: Date, default: null },
+}, { _id: false });
+
 // ── Screening result sub-schema ───────────────────────────────────────
+
 
 const screeningResultSchema = new mongoose.Schema({
   matchScore: { type: Number, default: 0 },
@@ -65,7 +98,7 @@ const proctoringViolationSchema = new mongoose.Schema({
     ],
     required: true,
   },
-  round: { type: String, enum: ['mcq', 'tech', 'hr'], required: true },
+  round: { type: String, enum: ['mcq', 'dsa', 'tech', 'hr'], required: true },
   roundNumber: { type: Number, default: 1 },
   timestamp: { type: Date, default: Date.now },
   details: { type: String, default: '' },
@@ -107,6 +140,10 @@ const applicationSchema = new mongoose.Schema({
       'mcq_in_progress',   // Candidate is taking MCQ
       'mcq_passed',
       'mcq_failed',
+      'dsa_pending',       // Awaiting DSA coding round
+      'dsa_in_progress',   // Candidate is taking DSA test
+      'dsa_passed',
+      'dsa_failed',
       'tech_pending',      // Awaiting next tech round
       'tech_in_progress',  // Candidate is in tech interview
       'tech_passed',       // All tech rounds passed
@@ -125,7 +162,7 @@ const applicationSchema = new mongoose.Schema({
 
   currentRound: {
     type: String,
-    enum: ['screening', 'mcq', 'tech', 'hr', 'completed'],
+    enum: ['screening', 'mcq', 'dsa', 'tech', 'hr', 'completed'],
     default: 'screening',
   },
   currentTechRoundNumber: { type: Number, default: 1 },
@@ -133,6 +170,7 @@ const applicationSchema = new mongoose.Schema({
   // Results
   screeningResult: { type: screeningResultSchema, default: null },
   mcqResult: { type: mcqResultSchema, default: null },
+  dsaResult: { type: dsaResultSchema, default: null },
   techResults: { type: [techResultSchema], default: [] },
   hrResult: { type: hrResultSchema, default: null },
 

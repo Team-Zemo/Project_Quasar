@@ -56,7 +56,7 @@ async function logViolation(req, res) {
       });
     }
 
-    const validRounds = ['mcq', 'tech', 'hr'];
+    const validRounds = ['mcq', 'dsa', 'tech', 'hr'];
     if (!validRounds.includes(round)) {
       return res.status(400).json({
         success: false,

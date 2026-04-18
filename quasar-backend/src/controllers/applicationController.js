@@ -176,6 +176,9 @@ async function applyToJob(req, res) {
           if (posting.pipeline?.mcqRound?.enabled) {
             application.status = 'mcq_pending';
             application.currentRound = 'mcq';
+          } else if (posting.pipeline?.dsaRound?.enabled) {
+            application.status = 'dsa_pending';
+            application.currentRound = 'dsa';
           } else if (posting.pipeline?.techInterviewRounds?.length > 0) {
             application.status = 'tech_pending';
             application.currentRound = 'tech';
@@ -196,6 +199,7 @@ async function applyToJob(req, res) {
 
         let nextStepLabel = '';
         if (application.currentRound === 'mcq') nextStepLabel = 'MCQ Assessment';
+        else if (application.currentRound === 'dsa') nextStepLabel = 'DSA Coding Challenge';
         else if (application.currentRound === 'tech') nextStepLabel = 'Technical Interview';
         else if (application.currentRound === 'hr') nextStepLabel = 'HR Interview';
         else nextStepLabel = 'Final Review';
@@ -215,6 +219,9 @@ async function applyToJob(req, res) {
         if (posting.pipeline?.mcqRound?.enabled) {
           application.status = 'mcq_pending';
           application.currentRound = 'mcq';
+        } else if (posting.pipeline?.dsaRound?.enabled) {
+          application.status = 'dsa_pending';
+          application.currentRound = 'dsa';
         } else if (posting.pipeline?.techInterviewRounds?.length > 0) {
           application.status = 'tech_pending';
           application.currentRound = 'tech';
@@ -229,6 +236,9 @@ async function applyToJob(req, res) {
       if (posting.pipeline?.mcqRound?.enabled) {
         application.status = 'mcq_pending';
         application.currentRound = 'mcq';
+      } else if (posting.pipeline?.dsaRound?.enabled) {
+        application.status = 'dsa_pending';
+        application.currentRound = 'dsa';
       } else if (posting.pipeline?.techInterviewRounds?.length > 0) {
         application.status = 'tech_pending';
         application.currentRound = 'tech';

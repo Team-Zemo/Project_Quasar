@@ -124,6 +124,7 @@ async function getApplicants(req, res) {
       lastActivityAt: app.lastActivityAt,
       screeningScore: app.screeningResult?.matchScore || null,
       mcqPercentage: app.mcqResult?.percentage || null,
+      dsaPercentage: app.dsaResult?.percentage || null,
       techScores: (app.techResults || []).map(r => ({
         round: r.roundNumber,
         score: r.score,
@@ -286,6 +287,7 @@ async function getRankings(req, res) {
       candidate: app.candidateId,
       totalScore: app.totalScore,
       mcqPercentage: app.mcqResult?.percentage || null,
+      dsaPercentage: app.dsaResult?.percentage || null,
       techScores: (app.techResults || []).map(r => ({
         round: r.roundNumber,
         score: r.score,
@@ -334,6 +336,7 @@ async function exportApplicantsCSV(req, res) {
       'Skills', 'Experience (Years)', 'Status', 'Applied At',
       'Screening Score (%)', 'Screening Passed', 'Matched Skills', 'Missing Skills', 'Screening Summary',
       'MCQ Score (%)', 'MCQ Correct', 'MCQ Total', 'MCQ Passed',
+      'DSA Score (%)', 'DSA Passed Tests', 'DSA Total Tests', 'DSA Passed',
     ];
 
     // Add dynamic tech round columns
@@ -379,6 +382,15 @@ async function exportApplicantsCSV(req, res) {
         mcq.totalQuestions ?? '',
         mcq.passed != null ? (mcq.passed ? 'Yes' : 'No') : '',
       ];
+
+      // DSA columns
+      const dsa = app.dsaResult || {};
+      row.push(dsa.percentage ?? '');
+      const dsaPassed = (dsa.questions || []).reduce((s, q) => s + (q.passedCount || 0), 0);
+      const dsaTotal = (dsa.questions || []).reduce((s, q) => s + (q.totalCount || 0), 0);
+      row.push(dsaPassed || '');
+      row.push(dsaTotal || '');
+      row.push(dsa.passed != null ? (dsa.passed ? 'Yes' : 'No') : '');
 
       // Tech rounds
       for (let i = 0; i < maxTechRounds; i++) {

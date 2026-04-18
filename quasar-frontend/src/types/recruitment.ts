@@ -38,8 +38,20 @@ export interface HrRoundConfig {
   window: TimeWindow;
 }
 
+export interface DsaRoundConfig {
+  enabled: boolean;
+  durationMinutes: number;
+  passingScore: number;
+  window: TimeWindow;
+  easyCount: number;
+  mediumCount: number;
+  hardCount: number;
+  allowedLanguages: string[];
+}
+
 export interface PipelineConfig {
   mcqRound?: McqRoundConfig | null;
+  dsaRound?: DsaRoundConfig | null;
   techInterviewRounds?: TechRoundConfig[];
   hrRound?: HrRoundConfig | null;
 }
@@ -104,6 +116,7 @@ export type ApplicationStatus =
   | 'applied'
   | 'screening' | 'screening_passed' | 'screening_failed'
   | 'mcq_pending' | 'mcq_in_progress' | 'mcq_passed' | 'mcq_failed'
+  | 'dsa_pending' | 'dsa_in_progress' | 'dsa_passed' | 'dsa_failed'
   | 'tech_pending' | 'tech_in_progress' | 'tech_passed' | 'tech_failed'
   | 'hr_pending' | 'hr_in_progress' | 'hr_passed' | 'hr_failed'
   | 'selected' | 'rejected' | 'withdrawn';
@@ -154,6 +167,64 @@ export interface HrResult {
   completedAt: string | null;
 }
 
+export interface DsaTestCaseResult {
+  passed: boolean;
+  input: string;
+  expected: string;
+  actual: string;
+  time: number;
+  memory: number;
+  status: string;
+  isHidden?: boolean;
+}
+
+export interface DsaQuestionResult {
+  questionId: string;
+  language: string;
+  code: string;
+  testCaseResults: DsaTestCaseResult[];
+  passedCount: number;
+  totalCount: number;
+  score: number;
+  submittedAt: string | null;
+}
+
+export interface DsaResult {
+  questions: DsaQuestionResult[];
+  totalScore: number;
+  percentage: number;
+  passed: boolean;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface DsaQuestion {
+  _id: string;
+  title: string;
+  description: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  domain: string;
+  constraints: string;
+  inputFormat: string;
+  outputFormat: string;
+  sampleInput: string;
+  sampleOutput: string;
+  testCases: { _id?: string; input: string; expectedOutput: string; isHidden?: boolean; timeLimit?: number; memoryLimit?: number }[];
+  starterCode: Record<string, string>;
+  tags: string[];
+  source: 'system' | 'recruiter';
+  jobPostingId: string | null;
+}
+
+export interface DsaTestStartData {
+  questions: DsaQuestion[];
+  totalQuestions: number;
+  durationMinutes: number;
+  allowedLanguages: string[];
+  startedAt: string;
+  deadline: string;
+}
+
 export interface Application {
   _id: string;
   candidateId: string;
@@ -163,6 +234,7 @@ export interface Application {
   currentTechRoundNumber: number;
   screeningResult: ScreeningResult | null;
   mcqResult: McqResult | null;
+  dsaResult: DsaResult | null;
   techResults: TechResult[];
   hrResult: HrResult | null;
   totalScore: number;
@@ -205,6 +277,7 @@ export interface ApplicantSummary {
   mcqPercentage: number | null;
   techScores: { round: number; score: number | null; passed: boolean | null }[];
   hrScore: number | null;
+  dsaPercentage: number | null;
 }
 
 // ── MCQ Test (Candidate View) ─────────────────────────────────────────

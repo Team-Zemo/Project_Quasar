@@ -44,6 +44,7 @@ import { JobBrowser } from "./components/candidate/JobBrowser";
 import { JobDetail } from "./components/candidate/JobDetail";
 import { MyApplications } from "./components/candidate/MyApplications";
 import { McqTestPage } from "./components/candidate/McqTestPage";
+import { DsaTestPage } from "./components/candidate/DsaTestPage";
 import { PipelineInterviewPage } from "./components/candidate/PipelineInterviewPage";
 import { PlatformContextPage } from "./components/PlatformContextPage";
 import { useInterviewSession } from "./hooks/useInterviewSession";
@@ -165,6 +166,36 @@ function McqTestRoute() {
 }
 
 /**
+ * DsaTestRoute — standalone route for DSA test (/dsa-test)
+ * Rendered without navbar for proctored exam experience.
+ */
+function DsaTestRoute() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const appId = (location.state as any)?.appId;
+
+  useEffect(() => {
+    if (!appId) navigate("/my-applications", { replace: true });
+  }, [appId, navigate]);
+
+  if (!appId) return null;
+
+  return (
+    <DsaTestPage
+      appId={appId}
+      onComplete={() => {
+        navigate("/my-applications", {
+          state: { activeAppId: appId, refreshKey: Date.now() },
+        });
+      }}
+      onBack={() => {
+        navigate("/my-applications");
+      }}
+    />
+  );
+}
+
+/**
  * ApplicationsPage — manages the full pipeline journey:
  * List → Pipeline Tracker → MCQ Test or Live Interview (Tech/HR)
  */
@@ -172,7 +203,7 @@ function ApplicationsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [view, setView] = useState<
-    { type: "list" } | { type: "mcq"; appId: string }
+    { type: "list" } | { type: "mcq"; appId: string } | { type: "dsa"; appId: string }
   >({ type: "list" });
 
   // When returning from /pipeline-interview, the route state carries activeAppId + refreshKey
@@ -189,8 +220,12 @@ function ApplicationsPage() {
   }, [location.state]);
 
   if (view.type === "mcq") {
-    // Navigate to the MCQ standalone route so navbar is hidden during the test
     navigate("/mcq-test", { state: { appId: view.appId } });
+    setView({ type: "list" });
+    return null;
+  }
+  if (view.type === "dsa") {
+    navigate("/dsa-test", { state: { appId: view.appId } });
     setView({ type: "list" });
     return null;
   }
@@ -201,6 +236,7 @@ function ApplicationsPage() {
       refreshKey={routeRefreshKey}
       onClearActiveApp={() => setActiveAppId(null)}
       onStartMcq={(appId) => setView({ type: "mcq", appId })}
+      onStartDsa={(appId) => setView({ type: "dsa", appId })}
       onStartTechInterview={(
         appId,
         round,
@@ -270,11 +306,13 @@ function AppShell() {
   const isFullScreenApp =
     isInterview ||
     location.pathname.startsWith("/pipeline-interview") ||
-    location.pathname.startsWith("/mcq-test");
+    location.pathname.startsWith("/mcq-test") ||
+    location.pathname.startsWith("/dsa-test");
   // Proctored exam pages: hide navbar entirely (fullscreen enforced by ProctoringGuard)
   const isProctoredExam =
     location.pathname.startsWith("/pipeline-interview") ||
-    location.pathname.startsWith("/mcq-test");
+    location.pathname.startsWith("/mcq-test") ||
+    location.pathname.startsWith("/dsa-test");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes
@@ -667,6 +705,14 @@ function AppShell() {
             element={
               <ProtectedRoute>
                 <McqTestRoute />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dsa-test"
+            element={
+              <ProtectedRoute>
+                <DsaTestRoute />
               </ProtectedRoute>
             }
           />

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowLeft, Users, Sparkles, Plus, Trash2,
   CheckCircle, XCircle, Play, Square,
-  Download, Eye,
+  Download, Eye, Code2,
 } from 'lucide-react';
 import { apiGet, apiPost } from '../../lib/api';
 import type { JobPosting, McqQuestion, ApplicantSummary, ApplicationStatus } from '../../types/recruitment';
@@ -14,7 +14,7 @@ interface Props {
   onBack: () => void;
 }
 
-type Tab = 'overview' | 'applicants' | 'mcqs' | 'pipeline';
+type Tab = 'overview' | 'applicants' | 'mcqs' | 'dsa_questions' | 'pipeline';
 
 const statusColors: Partial<Record<ApplicationStatus, { color: string; bg: string; label: string }>> = {
   applied: { color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)', label: 'Applied' },
@@ -33,6 +33,10 @@ const statusColors: Partial<Record<ApplicationStatus, { color: string; bg: strin
   hr_in_progress: { color: 'var(--c-accent)', bg: 'var(--c-accent-dim)', label: 'HR In Progress' },
   hr_passed: { color: 'var(--c-success)', bg: 'var(--c-success-dim)', label: 'HR Passed' },
   hr_failed: { color: 'var(--c-error)', bg: 'var(--c-error-dim)', label: 'HR Failed' },
+  dsa_pending: { color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', label: 'DSA Pending' },
+  dsa_in_progress: { color: 'var(--c-accent)', bg: 'var(--c-accent-dim)', label: 'DSA In Progress' },
+  dsa_passed: { color: 'var(--c-success)', bg: 'var(--c-success-dim)', label: 'DSA Passed' },
+  dsa_failed: { color: 'var(--c-error)', bg: 'var(--c-error-dim)', label: 'DSA Failed' },
   selected: { color: 'var(--c-success)', bg: 'var(--c-success-dim)', label: 'Selected' },
   rejected: { color: 'var(--c-error)', bg: 'var(--c-error-dim)', label: 'Rejected' },
 };
@@ -41,6 +45,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
   const [posting, setPosting] = useState<JobPosting | null>(null);
   const [applicants, setApplicants] = useState<ApplicantSummary[]>([]);
   const [mcqs, setMcqs] = useState<McqQuestion[]>([]);
+  const [dsaQuestions, setDsaQuestions] = useState<any[]>([]);
   const [tab, setTab] = useState<Tab>('overview');
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -66,10 +71,12 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
       apiGet<JobPosting>(`/api/recruiter/jobs/${jobId}`),
       apiGet<{ applicants: ApplicantSummary[] }>(`/api/recruiter/jobs/${jobId}/applicants`),
       apiGet<McqQuestion[]>(`/api/recruiter/jobs/${jobId}/mcqs`),
-    ]).then(([postRes, appRes, mcqRes]) => {
+      apiGet<any[]>(`/api/recruiter/jobs/${jobId}/dsa-questions`),
+    ]).then(([postRes, appRes, mcqRes, dsaRes]) => {
       if (postRes.success) setPosting(postRes.data);
       if (appRes.success) setApplicants(appRes.data.applicants || []);
       if (mcqRes.success) setMcqs(mcqRes.data);
+      if (dsaRes.success) setDsaQuestions(Array.isArray(dsaRes.data) ? dsaRes.data : []);
     }).finally(() => setLoading(false));
   }, [jobId]);
 
@@ -211,6 +218,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
     { id: 'overview', label: 'Overview' },
     { id: 'applicants', label: 'Applicants', count: applicants.length },
     { id: 'mcqs', label: 'MCQ Questions', count: mcqs.length },
+    ...(posting?.pipeline?.dsaRound?.enabled ? [{ id: 'dsa_questions' as Tab, label: 'DSA Questions', count: dsaQuestions.length }] : []),
     { id: 'pipeline', label: 'Pipeline Config' },
   ];
 
@@ -310,14 +318,14 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
               {/* ── Desktop table (hidden on mobile) ── */}
               <div className="hidden md:block">
                 {/* Table header */}
-                <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 bg-[var(--c-surface-2)] text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)]">
-                  <span>#</span><span>Candidate</span><span>Screening</span><span>MCQ</span><span>Tech</span><span>HR</span><span>Status</span><span>Actions</span>
+                <div className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-3 bg-[var(--c-surface-2)] text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)]">
+                  <span>#</span><span>Candidate</span><span>Screening</span><span>MCQ</span><span>DSA</span><span>Tech</span><span>HR</span><span>Status</span><span>Actions</span>
                 </div>
                 {applicants.map((app, i) => {
                   const st = statusColors[app.status] || { color: 'var(--c-text-mute)', bg: 'var(--c-surface-3)', label: app.status };
                   return (
                     <div key={app._id}
-                      className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-4 border-t border-[var(--c-border)] items-center hover:bg-[var(--c-surface-2)] transition-colors cursor-pointer"
+                      className="grid grid-cols-[auto_1fr_auto_auto_auto_auto_auto_auto_auto] gap-4 px-5 py-4 border-t border-[var(--c-border)] items-center hover:bg-[var(--c-surface-2)] transition-colors cursor-pointer"
                       onClick={() => setSelectedApplicantId(app._id)}
                     >
                       <span className="text-[12px] font-bold text-[var(--c-text-mute)] w-5">{app.rank || i + 1}</span>
@@ -327,6 +335,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                       </div>
                       <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{app.screeningScore != null ? `${app.screeningScore}%` : '—'}</span>
                       <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{app.mcqPercentage != null ? `${app.mcqPercentage}%` : '—'}</span>
+                      <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">{(app as any).dsaPercentage != null ? `${(app as any).dsaPercentage}%` : '—'}</span>
                       <span className="text-[13px] font-semibold text-[var(--c-text-dim)]">
                         {app.techScores?.length > 0 ? app.techScores.map(t => t.score != null ? t.score.toFixed(1) : '—').join('/') : '—'}
                       </span>
@@ -377,6 +386,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                       <div className="flex items-center gap-3 text-[11px] text-[var(--c-text-mute)] ml-8">
                         {app.screeningScore != null && <span>Screen: <strong className="text-[var(--c-text-dim)]">{app.screeningScore}%</strong></span>}
                         {app.mcqPercentage != null && <span>MCQ: <strong className="text-[var(--c-text-dim)]">{app.mcqPercentage}%</strong></span>}
+                        {(app as any).dsaPercentage != null && <span>DSA: <strong className="text-[var(--c-text-dim)]">{(app as any).dsaPercentage}%</strong></span>}
                         {app.techScores?.length > 0 && <span>Tech: <strong className="text-[var(--c-text-dim)]">{app.techScores.map(t => t.score != null ? t.score.toFixed(1) : '—').join('/')}</strong></span>}
                         {app.hrScore != null && <span>HR: <strong className="text-[var(--c-text-dim)]">{app.hrScore.toFixed(1)}</strong></span>}
                       </div>
@@ -636,9 +646,22 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
                 </div>
               </div>
             )}
+            {posting.pipeline.dsaRound?.enabled && (
+              <div className="flex items-center gap-3 p-4 bg-[var(--c-surface-2)] rounded-xl">
+                <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400 text-[12px] font-bold">{(posting.pipeline.mcqRound?.enabled ? 1 : 0) + 1}</div>
+                <div className="flex-1">
+                  <p className="text-[13px] font-semibold text-[var(--c-text)] flex items-center gap-2"><Code2 size={14} /> DSA Coding Round</p>
+                  <p className="text-[11px] text-[var(--c-text-mute)]">
+                    Duration: {posting.pipeline.dsaRound.durationMinutes}min • Pass: {posting.pipeline.dsaRound.passingScore}%
+                    {' • '}{(posting.pipeline.dsaRound as any).easyCount || 0}E + {(posting.pipeline.dsaRound as any).mediumCount || 0}M + {(posting.pipeline.dsaRound as any).hardCount || 0}H questions
+                    {' • '}{dsaQuestions.length} job-specific Qs
+                  </p>
+                </div>
+              </div>
+            )}
             {posting.pipeline.techInterviewRounds?.map(r => (
               <div key={r.roundNumber} className="flex items-center gap-3 p-4 bg-[var(--c-surface-2)] rounded-xl">
-                <div className="w-8 h-8 rounded-lg bg-[var(--c-user-dim)] flex items-center justify-center text-[var(--c-user)] text-[12px] font-bold">{(posting.pipeline.mcqRound?.enabled ? 1 : 0) + r.roundNumber}</div>
+                <div className="w-8 h-8 rounded-lg bg-[var(--c-user-dim)] flex items-center justify-center text-[var(--c-user)] text-[12px] font-bold">{(posting.pipeline.mcqRound?.enabled ? 1 : 0) + (posting.pipeline.dsaRound?.enabled ? 1 : 0) + r.roundNumber}</div>
                 <div>
                   <p className="text-[13px] font-semibold text-[var(--c-text)]">{r.title}</p>
                   <p className="text-[11px] text-[var(--c-text-mute)]">Duration: {r.durationMinutes}min • Pass: {r.passingScore}/10 • Domain: {r.domain}</p>
@@ -648,7 +671,7 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
             {posting.pipeline.hrRound?.enabled && (
               <div className="flex items-center gap-3 p-4 bg-[var(--c-surface-2)] rounded-xl">
                 <div className="w-8 h-8 rounded-lg bg-[var(--c-success-dim)] flex items-center justify-center text-[var(--c-success)] text-[12px] font-bold">
-                  {(posting.pipeline.mcqRound?.enabled ? 1 : 0) + (posting.pipeline.techInterviewRounds?.length || 0) + 1}
+                  {(posting.pipeline.mcqRound?.enabled ? 1 : 0) + (posting.pipeline.dsaRound?.enabled ? 1 : 0) + (posting.pipeline.techInterviewRounds?.length || 0) + 1}
                 </div>
                 <div>
                   <p className="text-[13px] font-semibold text-[var(--c-text)]">HR Round (AI)</p>
@@ -657,6 +680,64 @@ export function JobPostingDetail({ jobId, onBack }: Props) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {tab === 'dsa_questions' && (
+        <div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <p className="text-[13px] text-[var(--c-text-dim)]">
+              {dsaQuestions.length} job-specific questions
+              <span className="text-[var(--c-text-mute)] ml-2">(system pool questions are added automatically based on difficulty counts)</span>
+            </p>
+          </div>
+
+          {dsaQuestions.length === 0 ? (
+            <div className="text-center py-16">
+              <Code2 size={48} className="mx-auto text-[var(--c-text-mute)] mb-4" />
+              <p className="text-[var(--c-text-dim)] mb-2">No job-specific DSA questions yet</p>
+              <p className="text-[var(--c-text-mute)] text-[12px]">System pool questions ({(posting.pipeline.dsaRound as any)?.easyCount || 0} easy, {(posting.pipeline.dsaRound as any)?.mediumCount || 0} medium, {(posting.pipeline.dsaRound as any)?.hardCount || 0} hard) will be used automatically.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {dsaQuestions.map((q, i) => (
+                <motion.div
+                  key={q._id}
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.02 }}
+                  className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-xl p-5"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] font-bold text-[var(--c-text-mute)]">Q{i + 1}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                        q.difficulty === 'easy' ? 'bg-[var(--c-success-dim)] text-[var(--c-success)]' :
+                        q.difficulty === 'hard' ? 'bg-[var(--c-error-dim)] text-[var(--c-error)]' :
+                        'bg-[var(--c-accent-dim)] text-[var(--c-accent)]'
+                      }`}>
+                        {q.difficulty}
+                      </span>
+                      <span className="text-[10px] text-[var(--c-text-mute)]">{q.domain}</span>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        try {
+                          await fetch(`/api/recruiter/jobs/${jobId}/dsa-questions/${q._id}`, { method: 'DELETE', credentials: 'include' });
+                          setDsaQuestions(prev => prev.filter(dq => dq._id !== q._id));
+                        } catch {}
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-[var(--c-error-dim)] text-[var(--c-text-mute)] hover:text-[var(--c-error)]"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                  <p className="text-[13px] font-semibold text-[var(--c-text)] mb-1">{q.title}</p>
+                  <p className="text-[11px] text-[var(--c-text-mute)]">{q.testCases?.length || 0} test cases • {Object.keys(q.starterCode || {}).filter(k => q.starterCode[k]).length} languages</p>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

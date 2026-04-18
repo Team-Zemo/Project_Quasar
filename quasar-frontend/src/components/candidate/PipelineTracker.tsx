@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileSearch, ListChecks, Mic, Users, Trophy,
   CheckCircle, XCircle, Clock, ChevronRight, ArrowLeft,
-  Loader2, AlertCircle, Play,
+  Loader2, AlertCircle, Play, Code2,
 } from 'lucide-react';
 import { apiGet, apiPost } from '../../lib/api';
 import type {
@@ -14,13 +14,14 @@ interface Props {
   appId: string;
   onBack: () => void;
   onStartMcq: (appId: string) => void;
+  onStartDsa: (appId: string) => void;
   onStartTechInterview: (appId: string, round: number, config: TechRoundConfig, jdContext: string, alreadyStarted?: boolean) => void;
   onStartHrInterview: (appId: string, jdContext: string, alreadyStarted?: boolean) => void;
   /** Changed after interview completion — triggers a re-fetch of application data */
   refreshKey?: number | null;
 }
 
-type StageKey = 'screening' | 'mcq' | 'tech' | 'hr' | 'result';
+type StageKey = 'screening' | 'mcq' | 'dsa' | 'tech' | 'hr' | 'result';
 
 interface Stage {
   key: StageKey;
@@ -31,6 +32,7 @@ interface Stage {
 const STAGES: Stage[] = [
   { key: 'screening', label: 'Resume Screening', icon: FileSearch },
   { key: 'mcq', label: 'MCQ Assessment', icon: ListChecks },
+  { key: 'dsa', label: 'DSA Challenge', icon: Code2 },
   { key: 'tech', label: 'Tech Interview', icon: Mic },
   { key: 'hr', label: 'HR Interview', icon: Users },
   { key: 'result', label: 'Final Result', icon: Trophy },
@@ -51,17 +53,24 @@ function getStageStatus(stage: StageKey, app: Application): 'passed' | 'failed' 
       if (s === 'mcq_failed') return 'failed';
       if (app.mcqResult?.completedAt) return app.mcqResult.passed ? 'passed' : 'failed';
       if (s === 'screening_passed' && !app.mcqResult) return 'upcoming';
-      if (['tech_pending', 'tech_in_progress', 'tech_passed', 'tech_failed', 'hr_pending', 'hr_in_progress', 'hr_passed', 'hr_failed', 'selected'].includes(s)) return app.mcqResult ? 'passed' : 'skipped';
+      if (['dsa_pending', 'dsa_in_progress', 'dsa_passed', 'dsa_failed', 'tech_pending', 'tech_in_progress', 'tech_passed', 'tech_failed', 'hr_pending', 'hr_in_progress', 'hr_passed', 'hr_failed', 'selected'].includes(s)) return app.mcqResult ? 'passed' : 'skipped';
+      return 'upcoming';
+    case 'dsa':
+      if (['applied', 'screening', 'screening_failed', 'screening_passed', 'mcq_pending', 'mcq_in_progress', 'mcq_failed'].includes(s)) return 'upcoming';
+      if (s === 'dsa_pending' || s === 'dsa_in_progress') return 'active';
+      if (s === 'dsa_failed') return 'failed';
+      if (app.dsaResult?.completedAt) return app.dsaResult.passed ? 'passed' : 'failed';
+      if (['tech_pending', 'tech_in_progress', 'tech_passed', 'tech_failed', 'hr_pending', 'hr_in_progress', 'hr_passed', 'hr_failed', 'selected'].includes(s)) return app.dsaResult ? 'passed' : 'skipped';
       return 'upcoming';
     case 'tech':
-      if (['applied', 'screening', 'screening_failed', 'screening_passed', 'mcq_pending', 'mcq_in_progress', 'mcq_failed'].includes(s)) return 'upcoming';
+      if (['applied', 'screening', 'screening_failed', 'screening_passed', 'mcq_pending', 'mcq_in_progress', 'mcq_failed', 'dsa_pending', 'dsa_in_progress', 'dsa_failed'].includes(s)) return 'upcoming';
       if (s === 'tech_pending' || s === 'tech_in_progress') return 'active';
       if (s === 'tech_failed') return 'failed';
       if (['hr_pending', 'hr_in_progress', 'hr_passed', 'hr_failed', 'selected'].includes(s)) return (app.techResults?.length || 0) > 0 ? 'passed' : 'skipped';
       if (s === 'tech_passed') return 'passed';
       return 'upcoming';
     case 'hr':
-      if (['applied', 'screening', 'screening_failed', 'screening_passed', 'mcq_pending', 'mcq_in_progress', 'mcq_failed', 'tech_pending', 'tech_in_progress', 'tech_failed'].includes(s)) return 'upcoming';
+      if (['applied', 'screening', 'screening_failed', 'screening_passed', 'mcq_pending', 'mcq_in_progress', 'mcq_failed', 'dsa_pending', 'dsa_in_progress', 'dsa_failed', 'tech_pending', 'tech_in_progress', 'tech_failed'].includes(s)) return 'upcoming';
       if (s === 'hr_pending' || s === 'hr_in_progress') return 'active';
       if (s === 'hr_failed') return 'failed';
       if (s === 'hr_passed' || s === 'selected') return app.hrResult ? 'passed' : 'skipped';
@@ -69,7 +78,7 @@ function getStageStatus(stage: StageKey, app: Application): 'passed' | 'failed' 
     case 'result':
       if (s === 'selected') return 'passed';
       if (s === 'rejected') return 'failed';
-      if (['screening_failed', 'mcq_failed', 'tech_failed', 'hr_failed'].includes(s)) return 'failed';
+      if (['screening_failed', 'mcq_failed', 'dsa_failed', 'tech_failed', 'hr_failed'].includes(s)) return 'failed';
       return 'upcoming';
     default:
       return 'upcoming';
@@ -84,7 +93,7 @@ const statusColors: Record<string, { bg: string; border: string; text: string; r
   skipped: { bg: 'var(--c-surface-2)', border: 'var(--c-border)', text: 'var(--c-text-mute)', ring: 'transparent' },
 };
 
-export function PipelineTracker({ appId, onBack, onStartMcq, onStartTechInterview, onStartHrInterview, refreshKey }: Props) {
+export function PipelineTracker({ appId, onBack, onStartMcq, onStartDsa, onStartTechInterview, onStartHrInterview, refreshKey }: Props) {
   const [app, setApp] = useState<Application | null>(null);
   const [job, setJob] = useState<JobPosting | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,11 +140,13 @@ export function PipelineTracker({ appId, onBack, onStartMcq, onStartTechIntervie
   // Always show a stage if the app's status proves that stage exists,
   // even if the pipeline config field is not fully populated from the API
   const mcqStatusExists = app.status.includes('mcq') || app.mcqResult != null;
+  const dsaStatusExists = app.status.includes('dsa') || app.dsaResult != null;
   const techStatusExists = app.status.includes('tech') || (app.techResults?.length || 0) > 0;
   const hrStatusExists = app.status.includes('hr') || app.hrResult != null;
 
   const visibleStages = STAGES.filter(stage => {
     if (stage.key === 'mcq') return pipeline.mcqRound?.enabled || mcqStatusExists;
+    if (stage.key === 'dsa') return pipeline.dsaRound?.enabled || dsaStatusExists;
     if (stage.key === 'tech') return (pipeline.techInterviewRounds?.length || 0) > 0 || techStatusExists;
     if (stage.key === 'hr') return pipeline.hrRound?.enabled || hrStatusExists;
     return true;
@@ -150,6 +161,7 @@ export function PipelineTracker({ appId, onBack, onStartMcq, onStartTechIntervie
   };
 
   const canStartMcq = app.status === 'mcq_pending';
+  const canStartDsa = app.status === 'dsa_pending';
   const canStartTech = app.status === 'tech_pending' || app.status === 'tech_in_progress';
   const canStartHr = app.status === 'hr_pending' || app.status === 'hr_in_progress';
 
@@ -260,6 +272,12 @@ export function PipelineTracker({ appId, onBack, onStartMcq, onStartTechIntervie
                     </div>
                   )}
 
+                  {stage.key === 'dsa' && app.dsaResult?.completedAt && (
+                    <div className="text-[12px] text-[var(--c-text-dim)] mt-2">
+                      <p>Score: <strong style={{ color: app.dsaResult.passed ? 'var(--c-success)' : 'var(--c-error)' }}>{app.dsaResult.percentage}%</strong> ({app.dsaResult.totalScore} test cases passed)</p>
+                    </div>
+                  )}
+
                   {stage.key === 'tech' && app.techResults?.filter(r => r.score != null).length > 0 && (
                     <div className="flex items-center gap-3 mt-2">
                       {app.techResults.filter(r => r.score != null).map(r => (
@@ -295,6 +313,17 @@ export function PipelineTracker({ appId, onBack, onStartMcq, onStartTechIntervie
                       className="flex items-center gap-2 mt-3 px-4 py-2 rounded-xl text-[13px] font-bold text-white bg-gradient-to-r from-[var(--c-accent)] to-[#fb923c] hover:brightness-110 transition-all shadow-md active:scale-95"
                     >
                       <Play size={14} /> Start MCQ Test
+                    </motion.button>
+                  )}
+
+                  {stage.key === 'dsa' && canStartDsa && (
+                    <motion.button
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      onClick={() => onStartDsa(appId)}
+                      className="flex items-center gap-2 mt-3 px-4 py-2 rounded-xl text-[13px] font-bold text-white bg-gradient-to-r from-violet-500 to-purple-500 hover:brightness-110 transition-all shadow-md active:scale-95"
+                    >
+                      <Code2 size={14} /> Start DSA Challenge
                     </motion.button>
                   )}
 

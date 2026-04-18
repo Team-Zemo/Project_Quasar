@@ -14,6 +14,20 @@ const mcqRoundConfigSchema = new mongoose.Schema({
   window: { type: timeWindowSchema, required: true },
 }, { _id: false });
 
+const dsaRoundConfigSchema = new mongoose.Schema({
+  enabled: { type: Boolean, default: false },
+  durationMinutes: { type: Number, default: 60, min: 15, max: 240 },
+  passingScore: { type: Number, default: 60, min: 0, max: 100 }, // percentage of test cases passed
+  window: { type: timeWindowSchema, required: true },
+  easyCount: { type: Number, default: 1, min: 0, max: 10 },
+  mediumCount: { type: Number, default: 1, min: 0, max: 10 },
+  hardCount: { type: Number, default: 0, min: 0, max: 10 },
+  allowedLanguages: {
+    type: [String],
+    default: ['javascript', 'java', 'c', 'cpp', 'kotlin', 'go'],
+  },
+}, { _id: false });
+
 const techRoundConfigSchema = new mongoose.Schema({
   roundNumber: { type: Number, required: true, min: 1 },
   title: { type: String, required: true, trim: true },
@@ -33,6 +47,7 @@ const hrRoundConfigSchema = new mongoose.Schema({
 
 const pipelineConfigSchema = new mongoose.Schema({
   mcqRound: { type: mcqRoundConfigSchema, default: null },
+  dsaRound: { type: dsaRoundConfigSchema, default: null },
   techInterviewRounds: { type: [techRoundConfigSchema], default: [] },
   hrRound: { type: hrRoundConfigSchema, default: null },
 }, { _id: false });

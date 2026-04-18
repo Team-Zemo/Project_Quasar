@@ -9,6 +9,7 @@ const SkillVector = require('./SkillVector');
 const UserStats = require('./UserStats');
 const JobPosting = require('./JobPosting');
 const McqQuestion = require('./McqQuestion');
+const DsaQuestion = require('./DsaQuestion');
 const Application = require('./Application');
 const logger = require('../utils/logger');
 
@@ -81,6 +82,7 @@ module.exports = {
   UserStats,
   JobPosting,
   McqQuestion,
+  DsaQuestion,
   Application,
   seedPersonas,
 };

@@ -34,6 +34,16 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
   const [mcqWindowStart, setMcqWindowStart] = useState('');
   const [mcqWindowEnd, setMcqWindowEnd] = useState('');
 
+  // DSA Round
+  const [dsaEnabled, setDsaEnabled] = useState(false);
+  const [dsaDuration, setDsaDuration] = useState(60);
+  const [dsaPassingScore, setDsaPassingScore] = useState(60);
+  const [dsaWindowStart, setDsaWindowStart] = useState('');
+  const [dsaWindowEnd, setDsaWindowEnd] = useState('');
+  const [dsaEasyCount, setDsaEasyCount] = useState(1);
+  const [dsaMediumCount, setDsaMediumCount] = useState(1);
+  const [dsaHardCount, setDsaHardCount] = useState(0);
+
   const [techRounds, setTechRounds] = useState<Array<Omit<TechRoundConfig, 'window'> & { windowStart: string; windowEnd: string }>>([
     { roundNumber: 1, title: 'Technical Interview', domain: 'General', personaId: 'faang_engineer', durationMinutes: 30, passingScore: 6, windowStart: '', windowEnd: '' },
   ]);
@@ -100,8 +110,8 @@ Requirements:
 
     setTechRounds([{
       roundNumber: 1,
-      title: 'System Design & React',
-      domain: 'Full Stack Engineering',
+      title: 'java backend developer',
+      domain: 'java',
       personaId: 'faang_engineer',
       durationMinutes: 10,
       passingScore: 2,
@@ -114,6 +124,15 @@ Requirements:
     setHrPassingScore(2);
     setHrWindowStart(start);
     setHrWindowEnd(end);
+
+    setDsaEnabled(true);
+    setDsaDuration(30);
+    setDsaPassingScore(30);
+    setDsaEasyCount(1);
+    setDsaMediumCount(1);
+    setDsaHardCount(0);
+    setDsaWindowStart(start);
+    setDsaWindowEnd(end);
   };
 
   const buildPipeline = (): PipelineConfig => ({
@@ -122,6 +141,16 @@ Requirements:
       durationMinutes: mcqDuration,
       passingScore: mcqPassingScore,
       window: { start: mcqWindowStart, end: mcqWindowEnd },
+    } : null,
+    dsaRound: dsaEnabled ? {
+      enabled: true,
+      durationMinutes: dsaDuration,
+      passingScore: dsaPassingScore,
+      window: { start: dsaWindowStart, end: dsaWindowEnd },
+      easyCount: dsaEasyCount,
+      mediumCount: dsaMediumCount,
+      hardCount: dsaHardCount,
+      allowedLanguages: ['javascript', 'java', 'c', 'cpp', 'kotlin', 'go'],
     } : null,
     techInterviewRounds: techRounds.map(r => ({
       roundNumber: r.roundNumber,
@@ -279,12 +308,49 @@ Requirements:
               )}
             </div>
 
+            {/* DSA Round */}
+            <div className="border border-[var(--c-border)] rounded-xl p-5 mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-400 text-[12px] font-bold">{mcqEnabled ? 2 : 1}</div>
+                  <h3 className="text-[14px] font-bold text-[var(--c-text)]">DSA Coding Round</h3>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={dsaEnabled} onChange={e => setDsaEnabled(e.target.checked)} className="accent-[var(--c-accent)]" />
+                  <span className="text-[12px] text-[var(--c-text-dim)]">Enable</span>
+                </label>
+              </div>
+              {dsaEnabled && (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div><label className={labelClass}>Duration (min)</label>
+                      <input type="number" value={dsaDuration} onChange={e => setDsaDuration(+e.target.value)} className={inputClass} min={15} max={240} /></div>
+                    <div><label className={labelClass}>Passing Score (%)</label>
+                      <input type="number" value={dsaPassingScore} onChange={e => setDsaPassingScore(+e.target.value)} className={inputClass} min={0} max={100} /></div>
+                    <div><label className={labelClass}>Window Start</label>
+                      <input type="datetime-local" value={dsaWindowStart} onChange={e => setDsaWindowStart(e.target.value)} className={inputClass} /></div>
+                    <div><label className={labelClass}>Window End</label>
+                      <input type="datetime-local" value={dsaWindowEnd} onChange={e => setDsaWindowEnd(e.target.value)} className={inputClass} /></div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><label className={labelClass}>Easy Qs</label>
+                      <input type="number" value={dsaEasyCount} onChange={e => setDsaEasyCount(+e.target.value)} className={inputClass} min={0} max={10} /></div>
+                    <div><label className={labelClass}>Medium Qs</label>
+                      <input type="number" value={dsaMediumCount} onChange={e => setDsaMediumCount(+e.target.value)} className={inputClass} min={0} max={10} /></div>
+                    <div><label className={labelClass}>Hard Qs</label>
+                      <input type="number" value={dsaHardCount} onChange={e => setDsaHardCount(+e.target.value)} className={inputClass} min={0} max={10} /></div>
+                  </div>
+                  <p className="text-[11px] text-[var(--c-text-mute)]">Total: {dsaEasyCount + dsaMediumCount + dsaHardCount} questions from system pool + job-specific questions</p>
+                </div>
+              )}
+            </div>
+
             {/* Tech Rounds */}
             {techRounds.map((round, index) => (
               <div key={index} className="border border-[var(--c-border)] rounded-xl p-5 mb-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-[var(--c-user-dim)] flex items-center justify-center text-[var(--c-user)] text-[12px] font-bold">{(mcqEnabled ? 2 : 1) + index}</div>
+                    <div className="w-8 h-8 rounded-lg bg-[var(--c-user-dim)] flex items-center justify-center text-[var(--c-user)] text-[12px] font-bold">{(mcqEnabled ? 1 : 0) + (dsaEnabled ? 1 : 0) + 1 + index}</div>
                     <h3 className="text-[14px] font-bold text-[var(--c-text)]">Tech Round {round.roundNumber}</h3>
                   </div>
                   {techRounds.length > 1 && (
@@ -377,6 +443,7 @@ Requirements:
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase bg-[var(--c-accent-dim)] text-[var(--c-accent)]">AI Screening</span>
                   {mcqEnabled && <><span className="text-[var(--c-text-mute)]">→</span><span className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase bg-[var(--c-purple-dim)] text-[var(--c-purple)]">MCQ ({mcqDuration}min)</span></>}
+                  {dsaEnabled && <><span className="text-[var(--c-text-mute)]">→</span><span className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase bg-violet-500/10 text-violet-400">DSA ({dsaDuration}min • {dsaEasyCount + dsaMediumCount + dsaHardCount}Qs)</span></>}
                   {techRounds.map(r => (
                     <><span key={`arrow-${r.roundNumber}`} className="text-[var(--c-text-mute)]">→</span>
                     <span key={r.roundNumber} className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase bg-[var(--c-user-dim)] text-[var(--c-user)]">{r.title} ({r.durationMinutes}min)</span></>

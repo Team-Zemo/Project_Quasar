@@ -39,6 +39,9 @@ const config = {
   minioSecretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
   minioBucket: process.env.MINIO_BUCKET || 'quasar-resumes',
   minioUseSSL: process.env.MINIO_USE_SSL === 'true',
+
+  // Judge0 CE (self-hosted)
+  judge0ApiUrl: process.env.JUDGE0_API_URL || 'http://localhost:2358',
 };
 
 if (!config.geminiApiKey) {

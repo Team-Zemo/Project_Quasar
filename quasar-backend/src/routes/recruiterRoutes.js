@@ -31,6 +31,12 @@ router.put('/jobs/:id/mcqs/:mcqId', jobPostingController.updateMcq);
 router.delete('/jobs/:id/mcqs/:mcqId', jobPostingController.deleteMcq);
 router.post('/jobs/:id/mcqs/generate', jobPostingController.generateMcqs);
 
+// ── DSA Question Management ───────────────────────────────────────────
+router.post('/jobs/:id/dsa-questions', jobPostingController.addDsaQuestion);
+router.get('/jobs/:id/dsa-questions', jobPostingController.listDsaQuestions);
+router.put('/jobs/:id/dsa-questions/:qId', jobPostingController.updateDsaQuestion);
+router.delete('/jobs/:id/dsa-questions/:qId', jobPostingController.deleteDsaQuestion);
+
 // ── Applicant Management ──────────────────────────────────────────────
 router.get('/jobs/:id/applicants', dashboardController.getApplicants);
 router.get('/jobs/:id/applicants/:appId', dashboardController.getApplicantDetail);

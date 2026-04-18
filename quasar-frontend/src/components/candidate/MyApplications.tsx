@@ -9,6 +9,8 @@ interface Props {
   onViewApplication?: (appId: string, jobId: string) => void;
   /** Called when the tracker needs to start an MCQ test */
   onStartMcq?: (appId: string) => void;
+  /** Called when the tracker needs to start a DSA test */
+  onStartDsa?: (appId: string) => void;
   /** Called when the tracker needs to start a tech interview. alreadyStarted=true means status is already tech_in_progress */
   onStartTechInterview?: (appId: string, round: number, config: any, jdContext: string, alreadyStarted?: boolean) => void;
   /** Called when the tracker needs to start an HR interview. alreadyStarted=true means status is already hr_in_progress */
@@ -29,6 +31,10 @@ const statusConfig: Partial<Record<ApplicationStatus, { icon: typeof CheckCircle
   mcq_in_progress: { icon: AlertCircle, color: 'var(--c-accent)', label: 'MCQ In Progress' },
   mcq_passed: { icon: CheckCircle, color: 'var(--c-success)', label: 'MCQ Passed' },
   mcq_failed: { icon: XCircle, color: 'var(--c-error)', label: 'MCQ Failed' },
+  dsa_pending: { icon: Clock, color: 'var(--c-purple)', label: 'DSA Test Pending' },
+  dsa_in_progress: { icon: AlertCircle, color: 'var(--c-accent)', label: 'DSA In Progress' },
+  dsa_passed: { icon: CheckCircle, color: 'var(--c-success)', label: 'DSA Passed' },
+  dsa_failed: { icon: XCircle, color: 'var(--c-error)', label: 'DSA Failed' },
   tech_pending: { icon: Clock, color: 'var(--c-user)', label: 'Tech Interview Pending' },
   tech_in_progress: { icon: AlertCircle, color: 'var(--c-accent)', label: 'Tech Interview' },
   tech_passed: { icon: CheckCircle, color: 'var(--c-success)', label: 'Tech Passed' },
@@ -41,7 +47,7 @@ const statusConfig: Partial<Record<ApplicationStatus, { icon: typeof CheckCircle
   rejected: { icon: XCircle, color: 'var(--c-error)', label: 'Rejected' },
 };
 
-export function MyApplications({ onViewApplication, onStartMcq, onStartTechInterview, onStartHrInterview, activeAppId, onClearActiveApp, refreshKey }: Props) {
+export function MyApplications({ onViewApplication, onStartMcq, onStartDsa, onStartTechInterview, onStartHrInterview, activeAppId, onClearActiveApp, refreshKey }: Props) {
   const [applications, setApplications] = useState<(Application & { jobPostingId: JobPosting })[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedAppId, setSelectedAppId] = useState<string | null>(activeAppId || null);
@@ -73,6 +79,7 @@ export function MyApplications({ onViewApplication, onStartMcq, onStartTechInter
           onClearActiveApp?.();
         }}
         onStartMcq={onStartMcq || (() => {})}
+        onStartDsa={onStartDsa || (() => {})}
         onStartTechInterview={onStartTechInterview || (() => {})}
         onStartHrInterview={onStartHrInterview || (() => {})}
       />
@@ -96,7 +103,7 @@ export function MyApplications({ onViewApplication, onStartMcq, onStartTechInter
             const job = typeof app.jobPostingId === 'object' ? app.jobPostingId : null;
             const conf = statusConfig[app.status] || { icon: Clock, color: 'var(--c-text-mute)', label: app.status };
             const Icon = conf.icon;
-            const isActionable = ['mcq_pending', 'tech_pending', 'hr_pending', 'mcq_in_progress', 'tech_in_progress', 'hr_in_progress'].includes(app.status);
+            const isActionable = ['mcq_pending', 'dsa_pending', 'tech_pending', 'hr_pending', 'mcq_in_progress', 'dsa_in_progress', 'tech_in_progress', 'hr_in_progress'].includes(app.status);
 
             return (
               <motion.div
@@ -142,6 +149,14 @@ export function MyApplications({ onViewApplication, onStartMcq, onStartTechInter
                       <span className="text-[var(--c-text-mute)]">MCQ: </span>
                       <span className="font-semibold" style={{ color: app.mcqResult.passed ? 'var(--c-success)' : 'var(--c-error)' }}>
                         {app.mcqResult.percentage}%
+                      </span>
+                    </div>
+                  )}
+                  {app.dsaResult?.completedAt && (
+                    <div>
+                      <span className="text-[var(--c-text-mute)]">DSA: </span>
+                      <span className="font-semibold" style={{ color: app.dsaResult.passed ? 'var(--c-success)' : 'var(--c-error)' }}>
+                        {app.dsaResult.percentage}%
                       </span>
                     </div>
                   )}

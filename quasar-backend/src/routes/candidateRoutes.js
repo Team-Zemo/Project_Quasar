@@ -7,6 +7,7 @@ const express = require('express');
 const { requireAuth, requireRole } = require('../middleware/auth');
 const applicationController = require('../controllers/applicationController');
 const mcqRoundController = require('../controllers/mcqRoundController');
+const dsaRoundController = require('../controllers/dsaRoundController');
 const pipelineController = require('../controllers/pipelineController');
 const proctoringController = require('../controllers/proctoringController');
 
@@ -32,6 +33,12 @@ router.get('/applications', applicationController.listMyApplications);
 router.post('/applications/:appId/mcq/start', mcqRoundController.startMcqTest);
 router.post('/applications/:appId/mcq/submit', mcqRoundController.submitMcqTest);
 router.get('/applications/:appId/mcq/result', mcqRoundController.getMcqResult);
+
+// ── DSA Round ─────────────────────────────────────────────────────────
+router.post('/applications/:appId/dsa/start', dsaRoundController.startDsaTest);
+router.post('/applications/:appId/dsa/run', dsaRoundController.runDsaCode);
+router.post('/applications/:appId/dsa/submit', dsaRoundController.submitDsaSolution);
+router.post('/applications/:appId/dsa/complete', dsaRoundController.completeDsaTest);
 
 // ── Tech Interview Rounds ─────────────────────────────────────────────
 router.post('/applications/:appId/tech/:round/start', pipelineController.startTechRound);

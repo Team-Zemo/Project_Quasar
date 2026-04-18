@@ -4,6 +4,7 @@
  */
 const JobPosting = require('../models/JobPosting');
 const McqQuestion = require('../models/McqQuestion');
+const DsaQuestion = require('../models/DsaQuestion');
 const { chatCompletion } = require('../services/groqService');
 const { generateMcqsFromJd } = require('../services/mcqGeneratorService');
 const logger = require('../utils/logger');
@@ -272,6 +273,33 @@ async function publishJobPosting(req, res) {
             data: null,
           });
         }
+      }
+    }
+
+    if (pipeline.dsaRound?.enabled) {
+      if (!pipeline.dsaRound.window?.start || !pipeline.dsaRound.window?.end) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot publish: DSA round requires a time window',
+          data: null,
+        });
+      }
+      // Check that at least some questions exist (system or job-specific)
+      const dsaCount = await DsaQuestion.countDocuments({
+        $or: [
+          { jobPostingId: id },
+          { jobPostingId: null, source: 'system' },
+        ],
+      });
+      const totalNeeded = (pipeline.dsaRound.easyCount || 0) +
+        (pipeline.dsaRound.mediumCount || 0) +
+        (pipeline.dsaRound.hardCount || 0);
+      if (dsaCount < totalNeeded) {
+        return res.status(400).json({
+          success: false,
+          message: `Cannot publish: DSA round requires ${totalNeeded} questions but only ${dsaCount} available`,
+          data: null,
+        });
       }
     }
 
@@ -569,6 +597,153 @@ async function generateMcqs(req, res) {
   }
 }
 
+// ── DSA Question Management ───────────────────────────────────────────
+
+/**
+ * POST /api/recruiter/jobs/:id/dsa-questions
+ * Add a DSA question for a job posting.
+ */
+async function addDsaQuestion(req, res) {
+  try {
+    const recruiterId = req.user?.id;
+    const { id } = req.params;
+    const {
+      title, description, difficulty, domain,
+      constraints, inputFormat, outputFormat,
+      sampleInput, sampleOutput, testCases,
+      starterCode, tags,
+    } = req.body;
+
+    const posting = await JobPosting.findOne({ _id: id, recruiterId }).select('_id').lean();
+    if (!posting) {
+      return res.status(404).json({ success: false, message: 'Job posting not found', data: null });
+    }
+
+    if (!title || !description || !difficulty || !testCases || testCases.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'title, description, difficulty, and at least 1 test case are required',
+        data: null,
+      });
+    }
+
+    const dsaQ = await DsaQuestion.create({
+      title: title.trim(),
+      description,
+      difficulty,
+      domain: domain?.trim() || 'General',
+      constraints: constraints || '',
+      inputFormat: inputFormat || '',
+      outputFormat: outputFormat || '',
+      sampleInput: sampleInput || '',
+      sampleOutput: sampleOutput || '',
+      testCases,
+      starterCode: starterCode || {},
+      tags: tags || [],
+      source: 'recruiter',
+      jobPostingId: id,
+    });
+
+    return res.status(201).json({ success: true, message: 'DSA question added', data: dsaQ });
+  } catch (err) {
+    logger.error('Add DSA question error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to add DSA question', data: null });
+  }
+}
+
+/**
+ * GET /api/recruiter/jobs/:id/dsa-questions
+ * List all DSA questions (system + job-specific) available for a job.
+ */
+async function listDsaQuestions(req, res) {
+  try {
+    const recruiterId = req.user?.id;
+    const { id } = req.params;
+
+    const posting = await JobPosting.findOne({ _id: id, recruiterId }).select('_id').lean();
+    if (!posting) {
+      return res.status(404).json({ success: false, message: 'Job posting not found', data: null });
+    }
+
+    const questions = await DsaQuestion.find({
+      $or: [
+        { jobPostingId: id },
+        { jobPostingId: null, source: 'system' },
+      ],
+    }).sort({ difficulty: 1, createdAt: 1 }).lean();
+
+    return res.json({ success: true, message: 'DSA questions retrieved', data: questions });
+  } catch (err) {
+    logger.error('List DSA questions error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to list DSA questions', data: null });
+  }
+}
+
+/**
+ * PUT /api/recruiter/jobs/:id/dsa-questions/:qId
+ * Update a recruiter-owned DSA question.
+ */
+async function updateDsaQuestion(req, res) {
+  try {
+    const recruiterId = req.user?.id;
+    const { id, qId } = req.params;
+    const updates = req.body;
+
+    const posting = await JobPosting.findOne({ _id: id, recruiterId }).select('_id').lean();
+    if (!posting) {
+      return res.status(404).json({ success: false, message: 'Job posting not found', data: null });
+    }
+
+    const dsaQ = await DsaQuestion.findOne({ _id: qId, jobPostingId: id, source: 'recruiter' });
+    if (!dsaQ) {
+      return res.status(404).json({ success: false, message: 'DSA question not found or not editable', data: null });
+    }
+
+    const allowedFields = [
+      'title', 'description', 'difficulty', 'domain', 'constraints',
+      'inputFormat', 'outputFormat', 'sampleInput', 'sampleOutput',
+      'testCases', 'starterCode', 'tags',
+    ];
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        dsaQ[field] = updates[field];
+      }
+    }
+
+    await dsaQ.save();
+    return res.json({ success: true, message: 'DSA question updated', data: dsaQ });
+  } catch (err) {
+    logger.error('Update DSA question error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to update DSA question', data: null });
+  }
+}
+
+/**
+ * DELETE /api/recruiter/jobs/:id/dsa-questions/:qId
+ * Delete a recruiter-owned DSA question.
+ */
+async function deleteDsaQuestion(req, res) {
+  try {
+    const recruiterId = req.user?.id;
+    const { id, qId } = req.params;
+
+    const posting = await JobPosting.findOne({ _id: id, recruiterId }).select('_id').lean();
+    if (!posting) {
+      return res.status(404).json({ success: false, message: 'Job posting not found', data: null });
+    }
+
+    const result = await DsaQuestion.deleteOne({ _id: qId, jobPostingId: id, source: 'recruiter' });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, message: 'DSA question not found or is a system question', data: null });
+    }
+
+    return res.json({ success: true, message: 'DSA question deleted', data: null });
+  } catch (err) {
+    logger.error('Delete DSA question error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to delete DSA question', data: null });
+  }
+}
+
 module.exports = {
   createJobPosting,
   listJobPostings,
@@ -581,4 +756,8 @@ module.exports = {
   updateMcq,
   deleteMcq,
   generateMcqs,
+  addDsaQuestion,
+  listDsaQuestions,
+  updateDsaQuestion,
+  deleteDsaQuestion,
 };

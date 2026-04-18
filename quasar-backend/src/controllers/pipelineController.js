@@ -529,6 +529,12 @@ function calculateTotalScore(application, posting) {
     components++;
   }
 
+  // DSA score (percentage, normalize to 0-10)
+  if (application.dsaResult?.percentage != null && application.dsaResult.completedAt) {
+    total += (application.dsaResult.percentage / 100) * 10;
+    components++;
+  }
+
   // Tech round scores (average)
   if (application.techResults?.length > 0) {
     const techScores = application.techResults
