@@ -56,12 +56,9 @@ export function JobBrowser({ onViewJob }: Props) {
 
   return (
     <div className="max-w-5xl mx-auto py-10 px-4 sm:px-6">
-      <div className="mb-10 flex flex-col items-center text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 text-orange-400 text-xs font-bold mb-4">
-          <Briefcase size={14} />
-          Explore Opportunities
-        </div>
-        <h1 className="text-[36px] sm:text-[44px] font-black text-white tracking-tight mb-4">Find Your Next Role</h1>
+      <div className="mb-10 md:mt-25 flex flex-col items-center text-center">
+      
+        <h1 className="text-[36px] md:text-[50px] sm:text-[44px] font-black text-white tracking-tight mb-4">Find Your Next Role</h1>
         <p className="text-gray-400 text-[15px] sm:text-[16px] font-medium leading-relaxed max-w-2xl mx-auto">
           Discover {total} open positions across top tech companies. Get brutally honest, structured AI interviews tailored to your exact role.
         </p>

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
+import { IdenticonAvatar } from "../components/ui/IdenticonAvatar";
 
 export function LandingNavbar() {
   const { isAuthenticated, user } = useAuth();
@@ -59,9 +60,13 @@ export function LandingNavbar() {
                   <Link
                     to={dashboardPath}
                     aria-label="Go to dashboard"
-                    className="w-7 h-7 rounded-full bg-gradient-to-br from-[#f97316] to-[#fb923c] flex items-center justify-center text-[11px] font-bold text-black hover:scale-105 transition-transform duration-200"
+                    className="rounded-full overflow-hidden hover:scale-105 transition-transform duration-200"
                   >
-                    {user?.name?.charAt(0).toUpperCase()}
+                    <IdenticonAvatar
+                      seed={`${user?.email || ""}:${user?.name || "user"}`}
+                      size={28}
+                      className="rounded-full"
+                    />
                   </Link>
                 </div>
               </>
