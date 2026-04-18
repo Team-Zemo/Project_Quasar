@@ -90,8 +90,14 @@ router.get('/sessions/:sessionId/next-question',  requireAuth, skillController.g
 // ── AI Career Coach (streaming) ───────────────────────────────
 router.post('/coach/chat', requireAuth, coachController.chat);
 
-// ── Study Plan Generator (streaming) ─────────────────────────
+// ── Study Plan (streaming + scheduling) ──────────────────────────
 router.post('/study-plan/generate', requireAuth, studyPlanController.generatePlan);
+router.post('/study-plan/save',     requireAuth, studyPlanController.savePlan);
+router.get('/study-plan/active',    requireAuth, studyPlanController.getActivePlan);
+router.post('/study-plan/start',    requireAuth, studyPlanController.startSchedule);
+router.post('/study-plan/stop',     requireAuth, studyPlanController.stopSchedule);
+router.put('/study-plan/toggle-day/:index', requireAuth, studyPlanController.toggleDay);
+router.delete('/study-plan',        requireAuth, studyPlanController.deletePlan);
 
 // ── PDF Report ────────────────────────────────────────────────
 router.get('/sessions/:sessionId/report', requireAuth, reportController.generateReport);

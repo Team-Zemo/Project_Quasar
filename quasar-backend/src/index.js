@@ -6,6 +6,7 @@ const SocketManager = require('./websocket/socketManager');
 const { connectDatabase } = require('./config/database');
 const { seedPersonas } = require('./models');
 const { seedDsaQuestions } = require('./seeds/dsaQuestionSeeder');
+const { startStudyPlanCron } = require('./cron/studyPlanCron');
 
 // Wrap Express Application inside Native HTTP server for WS
 const server = http.createServer(app);
@@ -20,6 +21,9 @@ async function start() {
   } catch (err) {
     logger.error('Database initialization failed — continuing without DB', { err: err.message });
   }
+
+  // Start cron jobs
+  startStudyPlanCron();
 
   // Spin up WS server bound on the HTTP listener instance
   SocketManager.init(server);

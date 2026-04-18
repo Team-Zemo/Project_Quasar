@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, type CSSProperties } from "react";
-import { apiFetchRaw } from "../lib/api";
+import { useState, useRef, useCallback, useEffect, type CSSProperties } from "react";
+import { apiFetchRaw, apiPost, apiGet, apiPut, apiDelete } from "../lib/api";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,6 +11,15 @@ import {
   RotateCcw,
   Sparkles,
   X,
+  Save,
+  Play,
+  Pause,
+  CheckCircle,
+  Circle,
+  CalendarDays,
+  Mail,
+  Trash2,
+  AlertCircle,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -24,6 +33,29 @@ interface PlanForm {
 }
 
 type PlanState = "idle" | "streaming" | "done" | "error";
+
+interface ScheduleDay {
+  date: string;
+  week: number;
+  day: string;
+  focus: string;
+  resource: string;
+  completed: boolean;
+}
+
+interface SavedPlan {
+  _id: string;
+  skillToLearn: string;
+  techStack: string[];
+  weeks: number;
+  dailyHours: number;
+  currentLevel: string;
+  markdownContent: string;
+  schedule: ScheduleDay[];
+  status: 'saved' | 'active' | 'paused' | 'completed';
+  startedAt: string | null;
+  createdAt: string;
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const LEVEL_OPTIONS = [
@@ -109,6 +141,119 @@ export function StudyPlanPage() {
   const [error, setError] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const planRef = useRef<HTMLDivElement>(null);
+
+  // ── Saved plan state ─────────────────────────────────────────────────────
+  const [savedPlan, setSavedPlan] = useState<SavedPlan | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [loadingSaved, setLoadingSaved] = useState(true);
+  const [toast, setToast] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'generate' | 'saved'>('generate');
+
+  // ── Load saved plan on mount ─────────────────────────────────────────────
+  useEffect(() => {
+    loadSavedPlan();
+  }, []);
+
+  async function loadSavedPlan() {
+    setLoadingSaved(true);
+    try {
+      const res = await apiGet<SavedPlan | null>('/api/study-plan/active');
+      if (res.success && res.data) {
+        setSavedPlan(res.data);
+        if (res.data.status === 'active' || res.data.status === 'paused') {
+          setViewMode('saved');
+        }
+      }
+    } catch { /* ignore */ }
+    setLoadingSaved(false);
+  }
+
+  function showToast(msg: string) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  // ── Save plan handler ────────────────────────────────────────────────────
+  async function handleSave() {
+    if (!planContent || saving) return;
+    setSaving(true);
+    try {
+      const res = await apiPost<SavedPlan>('/api/study-plan/save', {
+        markdownContent: planContent,
+        skillToLearn: form.skillToLearn.trim(),
+        techStack: form.techStack,
+        weeks: form.weeks,
+        dailyHours: form.dailyHours,
+        currentLevel: form.currentLevel,
+      });
+      if (res.success) {
+        setSavedPlan(res.data);
+        showToast('Plan saved! You can now start the schedule.');
+      }
+    } catch {
+      showToast('Failed to save plan.');
+    }
+    setSaving(false);
+  }
+
+  // ── Start / Stop schedule ────────────────────────────────────────────────
+  async function handleStartSchedule() {
+    setScheduling(true);
+    try {
+      const res = await apiPost<SavedPlan>('/api/study-plan/start', {});
+      if (res.success) {
+        setSavedPlan(res.data);
+        setViewMode('saved');
+        showToast('Schedule activated! Daily emails start tomorrow at 8 AM.');
+      }
+    } catch {
+      showToast('Failed to start schedule.');
+    }
+    setScheduling(false);
+  }
+
+  async function handleStopSchedule() {
+    setScheduling(true);
+    try {
+      const res = await apiPost<SavedPlan>('/api/study-plan/stop', {});
+      if (res.success) {
+        setSavedPlan(res.data);
+        showToast('Schedule paused. No more daily emails.');
+      }
+    } catch {
+      showToast('Failed to pause schedule.');
+    }
+    setScheduling(false);
+  }
+
+  // ── Toggle day completion ────────────────────────────────────────────────
+  async function handleToggleDay(index: number) {
+    try {
+      const res = await apiPut<{ index: number; completed: boolean; planStatus: string }>(
+        `/api/study-plan/toggle-day/${index}`, {}
+      );
+      if (res.success && savedPlan) {
+        const updated = { ...savedPlan };
+        updated.schedule = [...updated.schedule];
+        updated.schedule[index] = { ...updated.schedule[index], completed: res.data.completed };
+        updated.status = res.data.planStatus as SavedPlan['status'];
+        setSavedPlan(updated);
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── Delete plan ──────────────────────────────────────────────────────────
+  async function handleDeletePlan() {
+    try {
+      await apiDelete('/api/study-plan');
+      setSavedPlan(null);
+      setViewMode('generate');
+      showToast('Plan deleted.');
+    } catch {
+      showToast('Failed to delete plan.');
+    }
+  }
 
   // ── Tag management ──────────────────────────────────────────────────────────
   const addTag = useCallback(
@@ -230,6 +375,156 @@ export function StudyPlanPage() {
 
   const showPlan = planState === "streaming" || planState === "done";
 
+  // ── Saved plan schedule view ────────────────────────────────────────────
+  if (viewMode === 'saved' && savedPlan && savedPlan.schedule.length > 0) {
+    const completed = savedPlan.schedule.filter(d => d.completed).length;
+    const total = savedPlan.schedule.length;
+    const pct = Math.round((completed / total) * 100);
+    const weeks = [...new Set(savedPlan.schedule.map(d => d.week))].sort((a, b) => a - b);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    return (
+      <div style={STUDY_PLAN_THEME} className="w-full pb-16">
+        <div className="mx-auto max-w-[1180px] px-4 md:px-6 pt-8 space-y-5">
+
+          {/* Toast */}
+          <AnimatePresence>
+            {toast && (
+              <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+                className="rounded-2xl border border-[#66301a] bg-[var(--sp-accent-soft)] px-4 py-3 text-[13px] font-semibold text-[#ffb07f]">
+                {toast}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--sp-text-mute)]">Active Schedule</p>
+              <h1 className="mt-1 text-[28px] font-black tracking-tight text-[var(--sp-text)]">{savedPlan.skillToLearn}</h1>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span className={`rounded-full px-3 py-1 text-[12px] font-bold border ${
+                  savedPlan.status === 'active' ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400' :
+                  savedPlan.status === 'paused' ? 'border-amber-500/30 bg-amber-500/10 text-amber-400' :
+                  savedPlan.status === 'completed' ? 'border-violet-500/30 bg-violet-500/10 text-violet-400' :
+                  'border-[var(--sp-border)] bg-[var(--sp-surface-soft)] text-[var(--sp-text-mute)]'
+                }`}>
+                  {savedPlan.status === 'active' ? '● Active' : savedPlan.status === 'paused' ? '⏸ Paused' : savedPlan.status === 'completed' ? '✓ Completed' : 'Saved'}
+                </span>
+                <span className="rounded-full border border-[var(--sp-border)] bg-[var(--sp-surface-soft)] px-3 py-1 text-[12px] font-semibold text-[var(--sp-text-soft)]">
+                  {savedPlan.weeks}-week plan
+                </span>
+                {savedPlan.status === 'active' && (
+                  <span className="rounded-full border border-[#66301a] bg-[var(--sp-accent-soft)] px-3 py-1 text-[12px] font-semibold text-[#ffb07f] flex items-center gap-1">
+                    <Mail size={11} /> Emails at 8 AM
+                  </span>
+                )}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {savedPlan.status === 'active' ? (
+                <button onClick={handleStopSchedule} disabled={scheduling}
+                  className="inline-flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[12px] font-bold text-amber-400 hover:bg-amber-500/20 transition-all disabled:opacity-50">
+                  <Pause size={13} /> Pause Emails
+                </button>
+              ) : (savedPlan.status === 'saved' || savedPlan.status === 'paused') ? (
+                <button onClick={handleStartSchedule} disabled={scheduling}
+                  className="inline-flex items-center gap-2 rounded-xl bg-[var(--sp-accent)] px-4 py-2 text-[12px] font-bold text-white hover:bg-[#fb8a38] transition-all disabled:opacity-50">
+                  {scheduling ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+                  {savedPlan.status === 'paused' ? 'Resume Emails' : 'Start Schedule'}
+                </button>
+              ) : null}
+              <button onClick={() => setViewMode('generate')}
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--sp-border)] bg-[var(--sp-surface-soft)] px-3 py-2 text-[12px] font-bold text-[var(--sp-text-soft)] hover:text-[var(--sp-text)] transition-all">
+                <RotateCcw size={13} /> New Plan
+              </button>
+              <button onClick={handleDeletePlan}
+                className="inline-flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-3 py-2 text-[12px] font-bold text-red-400 hover:bg-red-500/15 transition-all">
+                <Trash2 size={13} /> Delete
+              </button>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="rounded-[22px] border border-[var(--sp-border)] bg-[var(--sp-surface)] p-5 shadow-[var(--sp-shadow)]">
+            <div className="flex items-end justify-between mb-2">
+              <span className="text-[12px] font-bold uppercase tracking-wide text-[var(--sp-text-soft)]">Overall Progress</span>
+              <span className="text-[22px] font-black text-[var(--sp-accent)]">{pct}%</span>
+            </div>
+            <div className="h-3 rounded-full bg-[var(--sp-surface-soft)] overflow-hidden border border-[var(--sp-border)]">
+              <div className="h-full rounded-full bg-gradient-to-r from-[var(--sp-accent)] to-[#fb923c] transition-all duration-500" style={{ width: `${Math.max(pct, 1)}%` }} />
+            </div>
+            <p className="mt-2 text-[12px] text-[var(--sp-text-mute)]">{completed} of {total} days completed</p>
+          </div>
+
+          {/* Schedule by week */}
+          {weeks.map(weekNum => {
+            const weekDays = savedPlan.schedule
+              .map((d, i) => ({ ...d, _index: i }))
+              .filter(d => d.week === weekNum);
+            const weekDone = weekDays.filter(d => d.completed).length;
+
+            return (
+              <div key={weekNum} className="rounded-[22px] border border-[var(--sp-border)] bg-[var(--sp-surface)] p-5 shadow-[var(--sp-shadow)]">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-[16px] font-black text-[var(--sp-text)] flex items-center gap-2">
+                    <CalendarDays size={16} className="text-[var(--sp-accent)]" />
+                    Week {weekNum}
+                  </h3>
+                  <span className="text-[12px] font-bold text-[var(--sp-text-mute)]">{weekDone}/{weekDays.length} done</span>
+                </div>
+                <div className="space-y-2">
+                  {weekDays.map(day => {
+                    const dayDate = new Date(day.date); dayDate.setHours(0, 0, 0, 0);
+                    const isToday = dayDate.getTime() === today.getTime();
+                    const isPast = dayDate < today;
+                    return (
+                      <button key={day._index} onClick={() => handleToggleDay(day._index)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
+                          day.completed
+                            ? 'border-emerald-500/20 bg-emerald-500/5'
+                            : isToday
+                            ? 'border-[var(--sp-accent)]/40 bg-[var(--sp-accent-soft)]'
+                            : 'border-[var(--sp-border)] bg-[var(--sp-surface-soft)] hover:border-[var(--sp-accent)]/30'
+                        }`}>
+                        {day.completed
+                          ? <CheckCircle size={18} className="text-emerald-400 flex-shrink-0" />
+                          : <Circle size={18} className="text-[var(--sp-text-mute)] flex-shrink-0" />
+                        }
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-[12px] font-bold text-[var(--sp-text-mute)] uppercase w-8">{day.day}</span>
+                            <span className={`text-[13px] font-semibold truncate ${day.completed ? 'line-through text-[var(--sp-text-mute)]' : 'text-[var(--sp-text)]'}`}>
+                              {day.focus}
+                            </span>
+                          </div>
+                          {day.resource && day.resource !== '-' && (
+                            <p className="text-[11px] text-[var(--sp-text-mute)] truncate mt-0.5">{day.resource}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isToday && !day.completed && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-[var(--sp-accent)] text-white">Today</span>
+                          )}
+                          {isPast && !day.completed && !isToday && (
+                            <AlertCircle size={14} className="text-amber-400" />
+                          )}
+                          <span className="text-[10px] text-[var(--sp-text-mute)]">
+                            {new Date(day.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={STUDY_PLAN_THEME} className="w-full  pb-16">
       <div className="mx-auto max-w-[1180px] px-4 md:px-6">
@@ -256,6 +551,38 @@ export function StudyPlanPage() {
             />
           </article>
         </motion.section>
+
+        {/* Toast */}
+        <AnimatePresence>
+          {toast && (
+            <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+              className="rounded-2xl border border-[#66301a] bg-[var(--sp-accent-soft)] px-4 py-3 text-[13px] font-semibold text-[#ffb07f]">
+              {toast}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Saved plan banner */}
+        {savedPlan && (savedPlan.status === 'active' || savedPlan.status === 'paused') && !showPlan && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            className="rounded-[22px] border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <CalendarDays size={18} className="text-emerald-400" />
+              <div>
+                <p className="text-[14px] font-bold text-[var(--sp-text)]">
+                  You have an {savedPlan.status} schedule: <span className="text-emerald-400">{savedPlan.skillToLearn}</span>
+                </p>
+                <p className="text-[12px] text-[var(--sp-text-mute)]">
+                  {savedPlan.schedule.filter(d => d.completed).length}/{savedPlan.schedule.length} days completed
+                </p>
+              </div>
+            </div>
+            <button onClick={() => setViewMode('saved')}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-[12px] font-bold text-white hover:bg-emerald-400 transition-all">
+              <CalendarDays size={13} /> View Schedule
+            </button>
+          </motion.div>
+        )}
 
         <AnimatePresence mode="wait">
           {!showPlan && (
@@ -608,7 +935,7 @@ export function StudyPlanPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     {planState === "streaming" && (
                       <span className="inline-flex items-center gap-2 rounded-full border border-[#66301a] bg-[var(--sp-accent-soft)] px-3 py-1.5 text-[12px] font-bold text-[#ffb07f]">
                         <Loader2 size={13} className="animate-spin" />
@@ -616,13 +943,41 @@ export function StudyPlanPage() {
                       </span>
                     )}
                     {planState === "done" && (
-                      <button
-                        onClick={handleDownload}
-                        className="inline-flex items-center gap-2 rounded-xl border border-[var(--sp-border)] bg-[var(--sp-surface-soft)] px-3 py-2 text-[12px] font-bold text-[var(--sp-text-soft)] transition-all hover:border-[#2c3145] hover:text-[var(--sp-text)]"
-                      >
-                        <Download size={13} strokeWidth={2.5} />
-                        Download .md
-                      </button>
+                      <>
+                        <button
+                          onClick={handleSave}
+                          disabled={saving}
+                          className="inline-flex items-center gap-2 rounded-xl bg-[var(--sp-accent)] px-4 py-2 text-[12px] font-bold text-white hover:bg-[#fb8a38] transition-all disabled:opacity-50"
+                        >
+                          {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} strokeWidth={2.5} />}
+                          {savedPlan ? 'Saved ✓' : 'Save Plan'}
+                        </button>
+                        {savedPlan && (savedPlan.status === 'saved' || savedPlan.status === 'paused') && (
+                          <button
+                            onClick={handleStartSchedule}
+                            disabled={scheduling}
+                            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-[12px] font-bold text-white hover:bg-emerald-400 transition-all disabled:opacity-50"
+                          >
+                            {scheduling ? <Loader2 size={13} className="animate-spin" /> : <Play size={13} />}
+                            Start Schedule
+                          </button>
+                        )}
+                        {savedPlan && savedPlan.status === 'active' && (
+                          <button
+                            onClick={() => setViewMode('saved')}
+                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-[12px] font-bold text-emerald-400 hover:bg-emerald-500/20 transition-all"
+                          >
+                            <CalendarDays size={13} /> View Schedule
+                          </button>
+                        )}
+                        <button
+                          onClick={handleDownload}
+                          className="inline-flex items-center gap-2 rounded-xl border border-[var(--sp-border)] bg-[var(--sp-surface-soft)] px-3 py-2 text-[12px] font-bold text-[var(--sp-text-soft)] transition-all hover:border-[#2c3145] hover:text-[var(--sp-text)]"
+                        >
+                          <Download size={13} strokeWidth={2.5} />
+                          Download .md
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={resetForm}

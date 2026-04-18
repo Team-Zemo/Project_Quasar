@@ -59,6 +59,10 @@ export async function apiPut<T = unknown>(url: string, body: unknown): Promise<{
   return apiFetch<T>(url, { method: 'PUT', body: JSON.stringify(body) });
 }
 
+export async function apiDelete<T = unknown>(url: string): Promise<{ success: boolean; message: string; data: T }> {
+  return apiFetch<T>(url, { method: 'DELETE' });
+}
+
 export function downloadFile(url: string, filename: string): void {
   const link = document.createElement('a');
   link.href = url;

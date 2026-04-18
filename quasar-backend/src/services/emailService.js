@@ -949,6 +949,104 @@ async function sendPipelineNotification(to, candidateName, jobTitle, company, ou
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// Email #7 — Study Plan Daily Reminder
+// Triggered: studyPlanCron.js daily at 8 AM IST
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Send a daily study plan reminder email.
+ * @param {string}  to          — recipient email
+ * @param {string}  name        — user name
+ * @param {string}  skillName   — what they're learning
+ * @param {object}  dayEntry    — { day, focus, resource }
+ * @param {object}  progress    — { week, dayIndex, totalDays, completedDays, progressPct }
+ */
+async function sendStudyPlanReminder(to, name, skillName, dayEntry, progress) {
+  const firstName = (name || 'there').split(' ')[0];
+  const dayLabel = dayEntry.day || 'Today';
+  const focusTopic = dayEntry.focus || 'Continue your studies';
+  const resource = dayEntry.resource && dayEntry.resource !== '-'
+    ? dayEntry.resource
+    : null;
+
+  const progressBarWidth = Math.max(progress.progressPct, 3); // min 3% for visibility
+
+  const body = `
+    <h1 class="email-heading">📖 Today's Study Focus</h1>
+    <p class="email-subheading">Week ${progress.week} · ${dayLabel} — ${skillName}</p>
+
+    <p class="email-p">Hey <strong>${firstName}</strong>, here's what to focus on today:</p>
+
+    <div class="info-box" style="border-left:4px solid ${BRAND.accent};">
+      <p class="info-box-label">Today's Topic</p>
+      <p class="info-box-value" style="font-size:18px;">${focusTopic}</p>
+    </div>
+
+    ${resource ? `
+    <div class="info-box">
+      <p class="info-box-label">Recommended Resource</p>
+      <p class="info-box-value">
+        ${resource.startsWith('http')
+          ? `<a href="${resource}" class="text-link" style="font-size:15px;">${resource}</a>`
+          : resource
+        }
+      </p>
+    </div>
+    ` : ''}
+
+    <!-- Progress bar -->
+    <div style="margin:24px 0;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:12px;font-weight:700;color:${BRAND.textSecondary};">PROGRESS</span>
+        <span style="font-size:12px;font-weight:700;color:${BRAND.accent};">${progress.progressPct}%</span>
+      </div>
+      <div style="height:8px;background:${BRAND.bg};border:1px solid ${BRAND.surfaceBorder};border-radius:99px;overflow:hidden;">
+        <div style="width:${progressBarWidth}%;height:100%;background:linear-gradient(90deg,${BRAND.accent},${BRAND.accentAlt});border-radius:99px;"></div>
+      </div>
+      <p style="font-size:12px;color:${BRAND.textMuted};margin-top:6px;">
+        Day ${progress.dayIndex} of ${progress.totalDays} · ${progress.completedDays} days completed
+      </p>
+    </div>
+
+    <div class="btn-wrap">
+      <a href="${BRAND.appUrl}/study-plan" class="btn-cta">Open Study Plan &rarr;</a>
+    </div>
+
+    <hr class="divider" />
+
+    <div class="alert-box alert-info">
+      <strong>💡 Tip:</strong> Consistency beats intensity. Even 30 minutes of focused study today
+      will keep your momentum strong. Mark this day as done when you're finished!
+    </div>
+  `;
+
+  const html = buildEmail({
+    preheader: `Study reminder: ${focusTopic} — Week ${progress.week}, ${dayLabel}`,
+    accentColor: BRAND.accent,
+    body,
+  });
+
+  const text = buildPlainText([
+    `📖 Today's Study Focus — ${skillName}`,
+    `Week ${progress.week}, ${dayLabel}`,
+    '',
+    `Topic: ${focusTopic}`,
+    resource ? `Resource: ${resource}` : '',
+    '',
+    `Progress: Day ${progress.dayIndex}/${progress.totalDays} (${progress.progressPct}%)`,
+    '',
+    `Open your plan: ${BRAND.appUrl}/study-plan`,
+  ]);
+
+  return send({
+    to,
+    subject: `📖 Day ${progress.dayIndex}: ${focusTopic} — ${skillName}`,
+    html,
+    text,
+  });
+}
+
 // ── Exports ─────────────────────────────────────────────────────────
 
 module.exports = {
@@ -958,4 +1056,5 @@ module.exports = {
   sendApplicationSubmitted,
   sendScreeningResult,
   sendPipelineNotification,
+  sendStudyPlanReminder,
 };
