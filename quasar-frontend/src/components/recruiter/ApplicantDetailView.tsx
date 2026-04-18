@@ -5,7 +5,7 @@ import {
   CheckCircle, XCircle, Award, FileText, MessageSquare,
   Clock, Star, AlertTriangle, ChevronDown, ChevronUp,
   ThumbsUp, ThumbsDown, Shield, Target, Brain, Eye,
-  Download, Loader2,
+  Download, Loader2, Video, Calendar, ExternalLink,
 } from 'lucide-react';
 import { apiGet, apiPost } from '../../lib/api';
 import type { ApplicationStatus } from '../../types/recruitment';
@@ -60,6 +60,14 @@ interface HrResult {
   completedAt: string | null;
 }
 
+interface RecruiterInteractionResult {
+  meetLink: string;
+  scheduledAt: string | null;
+  passed: boolean | null;
+  notes: string;
+  completedAt: string | null;
+}
+
 interface ApplicationDetail {
   _id: string;
   candidateId: CandidateInfo;
@@ -73,6 +81,7 @@ interface ApplicationDetail {
   mcqResult: McqResult | null;
   techResults: TechResult[];
   hrResult: HrResult | null;
+  recruiterInteractionResult: RecruiterInteractionResult | null;
   proctoringViolations?: ProctoringViolation[];
   proctoringFlags?: ProctoringFlags;
 }
@@ -117,6 +126,10 @@ const statusConfig: Partial<Record<ApplicationStatus, { color: string; bg: strin
   hr_in_progress: { color: 'var(--c-accent)', bg: 'var(--c-accent-dim)', label: 'HR In Progress' },
   hr_passed: { color: 'var(--c-success)', bg: 'var(--c-success-dim)', label: 'HR Passed' },
   hr_failed: { color: 'var(--c-error)', bg: 'var(--c-error-dim)', label: 'HR Failed' },
+  ri_pending: { color: 'var(--c-purple)', bg: 'var(--c-purple-dim)', label: 'RI Pending' },
+  ri_scheduled: { color: 'var(--c-accent)', bg: 'var(--c-accent-dim)', label: 'RI Scheduled' },
+  ri_passed: { color: 'var(--c-success)', bg: 'var(--c-success-dim)', label: 'RI Passed' },
+  ri_failed: { color: 'var(--c-error)', bg: 'var(--c-error-dim)', label: 'RI Failed' },
   selected: { color: 'var(--c-success)', bg: 'var(--c-success-dim)', label: 'Selected' },
   rejected: { color: 'var(--c-error)', bg: 'var(--c-error-dim)', label: 'Rejected' },
 };
@@ -230,6 +243,42 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
   const [resumeLoading, setResumeLoading] = useState(false);
   const [resumeFilename, setResumeFilename] = useState<string>('resume.pdf');
   const [viewingFullProfile, setViewingFullProfile] = useState(false);
+
+  // Recruiter interaction state
+  const [riMeetLink, setRiMeetLink] = useState('');
+  const [riScheduledAt, setRiScheduledAt] = useState('');
+  const [riNotes, setRiNotes] = useState('');
+  const [riLoading, setRiLoading] = useState(false);
+
+  const handleScheduleInteraction = async () => {
+    if (!riMeetLink || !riScheduledAt || riLoading) return;
+    setRiLoading(true);
+    try {
+      const res = await apiPost<{ status: string; recruiterInteractionResult: RecruiterInteractionResult }>(
+        `/api/recruiter/jobs/${jobId}/applicants/${applicationId}/schedule-interaction`,
+        { meetLink: riMeetLink, scheduledAt: riScheduledAt }
+      );
+      if (res.success && app) {
+        setApp({ ...app, status: res.data.status as ApplicationStatus, recruiterInteractionResult: res.data.recruiterInteractionResult });
+      }
+    } catch { /* ignore */ }
+    setRiLoading(false);
+  };
+
+  const handleCompleteInteraction = async (passed: boolean) => {
+    if (riLoading) return;
+    setRiLoading(true);
+    try {
+      const res = await apiPost<{ status: string }>(
+        `/api/recruiter/jobs/${jobId}/applicants/${applicationId}/complete-interaction`,
+        { passed, notes: riNotes }
+      );
+      if (res.success && app) {
+        setApp({ ...app, status: res.data.status as ApplicationStatus });
+      }
+    } catch { /* ignore */ }
+    setRiLoading(false);
+  };
 
   useEffect(() => {
     apiGet<{ application: ApplicationDetail }>(`/api/recruiter/jobs/${jobId}/applicants/${applicationId}`)
@@ -549,6 +598,142 @@ export function ApplicantDetailView({ jobId, applicationId, onBack }: Props) {
               <h5 className="text-[11px] font-bold uppercase text-[var(--c-text-mute)] flex items-center gap-1"><MessageSquare size={12} /> Interview Transcript</h5>
               <TranscriptViewer transcript={app.hrResult.transcript} />
             </div>
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {/* Recruiter Interaction Round */}
+      {(app.status === 'ri_pending' || app.status === 'ri_scheduled' || app.status === 'ri_passed' || app.status === 'ri_failed') && (
+        <CollapsibleSection
+          title="Recruiter Interaction"
+          icon={Video}
+          defaultOpen={true}
+          badge={
+            app.status === 'ri_pending' ? { text: 'Schedule Required', color: 'var(--c-purple)', bg: 'var(--c-purple-dim)' } :
+            app.status === 'ri_scheduled' ? { text: 'Scheduled', color: 'var(--c-accent)', bg: 'var(--c-accent-dim)' } :
+            app.status === 'ri_passed' ? { text: 'Passed', color: 'var(--c-success)', bg: 'var(--c-success-dim)' } :
+            { text: 'Failed', color: 'var(--c-error)', bg: 'var(--c-error-dim)' }
+          }
+        >
+          <div className="pt-4 space-y-4">
+            {/* Schedule meeting form */}
+            {app.status === 'ri_pending' && (
+              <div className="space-y-3">
+                <p className="text-[12px] text-[var(--c-text-dim)]">
+                  This candidate has passed all previous rounds. Schedule a personal meeting to complete the hiring process.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold uppercase text-[var(--c-text-mute)] mb-1 block">Meeting Link</label>
+                    <input
+                      type="url"
+                      value={riMeetLink}
+                      onChange={e => setRiMeetLink(e.target.value)}
+                      placeholder="https://meet.google.com/... or Zoom/Teams link"
+                      className="w-full px-3 py-2 rounded-xl text-[13px] bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] placeholder:text-[var(--c-text-mute)] focus:border-[var(--c-accent)] outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-bold uppercase text-[var(--c-text-mute)] mb-1 block">Date & Time</label>
+                    <input
+                      type="datetime-local"
+                      value={riScheduledAt}
+                      onChange={e => setRiScheduledAt(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl text-[13px] bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] focus:border-[var(--c-accent)] outline-none"
+                    />
+                  </div>
+                </div>
+                <button
+                  onClick={handleScheduleInteraction}
+                  disabled={!riMeetLink || !riScheduledAt || riLoading}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-[12px] font-bold bg-gradient-to-r from-[var(--c-accent)] to-[#fb923c] text-white hover:brightness-110 transition-all disabled:opacity-50"
+                >
+                  {riLoading ? <Loader2 size={14} className="animate-spin" /> : <Calendar size={14} />}
+                  Schedule & Notify Candidate
+                </button>
+              </div>
+            )}
+
+            {/* Meeting scheduled — show details + pass/fail */}
+            {app.status === 'ri_scheduled' && app.recruiterInteractionResult && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-[var(--c-bg)] rounded-xl p-3 border border-[var(--c-border)]">
+                    <p className="text-[10px] font-bold uppercase text-[var(--c-text-mute)] mb-1">Scheduled At</p>
+                    <p className="text-[13px] font-semibold text-[var(--c-text)] flex items-center gap-1.5">
+                      <Calendar size={13} className="text-[var(--c-accent)]" />
+                      {new Date(app.recruiterInteractionResult.scheduledAt!).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                  <div className="bg-[var(--c-bg)] rounded-xl p-3 border border-[var(--c-border)]">
+                    <p className="text-[10px] font-bold uppercase text-[var(--c-text-mute)] mb-1">Meeting Link</p>
+                    <a href={app.recruiterInteractionResult.meetLink} target="_blank" rel="noopener noreferrer"
+                      className="text-[13px] font-semibold text-[var(--c-accent)] hover:underline flex items-center gap-1.5 truncate">
+                      <ExternalLink size={13} />
+                      {app.recruiterInteractionResult.meetLink}
+                    </a>
+                  </div>
+                </div>
+
+                <p className="text-[12px] text-[var(--c-text-dim)]">
+                  After the meeting, mark the candidate as passed or failed below.
+                </p>
+
+                <div>
+                  <label className="text-[11px] font-bold uppercase text-[var(--c-text-mute)] mb-1 block">Notes (optional)</label>
+                  <textarea
+                    value={riNotes}
+                    onChange={e => setRiNotes(e.target.value)}
+                    placeholder="Meeting feedback, observations..."
+                    rows={2}
+                    className="w-full px-3 py-2 rounded-xl text-[13px] bg-[var(--c-bg)] border border-[var(--c-border)] text-[var(--c-text)] placeholder:text-[var(--c-text-mute)] focus:border-[var(--c-accent)] outline-none resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleCompleteInteraction(false)}
+                    disabled={riLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold border border-[var(--c-error)]/30 text-[var(--c-error)] hover:bg-[var(--c-error-dim)] transition-all disabled:opacity-50"
+                  >
+                    {riLoading ? <Loader2 size={14} className="animate-spin" /> : <ThumbsDown size={14} />} Fail
+                  </button>
+                  <button
+                    onClick={() => handleCompleteInteraction(true)}
+                    disabled={riLoading}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl text-[12px] font-bold bg-gradient-to-r from-[var(--c-success)] to-[#34d399] text-white hover:brightness-110 transition-all disabled:opacity-50"
+                  >
+                    {riLoading ? <Loader2 size={14} className="animate-spin" /> : <ThumbsUp size={14} />} Pass & Select
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Completed */}
+            {(app.status === 'ri_passed' || app.status === 'ri_failed') && app.recruiterInteractionResult && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-[var(--c-bg)] rounded-xl p-3 border border-[var(--c-border)]">
+                    <p className="text-[10px] font-bold uppercase text-[var(--c-text-mute)] mb-1">Meeting Date</p>
+                    <p className="text-[13px] text-[var(--c-text)]">
+                      {app.recruiterInteractionResult.scheduledAt ? new Date(app.recruiterInteractionResult.scheduledAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' }) : '—'}
+                    </p>
+                  </div>
+                  <div className="bg-[var(--c-bg)] rounded-xl p-3 border border-[var(--c-border)]">
+                    <p className="text-[10px] font-bold uppercase text-[var(--c-text-mute)] mb-1">Result</p>
+                    <p className={`text-[13px] font-bold ${app.recruiterInteractionResult.passed ? 'text-[var(--c-success)]' : 'text-[var(--c-error)]'}`}>
+                      {app.recruiterInteractionResult.passed ? '✓ Passed' : '✗ Failed'}
+                    </p>
+                  </div>
+                </div>
+                {app.recruiterInteractionResult.notes && (
+                  <div className="bg-[var(--c-bg)] rounded-xl p-3 border border-[var(--c-border)]">
+                    <p className="text-[10px] font-bold uppercase text-[var(--c-text-mute)] mb-1">Notes</p>
+                    <p className="text-[12px] text-[var(--c-text-dim)]">{app.recruiterInteractionResult.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </CollapsibleSection>
       )}

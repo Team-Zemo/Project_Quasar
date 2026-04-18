@@ -45,11 +45,16 @@ const hrRoundConfigSchema = new mongoose.Schema({
   window: { type: timeWindowSchema, required: true },
 }, { _id: false });
 
+const recruiterInteractionRoundConfigSchema = new mongoose.Schema({
+  enabled: { type: Boolean, default: false },
+}, { _id: false });
+
 const pipelineConfigSchema = new mongoose.Schema({
   mcqRound: { type: mcqRoundConfigSchema, default: null },
   dsaRound: { type: dsaRoundConfigSchema, default: null },
   techInterviewRounds: { type: [techRoundConfigSchema], default: [] },
   hrRound: { type: hrRoundConfigSchema, default: null },
+  recruiterInteractionRound: { type: recruiterInteractionRoundConfigSchema, default: null },
 }, { _id: false });
 
 const salaryRangeSchema = new mongoose.Schema({

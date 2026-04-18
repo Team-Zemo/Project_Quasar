@@ -76,6 +76,9 @@ export function JobPostingForm({ onComplete, onCancel }: Props) {
   const [hrWindowStart, setHrWindowStart] = useState("");
   const [hrWindowEnd, setHrWindowEnd] = useState("");
 
+  // Recruiter Interaction Round
+  const [riEnabled, setRiEnabled] = useState(false);
+
   const addTechRound = () => {
     setTechRounds((prev) => [
       ...prev,
@@ -211,6 +214,7 @@ Requirements:
           window: { start: hrWindowStart, end: hrWindowEnd },
         }
       : null,
+    recruiterInteractionRound: riEnabled ? { enabled: true } : null,
   });
 
   const handleSubmit = async () => {
@@ -787,6 +791,36 @@ Requirements:
               )}
             </div>
 
+            {/* ── Recruiter Interaction Round ── */}
+            <div className="bg-[var(--c-surface)] border border-[var(--c-border)] rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-[var(--c-accent-dim)] text-[var(--c-accent)] flex items-center justify-center text-[12px] font-black">
+                    {(mcqEnabled ? 1 : 0) + (dsaEnabled ? 1 : 0) + (techEnabled ? techRounds.length : 0) + (hrEnabled ? 1 : 0) + 1}
+                  </div>
+                  <h3 className="text-[14px] font-bold text-[var(--c-text)]">
+                    Recruiter Interaction
+                  </h3>
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={riEnabled}
+                    onChange={(e) => setRiEnabled(e.target.checked)}
+                    className="accent-[var(--c-accent)]"
+                  />
+                  <span className="text-[12px] text-[var(--c-text-dim)]">
+                    Enable
+                  </span>
+                </label>
+              </div>
+              {riEnabled && (
+                <p className="text-[12px] text-[var(--c-text-mute)] ml-10">
+                  A manual round where you schedule a personal meeting (Google Meet / Zoom / Teams) with the candidate and pass or fail them.
+                </p>
+              )}
+            </div>
+
             {error && step === "pipeline" && (
               <p className="text-[var(--c-error)] text-[13px] font-medium mb-4">
                 {error}
@@ -804,7 +838,7 @@ Requirements:
               </button>
               <button
                 onClick={() => {
-                  if (!mcqEnabled && !dsaEnabled && !techEnabled && !hrEnabled) {
+                  if (!mcqEnabled && !dsaEnabled && !techEnabled && !hrEnabled && !riEnabled) {
                     setError("Please enable at least one interview round.");
                     return;
                   }
@@ -893,6 +927,14 @@ Requirements:
                       <span className="text-[var(--c-text-mute)]">→</span>
                       <span className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase bg-[var(--c-surface-3)] text-[var(--c-text-dim)]">
                         HR ({hrDuration}min)
+                      </span>
+                    </>
+                  )}
+                  {riEnabled && (
+                    <>
+                      <span className="text-[var(--c-text-mute)]">→</span>
+                      <span className="px-3 py-1 rounded-lg text-[11px] font-bold uppercase bg-[var(--c-accent-dim)] text-[var(--c-accent)]">
+                        Recruiter Interaction
                       </span>
                     </>
                   )}

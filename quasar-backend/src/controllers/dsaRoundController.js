@@ -419,6 +419,9 @@ async function completeDsaTest(req, res) {
       } else if (posting?.pipeline?.hrRound?.enabled) {
         application.status = 'hr_pending';
         application.currentRound = 'hr';
+      } else if (posting?.pipeline?.recruiterInteractionRound?.enabled) {
+        application.status = 'ri_pending';
+        application.currentRound = 'recruiter_interaction';
       } else {
         application.status = 'selected';
         application.currentRound = 'completed';

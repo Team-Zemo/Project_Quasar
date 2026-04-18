@@ -272,6 +272,9 @@ async function completeTechRound(req, res) {
         if (posting?.pipeline?.hrRound?.enabled) {
           application.status = 'hr_pending';
           application.currentRound = 'hr';
+        } else if (posting?.pipeline?.recruiterInteractionRound?.enabled) {
+          application.status = 'ri_pending';
+          application.currentRound = 'recruiter_interaction';
         } else {
           application.status = 'selected';
           application.currentRound = 'completed';
@@ -481,9 +484,15 @@ async function completeHrRound(req, res) {
     application.hrResult.completedAt = new Date();
 
     if (passed) {
-      application.status = 'selected';
-      application.currentRound = 'completed';
-      application.totalScore = calculateTotalScore(application, posting);
+      // Check if recruiter interaction round is enabled
+      if (posting?.pipeline?.recruiterInteractionRound?.enabled) {
+        application.status = 'ri_pending';
+        application.currentRound = 'recruiter_interaction';
+      } else {
+        application.status = 'selected';
+        application.currentRound = 'completed';
+        application.totalScore = calculateTotalScore(application, posting);
+      }
     } else {
       application.status = 'hr_failed';
     }

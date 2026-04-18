@@ -87,6 +87,16 @@ const screeningResultSchema = new mongoose.Schema({
   evaluatedAt: { type: Date, default: null },
 }, { _id: false });
 
+// ── Recruiter interaction result sub-schema ────────────────────────────
+
+const recruiterInteractionResultSchema = new mongoose.Schema({
+  meetLink:      { type: String, default: '' },
+  scheduledAt:   { type: Date, default: null },
+  passed:        { type: Boolean, default: null },
+  notes:         { type: String, default: '' },
+  completedAt:   { type: Date, default: null },
+}, { _id: false });
+
 // ── Proctoring violation sub-schema ───────────────────────────────────
 
 const proctoringViolationSchema = new mongoose.Schema({
@@ -152,6 +162,10 @@ const applicationSchema = new mongoose.Schema({
       'hr_in_progress',
       'hr_passed',
       'hr_failed',
+      'ri_pending',        // Awaiting recruiter interaction scheduling
+      'ri_scheduled',      // Meeting scheduled, waiting for it to happen
+      'ri_passed',
+      'ri_failed',
       'selected',          // Passed all rounds
       'rejected',          // Manually rejected by recruiter
       'withdrawn',         // Candidate withdrew
@@ -162,7 +176,7 @@ const applicationSchema = new mongoose.Schema({
 
   currentRound: {
     type: String,
-    enum: ['screening', 'mcq', 'dsa', 'tech', 'hr', 'completed'],
+    enum: ['screening', 'mcq', 'dsa', 'tech', 'hr', 'recruiter_interaction', 'completed'],
     default: 'screening',
   },
   currentTechRoundNumber: { type: Number, default: 1 },
@@ -173,6 +187,7 @@ const applicationSchema = new mongoose.Schema({
   dsaResult: { type: dsaResultSchema, default: null },
   techResults: { type: [techResultSchema], default: [] },
   hrResult: { type: hrResultSchema, default: null },
+  recruiterInteractionResult: { type: recruiterInteractionResultSchema, default: null },
 
   // Proctoring
   proctoringViolations: { type: [proctoringViolationSchema], default: [] },

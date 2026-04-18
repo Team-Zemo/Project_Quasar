@@ -15,6 +15,8 @@ import {
   AlertCircle,
   Play,
   Code2,
+  Video,
+  ExternalLink,
 } from "lucide-react";
 import { apiGet } from "../../lib/api";
 import type {
@@ -50,7 +52,7 @@ interface Props {
   refreshKey?: number | null;
 }
 
-type StageKey = "screening" | "mcq" | "dsa" | "tech" | "hr" | "result";
+type StageKey = "screening" | "mcq" | "dsa" | "tech" | "hr" | "ri" | "result";
 
 interface Stage {
   key: StageKey;
@@ -64,6 +66,7 @@ const STAGES: Stage[] = [
   { key: "dsa", label: "DSA Challenge", icon: Code2 },
   { key: "tech", label: "Tech Interview", icon: Mic },
   { key: "hr", label: "HR Interview", icon: Users },
+  { key: "ri", label: "Recruiter Interaction", icon: Video },
   { key: "result", label: "Final Result", icon: Trophy },
 ];
 
@@ -190,8 +193,35 @@ function getStageStatus(
         return "upcoming";
       if (s === "hr_pending" || s === "hr_in_progress") return "active";
       if (s === "hr_failed") return "failed";
-      if (s === "hr_passed" || s === "selected")
+      if (s === "hr_passed" || s === "ri_pending" || s === "ri_scheduled" || s === "ri_passed" || s === "ri_failed" || s === "selected")
         return app.hrResult ? "passed" : "skipped";
+      return "upcoming";
+    case "ri":
+      if (
+        [
+          "applied",
+          "screening",
+          "screening_failed",
+          "screening_passed",
+          "mcq_pending",
+          "mcq_in_progress",
+          "mcq_failed",
+          "dsa_pending",
+          "dsa_in_progress",
+          "dsa_failed",
+          "tech_pending",
+          "tech_in_progress",
+          "tech_failed",
+          "hr_pending",
+          "hr_in_progress",
+          "hr_failed",
+        ].includes(s)
+      )
+        return "upcoming";
+      if (s === "ri_pending" || s === "ri_scheduled") return "active";
+      if (s === "ri_failed") return "failed";
+      if (s === "ri_passed" || s === "selected")
+        return app.recruiterInteractionResult ? "passed" : "skipped";
       return "upcoming";
     case "result":
       if (s === "selected") return "passed";
@@ -203,6 +233,7 @@ function getStageStatus(
           "dsa_failed",
           "tech_failed",
           "hr_failed",
+          "ri_failed",
         ].includes(s)
       )
         return "failed";
@@ -322,6 +353,7 @@ export function PipelineTracker({
   const techStatusExists =
     app.status.includes("tech") || (app.techResults?.length || 0) > 0;
   const hrStatusExists = app.status.includes("hr") || app.hrResult != null;
+  const riStatusExists = app.status.includes("ri") || app.recruiterInteractionResult != null;
 
   const visibleStages = STAGES.filter((stage) => {
     if (stage.key === "mcq")
@@ -333,6 +365,7 @@ export function PipelineTracker({
         (pipeline.techInterviewRounds?.length || 0) > 0 || techStatusExists
       );
     if (stage.key === "hr") return pipeline.hrRound?.enabled || hrStatusExists;
+    if (stage.key === "ri") return pipeline.recruiterInteractionRound?.enabled || riStatusExists;
     return true;
   });
 
@@ -593,6 +626,48 @@ export function PipelineTracker({
                           {app.hrResult.score?.toFixed(1)}/10
                         </strong>
                       </p>
+                    </div>
+                  )}
+
+                  {stage.key === "ri" && (
+                    <div className="text-[12px] text-[var(--c-text-dim)] mt-2 space-y-1">
+                      {app.status === "ri_pending" && (
+                        <p className="text-[var(--c-text-mute)] italic">
+                          Waiting for the recruiter to schedule a meeting with you.
+                        </p>
+                      )}
+                      {app.status === "ri_scheduled" && app.recruiterInteractionResult && (
+                        <>
+                          <p>
+                            Meeting scheduled for{" "}
+                            <strong className="text-[var(--c-accent)]">
+                              {new Date(app.recruiterInteractionResult.scheduledAt!).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                            </strong>
+                          </p>
+                          <a
+                            href={app.recruiterInteractionResult.meetLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 mt-1 px-3 py-1.5 rounded-lg text-[12px] font-bold text-white bg-gradient-to-r from-[var(--c-accent)] to-[#fb923c] hover:brightness-110 transition-all"
+                          >
+                            <ExternalLink size={12} /> Join Meeting
+                          </a>
+                        </>
+                      )}
+                      {app.recruiterInteractionResult?.completedAt && (
+                        <p>
+                          Result:{" "}
+                          <strong
+                            style={{
+                              color: app.recruiterInteractionResult.passed
+                                ? "var(--c-success)"
+                                : "var(--c-error)",
+                            }}
+                          >
+                            {app.recruiterInteractionResult.passed ? "Passed ✓" : "Not selected"}
+                          </strong>
+                        </p>
+                      )}
                     </div>
                   )}
 

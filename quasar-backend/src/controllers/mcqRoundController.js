@@ -220,16 +220,20 @@ async function submitMcqTest(req, res) {
 
     // Eliminator logic: pass → next round, fail → rejected
     if (passed) {
+      const techInterviewRounds = posting?.pipeline?.techInterviewRounds || [];
       if (posting?.pipeline?.dsaRound?.enabled) {
         application.status = 'dsa_pending';
         application.currentRound = 'dsa';
-      } else if (techRounds.length > 0) {
+      } else if (techInterviewRounds.length > 0) {
         application.status = 'tech_pending';
         application.currentRound = 'tech';
         application.currentTechRoundNumber = 1;
       } else if (posting?.pipeline?.hrRound?.enabled) {
         application.status = 'hr_pending';
         application.currentRound = 'hr';
+      } else if (posting?.pipeline?.recruiterInteractionRound?.enabled) {
+        application.status = 'ri_pending';
+        application.currentRound = 'recruiter_interaction';
       } else {
         application.status = 'selected';
         application.currentRound = 'completed';

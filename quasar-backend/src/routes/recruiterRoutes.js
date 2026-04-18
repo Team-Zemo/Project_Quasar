@@ -42,6 +42,8 @@ router.get('/jobs/:id/applicants', dashboardController.getApplicants);
 router.get('/jobs/:id/applicants/:appId', dashboardController.getApplicantDetail);
 router.get('/jobs/:id/applicants/:appId/profile', dashboardController.getApplicantProfile);
 router.post('/jobs/:id/applicants/:appId/shortlist', dashboardController.shortlistCandidate);
+router.post('/jobs/:id/applicants/:appId/schedule-interaction', dashboardController.scheduleRecruiterInteraction);
+router.post('/jobs/:id/applicants/:appId/complete-interaction', dashboardController.completeRecruiterInteraction);
 router.get('/jobs/:id/applicants/:appId/resume', dashboardController.getApplicantResume);
 router.get('/jobs/:id/rankings', dashboardController.getRankings);
 router.get('/jobs/:id/export', dashboardController.exportApplicantsCSV);

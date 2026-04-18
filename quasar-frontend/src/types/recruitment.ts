@@ -54,6 +54,7 @@ export interface PipelineConfig {
   dsaRound?: DsaRoundConfig | null;
   techInterviewRounds?: TechRoundConfig[];
   hrRound?: HrRoundConfig | null;
+  recruiterInteractionRound?: { enabled: boolean } | null;
 }
 
 export interface SalaryRange {
@@ -119,6 +120,7 @@ export type ApplicationStatus =
   | 'dsa_pending' | 'dsa_in_progress' | 'dsa_passed' | 'dsa_failed'
   | 'tech_pending' | 'tech_in_progress' | 'tech_passed' | 'tech_failed'
   | 'hr_pending' | 'hr_in_progress' | 'hr_passed' | 'hr_failed'
+  | 'ri_pending' | 'ri_scheduled' | 'ri_passed' | 'ri_failed'
   | 'selected' | 'rejected' | 'withdrawn';
 
 export interface ScreeningResult {
@@ -164,6 +166,14 @@ export interface HrResult {
   passed: boolean | null;
   transcript: string;
   evaluation: Record<string, unknown> | null;
+  completedAt: string | null;
+}
+
+export interface RecruiterInteractionResult {
+  meetLink: string;
+  scheduledAt: string | null;
+  passed: boolean | null;
+  notes: string;
   completedAt: string | null;
 }
 
@@ -237,6 +247,7 @@ export interface Application {
   dsaResult: DsaResult | null;
   techResults: TechResult[];
   hrResult: HrResult | null;
+  recruiterInteractionResult: RecruiterInteractionResult | null;
   totalScore: number;
   rank: number | null;
   appliedAt: string;

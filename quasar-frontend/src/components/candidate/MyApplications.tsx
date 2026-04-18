@@ -131,6 +131,22 @@ const statusConfig: Partial<
     label: "HR Passed",
   },
   hr_failed: { icon: XCircle, color: "var(--c-error)", label: "HR Failed" },
+  ri_pending: {
+    icon: Clock,
+    color: "var(--c-purple)",
+    label: "Meeting Pending",
+  },
+  ri_scheduled: {
+    icon: AlertCircle,
+    color: "var(--c-accent)",
+    label: "Meeting Scheduled",
+  },
+  ri_passed: {
+    icon: CheckCircle,
+    color: "var(--c-success)",
+    label: "Meeting Passed",
+  },
+  ri_failed: { icon: XCircle, color: "var(--c-error)", label: "Meeting Failed" },
   selected: {
     icon: CheckCircle,
     color: "var(--c-success)",
@@ -174,6 +190,7 @@ export function MyApplications({
     "dsa_failed",
     "tech_failed",
     "hr_failed",
+    "ri_failed",
   ];
 
   useEffect(() => {

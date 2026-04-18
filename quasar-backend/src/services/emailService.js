@@ -1047,6 +1047,113 @@ async function sendStudyPlanReminder(to, name, skillName, dayEntry, progress) {
   });
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// Email #8 — Recruiter Interaction Scheduled
+// Triggered: dashboardController.scheduleRecruiterInteraction()
+// ══════════════════════════════════════════════════════════════════════
+
+/**
+ * Notify candidate that a recruiter meeting has been scheduled.
+ * @param {string} to          — candidate email
+ * @param {string} name        — candidate name
+ * @param {string} jobTitle    — job title
+ * @param {string} company     — company name
+ * @param {string} meetLink    — meeting link (Zoom/Meet/Teams)
+ * @param {Date}   scheduledAt — meeting datetime
+ */
+async function sendRecruiterInteractionScheduled(to, name, jobTitle, company, meetLink, scheduledAt) {
+  const firstName = (name || 'there').split(' ')[0];
+  const dateStr = new Date(scheduledAt).toLocaleString('en-IN', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    timeZone: 'Asia/Kolkata',
+  });
+
+  // Detect platform
+  let platform = 'Video Call';
+  const linkLower = meetLink.toLowerCase();
+  if (linkLower.includes('meet.google') || linkLower.includes('g.co')) platform = 'Google Meet';
+  else if (linkLower.includes('zoom.us') || linkLower.includes('zoom.com')) platform = 'Zoom';
+  else if (linkLower.includes('teams.microsoft') || linkLower.includes('teams.live')) platform = 'Microsoft Teams';
+
+  const body = `
+    <h1 class="email-heading">Meeting Scheduled! 📅</h1>
+    <p class="email-subheading">You're invited to a recruiter interaction round.</p>
+
+    <p class="email-p">Hi <strong>${firstName}</strong>,</p>
+    <p class="email-p">
+      Great news! The hiring team at <strong>${company}</strong> has scheduled a personal meeting
+      with you for the <strong>${jobTitle}</strong> position. This is the final stage of the hiring pipeline.
+    </p>
+
+    <div style="display:flex;gap:12px;margin:20px 0;">
+      <div class="info-box" style="flex:1;margin:0;">
+        <p class="info-box-label">Position</p>
+        <p class="info-box-value">${jobTitle}</p>
+      </div>
+      <div class="info-box" style="flex:1;margin:0;">
+        <p class="info-box-label">Company</p>
+        <p class="info-box-value">${company}</p>
+      </div>
+    </div>
+
+    <div class="info-box" style="border-left:4px solid ${BRAND.accent};">
+      <p class="info-box-label">Scheduled Date &amp; Time</p>
+      <p class="info-box-value" style="font-size:18px;">${dateStr} IST</p>
+    </div>
+
+    <div class="info-box">
+      <p class="info-box-label">Platform</p>
+      <p class="info-box-value">${platform}</p>
+    </div>
+
+    <div class="btn-wrap">
+      <a href="${meetLink}" class="btn-cta">Join Meeting &rarr;</a>
+    </div>
+
+    <p class="url-fallback">
+      Or copy and paste this link into your browser:<br/>
+      <a href="${meetLink}" class="text-link">${meetLink}</a>
+    </p>
+
+    <hr class="divider" />
+
+    <div class="alert-box alert-info">
+      <strong>Preparation Tips:</strong><br/>
+      • Review the job description and your application<br/>
+      • Prepare questions about the role and company<br/>
+      • Test your camera and microphone beforehand<br/>
+      • Join the meeting 2-3 minutes early
+    </div>
+  `;
+
+  const html = buildEmail({
+    preheader: `Meeting scheduled for ${jobTitle} at ${company} — ${dateStr} IST`,
+    accentColor: BRAND.accent,
+    body,
+  });
+
+  const text = buildPlainText([
+    `Meeting Scheduled — ${jobTitle} at ${company}`,
+    '',
+    `Hi ${firstName},`,
+    `Your recruiter interaction round has been scheduled.`,
+    '',
+    `Date & Time: ${dateStr} IST`,
+    `Platform: ${platform}`,
+    `Meeting Link: ${meetLink}`,
+    '',
+    'Join the meeting a few minutes early. Good luck!',
+  ]);
+
+  return send({
+    to,
+    subject: `📅 Meeting scheduled — ${jobTitle} at ${company}`,
+    html,
+    text,
+  });
+}
+
 // ── Exports ─────────────────────────────────────────────────────────
 
 module.exports = {
@@ -1057,4 +1164,5 @@ module.exports = {
   sendScreeningResult,
   sendPipelineNotification,
   sendStudyPlanReminder,
+  sendRecruiterInteractionScheduled,
 };

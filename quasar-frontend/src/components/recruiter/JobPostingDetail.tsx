@@ -133,6 +133,26 @@ const statusColors: Partial<
     bg: "var(--c-error-dim)",
     label: "DSA Failed",
   },
+  ri_pending: {
+    color: "var(--c-purple)",
+    bg: "var(--c-purple-dim)",
+    label: "RI Pending",
+  },
+  ri_scheduled: {
+    color: "var(--c-accent)",
+    bg: "var(--c-accent-dim)",
+    label: "RI Scheduled",
+  },
+  ri_passed: {
+    color: "var(--c-success)",
+    bg: "var(--c-success-dim)",
+    label: "RI Passed",
+  },
+  ri_failed: {
+    color: "var(--c-error)",
+    bg: "var(--c-error-dim)",
+    label: "RI Failed",
+  },
   selected: {
     color: "var(--c-success)",
     bg: "var(--c-success-dim)",

@@ -5,7 +5,7 @@
 const Application = require('../models/Application');
 const JobPosting = require('../models/JobPosting');
 const User = require('../models/User');
-const { sendPipelineNotification } = require('../services/emailService');
+const { sendPipelineNotification, sendRecruiterInteractionScheduled } = require('../services/emailService');
 const { getPresignedUrl } = require('../services/storageService');
 const logger = require('../utils/logger');
 
@@ -520,6 +520,182 @@ async function getApplicantProfile(req, res) {
   }
 }
 
+/**
+ * POST /api/recruiter/jobs/:id/applicants/:appId/schedule-interaction
+ * Recruiter provides a meeting link + scheduled datetime.
+ * Sends an email to the candidate and moves status to ri_scheduled.
+ * Body: { meetLink, scheduledAt }
+ */
+async function scheduleRecruiterInteraction(req, res) {
+  try {
+    const recruiterId = req.user?.id;
+    const { id, appId } = req.params;
+    const { meetLink, scheduledAt } = req.body;
+
+    if (!meetLink || !scheduledAt) {
+      return res.status(400).json({ success: false, message: 'meetLink and scheduledAt are required', data: null });
+    }
+
+    // Verify ownership
+    const posting = await JobPosting.findOne({ _id: id, recruiterId }).select('title company').lean();
+    if (!posting) {
+      return res.status(404).json({ success: false, message: 'Job posting not found', data: null });
+    }
+
+    const application = await Application.findOne({ _id: appId, jobPostingId: id });
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found', data: null });
+    }
+
+    if (application.status !== 'ri_pending') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot schedule interaction. Current status: ${application.status}`,
+        data: null,
+      });
+    }
+
+    application.status = 'ri_scheduled';
+    application.recruiterInteractionResult = {
+      meetLink: meetLink.trim(),
+      scheduledAt: new Date(scheduledAt),
+      passed: null,
+      notes: '',
+      completedAt: null,
+    };
+    application.lastActivityAt = new Date();
+    await application.save();
+
+    // Send email to candidate
+    try {
+      const candidate = await User.findById(application.candidateId).select('email name').lean();
+      if (candidate?.email) {
+        sendRecruiterInteractionScheduled(
+          candidate.email,
+          candidate.name || 'Candidate',
+          posting.title,
+          posting.company,
+          meetLink.trim(),
+          new Date(scheduledAt),
+        ).catch(err => logger.warn('RI schedule email failed', { err: err.message }));
+      }
+    } catch (emailErr) {
+      logger.warn('Failed to send RI scheduled email', { err: emailErr.message });
+    }
+
+    logger.info('Recruiter interaction scheduled', { appId, recruiterId, meetLink, scheduledAt });
+
+    return res.json({
+      success: true,
+      message: 'Meeting scheduled. Candidate has been notified via email.',
+      data: { status: application.status, recruiterInteractionResult: application.recruiterInteractionResult },
+    });
+  } catch (err) {
+    logger.error('Schedule recruiter interaction error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to schedule interaction', data: null });
+  }
+}
+
+/**
+ * POST /api/recruiter/jobs/:id/applicants/:appId/complete-interaction
+ * Recruiter passes or fails candidate after the meeting.
+ * Body: { passed: boolean, notes?: string }
+ */
+async function completeRecruiterInteraction(req, res) {
+  try {
+    const recruiterId = req.user?.id;
+    const { id, appId } = req.params;
+    const { passed, notes } = req.body;
+
+    if (typeof passed !== 'boolean') {
+      return res.status(400).json({ success: false, message: '`passed` (boolean) is required', data: null });
+    }
+
+    // Verify ownership
+    const posting = await JobPosting.findOne({ _id: id, recruiterId }).select('title company').lean();
+    if (!posting) {
+      return res.status(404).json({ success: false, message: 'Job posting not found', data: null });
+    }
+
+    const application = await Application.findOne({ _id: appId, jobPostingId: id });
+    if (!application) {
+      return res.status(404).json({ success: false, message: 'Application not found', data: null });
+    }
+
+    if (application.status !== 'ri_scheduled') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot complete interaction. Current status: ${application.status}`,
+        data: null,
+      });
+    }
+
+    application.recruiterInteractionResult.passed = passed;
+    application.recruiterInteractionResult.notes = notes || '';
+    application.recruiterInteractionResult.completedAt = new Date();
+
+    if (passed) {
+      application.status = 'selected';
+      application.currentRound = 'completed';
+      // Recalculate total score
+      const { recalculateRankings } = require('./pipelineController');
+      const fullPosting = await JobPosting.findById(id).lean();
+      application.totalScore = calculateTotalScoreForRI(application, fullPosting);
+      application.lastActivityAt = new Date();
+      await application.save();
+      await recalculateRankings(id);
+    } else {
+      application.status = 'ri_failed';
+      application.lastActivityAt = new Date();
+      await application.save();
+    }
+
+    // Send pipeline notification email
+    const outcome = passed ? 'selected' : 'rejected';
+    try {
+      const candidate = await User.findById(application.candidateId).select('email name').lean();
+      if (candidate?.email) {
+        sendPipelineNotification(
+          candidate.email,
+          candidate.name || 'Candidate',
+          posting.title,
+          posting.company,
+          outcome,
+        ).catch(err => logger.warn('Pipeline email failed', { err: err.message }));
+      }
+    } catch (emailErr) {
+      logger.warn('Failed to send pipeline notification', { err: emailErr.message });
+    }
+
+    logger.info('Recruiter interaction completed', { appId, recruiterId, passed });
+
+    return res.json({
+      success: true,
+      message: passed ? 'Candidate selected!' : 'Candidate rejected.',
+      data: { status: application.status },
+    });
+  } catch (err) {
+    logger.error('Complete recruiter interaction error', { err: err.message });
+    return res.status(500).json({ success: false, message: 'Failed to complete interaction', data: null });
+  }
+}
+
+/**
+ * Calculate total score (duplicated helper to avoid circular dependency).
+ */
+function calculateTotalScoreForRI(application, posting) {
+  let total = 0;
+  let components = 0;
+  if (application.mcqResult?.percentage != null) { total += (application.mcqResult.percentage / 100) * 10; components++; }
+  if (application.dsaResult?.percentage != null && application.dsaResult.completedAt) { total += (application.dsaResult.percentage / 100) * 10; components++; }
+  if (application.techResults?.length > 0) {
+    const scores = application.techResults.filter(r => r.score != null).map(r => r.score);
+    if (scores.length > 0) { total += scores.reduce((a, b) => a + b, 0) / scores.length; components++; }
+  }
+  if (application.hrResult?.score != null) { total += application.hrResult.score; components++; }
+  return components > 0 ? parseFloat((total / components).toFixed(2)) : 0;
+}
+
 module.exports = {
   getDashboardStats,
   getApplicants,
@@ -529,4 +705,6 @@ module.exports = {
   exportApplicantsCSV,
   getApplicantResume,
   getApplicantProfile,
+  scheduleRecruiterInteraction,
+  completeRecruiterInteraction,
 };

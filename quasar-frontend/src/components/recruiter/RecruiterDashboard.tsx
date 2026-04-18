@@ -97,6 +97,13 @@ export function RecruiterDashboard({ onNavigate, dummyStats }: Props) {
             (stats.pipelineFunnel["hr_in_progress"] || 0) +
             (stats.pipelineFunnel["hr_passed"] || 0),
         },
+        {
+          label: "RI",
+          count:
+            (stats.pipelineFunnel["ri_pending"] || 0) +
+            (stats.pipelineFunnel["ri_scheduled"] || 0) +
+            (stats.pipelineFunnel["ri_passed"] || 0),
+        },
         { label: "Selected", count: stats.pipelineFunnel["selected"] || 0 },
       ]
     : [];
