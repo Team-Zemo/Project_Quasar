@@ -963,7 +963,7 @@ function EditableField({
   type?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1.5 min-w-0">
       <label className="text-[12px] font-semibold uppercase tracking-wider text-[var(--c-text-mute)] flex items-center gap-1.5">
         <Icon size={13} /> {label}
       </label>
@@ -973,10 +973,10 @@ function EditableField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder || label}
-          className="bg-[var(--c-bg)] border border-[var(--c-border)] rounded-xl px-3 py-2.5 text-[14px] text-[var(--c-text)] outline-none focus:border-[var(--c-accent)] transition-colors"
+          className="w-full min-w-0 bg-[var(--c-bg)] border border-[var(--c-border)] rounded-xl px-3 py-2.5 text-[14px] text-[var(--c-text)] outline-none focus:border-[var(--c-accent)] transition-colors"
         />
       ) : (
-        <p className="text-[16px] font-medium text-[var(--c-text)] py-1">
+        <p className="text-[16px] font-medium text-[var(--c-text)] py-1 break-all">
           {value || (
             <span className="text-[var(--c-text-mute)] italic text-[13px]">
               Not set
