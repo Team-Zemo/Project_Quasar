@@ -29,12 +29,17 @@ interface Props {
     round: number,
     config: any,
     jdContext: string,
+    jobTitle: string,
+    company: string,
     alreadyStarted?: boolean,
   ) => void;
   /** Called when the tracker needs to start an HR interview. alreadyStarted=true means status is already hr_in_progress */
   onStartHrInterview?: (
     appId: string,
     jdContext: string,
+    jobTitle: string,
+    company: string,
+    durationMinutes: number,
     alreadyStarted?: boolean,
   ) => void;
   /** If set, show a specific application in detail mode */
@@ -96,7 +101,7 @@ const statusConfig: Partial<
   dsa_failed: { icon: XCircle, color: "var(--c-error)", label: "DSA Failed" },
   tech_pending: {
     icon: Clock,
-    color: "var(--c-user)",
+    color: "var(--c-accent)",
     label: "Tech Interview Pending",
   },
   tech_in_progress: {
@@ -112,7 +117,7 @@ const statusConfig: Partial<
   tech_failed: { icon: XCircle, color: "var(--c-error)", label: "Tech Failed" },
   hr_pending: {
     icon: Clock,
-    color: "var(--c-success)",
+    color: "var(--c-accent)",
     label: "HR Round Pending",
   },
   hr_in_progress: {

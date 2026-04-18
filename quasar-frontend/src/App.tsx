@@ -388,6 +388,8 @@ function ApplicationsPage() {
         round,
         config,
         jdContext,
+        jobTitle,
+        company,
         alreadyStarted,
       ) => {
         navigate("/pipeline-interview", {
@@ -398,23 +400,30 @@ function ApplicationsPage() {
             domain: config?.domain || "Technical",
             durationMinutes: config?.durationMinutes || 30,
             jdContext,
-            jobTitle: config?.title || "Technical Interview",
-            company: "",
+            jobTitle: jobTitle || config?.title || "Technical Interview",
+            company: company || "",
             alreadyStarted,
           },
         });
       }}
-      onStartHrInterview={(appId, jdContext, alreadyStarted) => {
+      onStartHrInterview={(
+        appId,
+        jdContext,
+        jobTitle,
+        company,
+        durationMinutes,
+        alreadyStarted,
+      ) => {
         navigate("/pipeline-interview", {
           state: {
             appId,
             mode: "hr",
             roundNumber: 1,
             domain: "HR",
-            durationMinutes: 30,
+            durationMinutes: durationMinutes || 30,
             jdContext,
-            jobTitle: "HR Interview",
-            company: "",
+            jobTitle: jobTitle || "HR Interview",
+            company: company || "",
             alreadyStarted,
           },
         });

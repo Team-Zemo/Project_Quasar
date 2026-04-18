@@ -34,6 +34,7 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
   const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(
     undefined,
   );
+  const submitRef = useRef<() => Promise<void>>(async () => {});
 
   const startTest = async () => {
     setLoading(true);
@@ -56,24 +57,6 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
     }
   };
 
-  // Timer
-  useEffect(() => {
-    if (!testStarted || timeLeft <= 0) return;
-
-    timerRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timerRef.current);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timerRef.current);
-  }, [testStarted]);
-
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
@@ -94,7 +77,7 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
   };
 
   const handleSubmit = useCallback(async () => {
-    if (!testData) return;
+    if (!testData || submitting) return;
     setSubmitting(true);
     clearInterval(timerRef.current);
 
@@ -120,6 +103,28 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
       setSubmitting(false);
     }
   }, [testData, answers, appId, onComplete]);
+
+  useEffect(() => {
+    submitRef.current = handleSubmit;
+  }, [handleSubmit]);
+
+  // Timer
+  useEffect(() => {
+    if (!testStarted || timeLeft <= 0) return;
+
+    timerRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current);
+          submitRef.current();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timerRef.current);
+  }, [testStarted, timeLeft]);
 
   if (loading && !testStarted) {
     return (
@@ -244,6 +249,12 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
               )}
             </div>
           </div>
+
+          {error && (
+            <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-[12px] font-semibold text-[var(--c-error)]">
+              {error}
+            </div>
+          )}
 
           <div className="mt-3 h-1.5 rounded-full bg-[var(--c-surface-3)] overflow-hidden">
             <div
@@ -449,7 +460,7 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
                       </p>
                       <p className="text-[11px] text-[var(--c-text-dim)]">
                         {total - answered > 0
-                          ? `${total - answered} unanswered question${total - answered > 1 ? "s" : ""}`
+                          ? `${total - answered} unanswered question${total - answered > 1 ? "s" : ""} (will be marked unattempted)`
                           : "All questions answered"}
                       </p>
                     </div>

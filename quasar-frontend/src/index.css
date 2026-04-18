@@ -29,6 +29,7 @@
   --c-text-mute: rgba(240, 240, 248, 0.3);
 
   --c-accent: #f97316;
+  --c-accent-hover: #fb923c;
   --c-accent-dim: rgba(249, 115, 22, 0.15);
   --c-accent-glow: rgba(249, 115, 22, 0.35);
 
