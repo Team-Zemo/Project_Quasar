@@ -25,6 +25,7 @@ import {
   PenTool,
 } from "lucide-react";
 import { DomainSelector } from "./components/DomainSelector";
+import { InterviewPermissionGate } from "./components/InterviewPermissionGate.tsx";
 import { InterviewRoom } from "./components/InterviewRoom";
 import { LoginPage } from "./components/LoginPage";
 import { RegisterPage } from "./components/RegisterPage";
@@ -55,7 +56,16 @@ import { logout } from "./lib/auth";
 import type { SessionConfig } from "./types/interview";
 
 function InterviewPage() {
+  const navigate = useNavigate();
   const [activeDomain, setActiveDomain] = useState("");
+  const [pendingConfig, setPendingConfig] = useState<SessionConfig | null>(
+    null,
+  );
+  const [showPermissionGate, setShowPermissionGate] = useState(false);
+  const [startingInterview, setStartingInterview] = useState(false);
+  const [showFullscreenWarning, setShowFullscreenWarning] = useState(false);
+  const [fullscreenCountdown, setFullscreenCountdown] = useState(10);
+  const [restoringFullscreen, setRestoringFullscreen] = useState(false);
   const {
     status,
     messages,
@@ -78,20 +88,126 @@ function InterviewPage() {
     status === "connecting" || status === "active" || status === "ready";
   const isEnded = status === "ended" || status === "error";
 
-  const handleStart = (config: SessionConfig) => {
-    setActiveDomain(config.domain);
-    startInterview(config);
+  useEffect(() => {
+    if (!isInSession) {
+      setShowFullscreenWarning(false);
+      setFullscreenCountdown(10);
+      return;
+    }
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setShowFullscreenWarning(true);
+        setFullscreenCountdown(10);
+      } else {
+        setShowFullscreenWarning(false);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [isInSession]);
+
+  useEffect(() => {
+    if (!showFullscreenWarning) return;
+
+    if (fullscreenCountdown <= 0) {
+      setShowFullscreenWarning(false);
+      handleEndInterview();
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setFullscreenCountdown((prev) => prev - 1);
+    }, 1000);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [showFullscreenWarning, fullscreenCountdown]);
+
+  const requestAppFullscreen = async () => {
+    const el = document.documentElement;
+    try {
+      if (!document.fullscreenElement) {
+        if (el.requestFullscreen) {
+          await el.requestFullscreen();
+        } else if ((el as any).webkitRequestFullscreen) {
+          (el as any).webkitRequestFullscreen();
+        } else if ((el as any).msRequestFullscreen) {
+          (el as any).msRequestFullscreen();
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleStart = async (config: SessionConfig) => {
+    setPendingConfig(config);
+    setShowPermissionGate(true);
+  };
+
+  const handleStartAfterPermissions = async () => {
+    if (!pendingConfig) return;
+    setStartingInterview(true);
+
+    const enteredFullscreen = await requestAppFullscreen();
+    if (!enteredFullscreen) {
+      setStartingInterview(false);
+      return;
+    }
+
+    navigate("/interview?active=1", { replace: true });
+    setActiveDomain(pendingConfig.domain);
+    startInterview(pendingConfig);
+    setStartingInterview(false);
+    setShowPermissionGate(false);
+    setPendingConfig(null);
   };
 
   const handleNewInterview = () => {
+    navigate("/interview", { replace: true });
     resetSession();
     setActiveDomain("");
+    setPendingConfig(null);
+    setShowPermissionGate(false);
+  };
+
+  const handleEndInterview = () => {
+    navigate("/interview", { replace: true });
+    endInterview();
+  };
+
+  const handleReturnToFullscreen = async () => {
+    setRestoringFullscreen(true);
+    const enteredFullscreen = await requestAppFullscreen();
+    if (enteredFullscreen) {
+      setShowFullscreenWarning(false);
+      setFullscreenCountdown(10);
+    }
+    setRestoringFullscreen(false);
   };
 
   return (
     <>
       {!isInSession && !isEnded ? (
-        <DomainSelector onStart={handleStart} status={status} error={error} />
+        showPermissionGate && pendingConfig ? (
+          <InterviewPermissionGate
+            domain={pendingConfig.domain}
+            isStarting={startingInterview}
+            onBack={() => {
+              setShowPermissionGate(false);
+              setStartingInterview(false);
+            }}
+            onEnter={handleStartAfterPermissions}
+          />
+        ) : (
+          <DomainSelector onStart={handleStart} status={status} error={error} />
+        )
       ) : (
         <InterviewRoom
           messages={messages}
@@ -100,7 +216,7 @@ function InterviewPage() {
           domain={activeDomain}
           sessionId={sessionId}
           activeCodingQuestion={activeCodingQuestion}
-          onEnd={endInterview}
+          onEnd={handleEndInterview}
           onNewInterview={handleNewInterview}
           onSubmitCode={submitCode}
           getTranscript={getTranscript}
@@ -109,6 +225,32 @@ function InterviewPage() {
           pttEnabled={pttEnabled}
           setPttEnabled={setPttEnabled}
         />
+      )}
+
+      {showFullscreenWarning && isInSession && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--c-error)]/40 bg-[var(--c-surface)] p-6 shadow-2xl">
+            <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[var(--c-error)]">
+              Fullscreen Required
+            </p>
+            <h3 className="mt-2 text-[20px] font-black text-[var(--c-text)] tracking-tight">
+              Return to full screen in {fullscreenCountdown}s
+            </h3>
+            <p className="mt-2 text-[13px] leading-relaxed text-[var(--c-text-dim)]">
+              Do not exit full screen mode again. Click the button below to
+              return to full screen now.
+            </p>
+
+            <button
+              type="button"
+              onClick={handleReturnToFullscreen}
+              disabled={restoringFullscreen}
+              className="mt-5 w-full rounded-xl bg-[var(--c-accent)] px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-[var(--c-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {restoringFullscreen ? "Restoring..." : "Return to Full Screen"}
+            </button>
+          </div>
+        </div>
       )}
     </>
   );
@@ -306,17 +448,16 @@ function AppShell() {
   const navigate = useNavigate();
   const location = useLocation();
   const isInterview = location.pathname === "/interview";
+  const isActiveInterview =
+    isInterview && new URLSearchParams(location.search).get("active") === "1";
   const isCoach = location.pathname === "/coach";
   const isFullScreenApp =
     isInterview ||
     location.pathname.startsWith("/pipeline-interview") ||
     location.pathname.startsWith("/mcq-test") ||
     location.pathname.startsWith("/dsa-test");
-  // Proctored exam pages: hide navbar entirely (fullscreen enforced by ProctoringGuard)
-  const isProctoredExam =
-    location.pathname.startsWith("/pipeline-interview") ||
-    location.pathname.startsWith("/mcq-test") ||
-    location.pathname.startsWith("/dsa-test");
+  // Hide navbar only during active live interview sessions.
+  const isProctoredExam = isActiveInterview;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes

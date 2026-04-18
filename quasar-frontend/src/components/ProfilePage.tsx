@@ -343,7 +343,7 @@ export function ProfilePage() {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="max-w-6xl w-full mx-auto flex flex-col gap-5 py-4"
+      className="max-w-6xl w-full mx-auto min-h-full flex flex-col justify-center gap-5 py-6"
     >
       {/* Messages */}
       {message && (
@@ -373,7 +373,9 @@ export function ProfilePage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5 auto-rows-min">
         {/* Profile Header Card */}
-        <div className="xl:col-span-4 xl:row-span-2 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] p-6 xl:min-h-[280px]">
+        <div
+          className={`xl:col-span-4 xl:row-span-2 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] p-6 xl:min-h-[280px]`}
+        >
           <div className="flex flex-col items-center text-center gap-4">
             <IdenticonAvatar
               seed={`${profile.email || ""}:${profile.name || "user"}`}
@@ -779,7 +781,7 @@ export function ProfilePage() {
 
         {/* Account Security Card */}
         <div
-          className={`bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] p-6 ${isCandidate ? "xl:col-span-4" : "xl:col-span-4"}`}
+          className={`bg-[var(--c-surface)] border border-[var(--c-border)] rounded-[24px] p-6 ${isCandidate ? "xl:col-span-4" : "xl:col-span-8 xl:col-start-5"}`}
         >
           <h2 className="text-[22px] font-black text-[var(--c-text)] mb-5 flex items-center gap-2">
             <Lock size={20} className="text-[var(--c-text-mute)]" />
@@ -927,15 +929,15 @@ export function ProfilePage() {
         </div>
 
         {/* Hint */}
-        <div
-          className={`flex items-start gap-3 px-4 py-3 rounded-2xl bg-[var(--c-surface)] border border-[var(--c-border)] text-[13px] text-[var(--c-text-mute)] ${isCandidate ? "xl:col-span-12" : "xl:col-span-8"}`}
-        >
-          <Info size={16} className="flex-shrink-0 mt-0.5 opacity-60" />
-          <span>
-            Your profile data is used by the AI Coach to personalize advice and
-            career guidance.
-          </span>
-        </div>
+        {isCandidate && (
+          <div className="flex items-start gap-3 px-4 py-3 rounded-2xl bg-[var(--c-surface)] border border-[var(--c-border)] text-[13px] text-[var(--c-text-mute)] xl:col-span-12">
+            <Info size={16} className="flex-shrink-0 mt-0.5 opacity-60" />
+            <span>
+              Your profile data is used by the AI Coach to personalize advice
+              and career guidance.
+            </span>
+          </div>
+        )}
       </div>
     </motion.div>
   );
