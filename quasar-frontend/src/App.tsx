@@ -456,8 +456,12 @@ function AppShell() {
     location.pathname.startsWith("/pipeline-interview") ||
     location.pathname.startsWith("/mcq-test") ||
     location.pathname.startsWith("/dsa-test");
-  // Hide navbar only during active live interview sessions.
-  const isProctoredExam = isActiveInterview;
+  // Hide navbar during any fullscreen proctored flow.
+  const isProctoredExam =
+    isActiveInterview ||
+    location.pathname.startsWith("/pipeline-interview") ||
+    location.pathname.startsWith("/mcq-test") ||
+    location.pathname.startsWith("/dsa-test");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Close mobile menu when route changes

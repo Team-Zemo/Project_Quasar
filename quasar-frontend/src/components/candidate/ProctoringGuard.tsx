@@ -6,7 +6,6 @@ import {
   Eye,
   AlertTriangle,
   XCircle,
-  Shield,
 } from "lucide-react";
 import { useProctoring, type ProctoringRound } from "../../hooks/useProctoring";
 
@@ -89,16 +88,16 @@ export function ProctoringGuard({
       {/* Main exam content */}
       {children}
 
-      {/* Violation badge — top right corner */}
+      {/* Violation badge — moved away from action buttons */}
       <AnimatePresence>
         {violationCount > 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="fixed top-3 right-3 z-[9999] flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md"
+            className="fixed top-4 left-4 z-[9999] pointer-events-none flex items-center gap-2 px-3 py-1.5 rounded-full border backdrop-blur-md"
             style={{
-              background: "rgba(0, 0, 0, 0.7)",
+              background: "rgba(15, 15, 26, 0.86)",
               borderColor: getBadgeColor(),
             }}
           >
@@ -118,14 +117,6 @@ export function ProctoringGuard({
         )}
       </AnimatePresence>
 
-      {/* Proctoring active indicator — bottom center */}
-      <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-[9998] flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/50 backdrop-blur-sm border border-white/5">
-        <Shield size={10} className="text-emerald-400" />
-        <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-400/80">
-          Proctored
-        </span>
-      </div>
-
       {/* Fullscreen exit warning overlay */}
       <AnimatePresence>
         {!isFullscreen && (
@@ -134,39 +125,39 @@ export function ProctoringGuard({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[10000] flex items-center justify-center"
-            style={{ background: "rgba(0, 0, 0, 0.92)" }}
+            style={{ background: "rgba(8, 8, 16, 0.94)" }}
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="max-w-md w-full mx-4 bg-[#1a1a2e] border border-red-500/30 rounded-3xl p-8 text-center shadow-2xl"
+              className="max-w-md w-full mx-4 bg-[var(--c-surface)] border border-[var(--c-border-2)] rounded-3xl p-8 text-center shadow-[var(--shadow-glass)]"
             >
               {/* Warning icon */}
-              <div className="flex items-center justify-center w-20 h-20 rounded-2xl mx-auto mb-6 bg-red-500/10 border border-red-500/20">
-                <ShieldAlert size={40} className="text-red-400" />
+              <div className="flex items-center justify-center w-20 h-20 rounded-2xl mx-auto mb-6 bg-[var(--c-error-dim)] border border-red-500/20">
+                <ShieldAlert size={40} className="text-[var(--c-error)]" />
               </div>
 
-              <h2 className="text-xl font-black text-white mb-2">
+              <h2 className="text-xl font-black text-[var(--c-text)] mb-2">
                 Fullscreen Required
               </h2>
-              <p className="text-[14px] text-gray-400 mb-2 leading-relaxed">
+              <p className="text-[14px] text-[var(--c-text-dim)] mb-2 leading-relaxed">
                 You have exited fullscreen mode. This has been logged as a
-                <span className="ml-1 px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 text-[12px] font-bold">
+                <span className="ml-1 px-1.5 py-0.5 rounded bg-[var(--c-error-dim)] text-[var(--c-error)] text-[12px] font-bold">
                   critical violation
                 </span>
               </p>
-              <p className="text-[13px] text-gray-500 mb-6">
+              <p className="text-[13px] text-[var(--c-text-mute)] mb-6">
                 Please return to fullscreen immediately to continue your exam.
                 Multiple violations may result in automatic termination.
               </p>
 
               {/* Countdown */}
               {fullscreenCountdown > 0 && (
-                <div className="text-[12px] text-gray-500 mb-4">
-                  Auto-requesting fullscreen in{" "}
-                  <span className="font-bold text-red-400">
+                <div className="text-[12px] text-[var(--c-text-mute)] mb-4">
+                  Returning to fullscreen in{" "}
+                  <span className="font-black text-[var(--c-accent)]">
                     {fullscreenCountdown}s
                   </span>
                 </div>
@@ -174,20 +165,20 @@ export function ProctoringGuard({
 
               <button
                 onClick={requestFullscreen}
-                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-bold text-white bg-gradient-to-r from-red-500 to-rose-600 hover:brightness-110 transition-all shadow-lg active:scale-[0.98]"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-[15px] font-black text-black bg-[var(--c-accent)] hover:brightness-110 transition-all shadow-[var(--shadow-accent)] active:scale-[0.98]"
               >
                 <Maximize size={18} />
                 Return to Fullscreen
               </button>
 
               {/* Violation counter */}
-              <div className="mt-5 flex items-center justify-center gap-4 text-[11px] text-gray-500">
-                <span className="flex items-center gap-1">
-                  <AlertTriangle size={10} className="text-amber-400" />
+              <div className="mt-5 flex items-center justify-center gap-4 text-[11px] text-[var(--c-text-mute)]">
+                <span className="flex items-center gap-1.5">
+                  <AlertTriangle size={10} className="text-[var(--c-accent)]" />
                   {violationCount} total violations
                 </span>
-                <span className="flex items-center gap-1">
-                  <XCircle size={10} className="text-red-400" />
+                <span className="flex items-center gap-1.5">
+                  <XCircle size={10} className="text-[var(--c-error)]" />
                   {criticalCount} critical
                 </span>
               </div>

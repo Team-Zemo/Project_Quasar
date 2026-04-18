@@ -1,12 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  Clock, ChevronLeft, ChevronRight, Flag, CheckCircle,
-  AlertTriangle, Send,
-} from 'lucide-react';
-import { apiPost, apiGet } from '../../lib/api';
-import type { McqTestQuestion, McqTestStartData } from '../../types/recruitment';
-import { ProctoringGuard } from './ProctoringGuard';
+  ArrowLeft,
+  Clock,
+  ChevronLeft,
+  ChevronRight,
+  Flag,
+  CheckCircle,
+  AlertTriangle,
+  Send,
+} from "lucide-react";
+import { apiPost } from "../../lib/api";
+import type { McqTestStartData } from "../../types/recruitment";
+import { ProctoringGuard } from "./ProctoringGuard";
 
 interface Props {
   appId: string;
@@ -22,24 +28,29 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [testStarted, setTestStarted] = useState(false);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  const timerRef = useRef<ReturnType<typeof setInterval> | undefined>(
+    undefined,
+  );
 
   const startTest = async () => {
     setLoading(true);
     try {
-      const res = await apiPost<McqTestStartData>(`/api/candidate/applications/${appId}/mcq/start`, {});
+      const res = await apiPost<McqTestStartData>(
+        `/api/candidate/applications/${appId}/mcq/start`,
+        {},
+      );
       if (res.success) {
         setTestData(res.data);
         setTimeLeft(res.data.durationMinutes * 60);
         setTestStarted(true);
       } else {
-        setError(res.message || 'Failed to start test');
+        setError(res.message || "Failed to start test");
       }
     } catch {
-      setError('Failed to start test');
+      setError("Failed to start test");
     } finally {
       setLoading(false);
     }
@@ -50,7 +61,7 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
     if (!testStarted || timeLeft <= 0) return;
 
     timerRef.current = setInterval(() => {
-      setTimeLeft(prev => {
+      setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
           handleSubmit();
@@ -66,15 +77,15 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
   const selectAnswer = (questionId: string, optionIndex: number) => {
-    setAnswers(prev => new Map(prev).set(questionId, optionIndex));
+    setAnswers((prev) => new Map(prev).set(questionId, optionIndex));
   };
 
   const toggleFlag = (questionId: string) => {
-    setFlagged(prev => {
+    setFlagged((prev) => {
       const next = new Set(prev);
       if (next.has(questionId)) next.delete(questionId);
       else next.add(questionId);
@@ -87,21 +98,24 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
     setSubmitting(true);
     clearInterval(timerRef.current);
 
-    const answerPayload = testData.questions.map(q => ({
+    const answerPayload = testData.questions.map((q) => ({
       questionId: q._id,
       selectedOption: answers.get(q._id) ?? -1,
       timeTakenSeconds: 0,
     }));
 
     try {
-      const res = await apiPost<{ passed: boolean; percentage: number }>(`/api/candidate/applications/${appId}/mcq/submit`, { answers: answerPayload });
+      const res = await apiPost<{ passed: boolean; percentage: number }>(
+        `/api/candidate/applications/${appId}/mcq/submit`,
+        { answers: answerPayload },
+      );
       if (res.success) {
         onComplete(res.data);
       } else {
-        setError(res.message || 'Submission failed');
+        setError(res.message || "Submission failed");
       }
     } catch {
-      setError('Failed to submit test');
+      setError("Failed to submit test");
     } finally {
       setSubmitting(false);
     }
@@ -109,14 +123,63 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
 
   if (loading && !testStarted) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-[var(--c-text)] mb-4">MCQ Assessment</h2>
-          <p className="text-[var(--c-text-dim)] text-[14px] mb-6">When you start, the timer begins. You cannot pause.</p>
-          {error && <p className="text-[var(--c-error)] text-[13px] mb-4">{error}</p>}
-          <button onClick={startTest} className="btn-primary flex items-center gap-2 mx-auto">
-            Start Test <ChevronRight size={16} />
-          </button>
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="w-full max-w-2xl bg-[var(--c-surface)] border border-[var(--c-border)] rounded-3xl p-8">
+          <p className="text-[12px] font-black uppercase tracking-[0.18em] text-[var(--c-accent)] mb-3">
+            Assessment Round
+          </p>
+          <h2 className="text-3xl font-black text-[var(--c-text)] mb-3">
+            MCQ Challenge
+          </h2>
+          <p className="text-[var(--c-text-dim)] text-[14px] mb-6">
+            Timer starts immediately after launch. Fullscreen, tab focus, and
+            visibility checks are active during this round.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-7">
+            <div className="rounded-2xl bg-[var(--c-bg)] border border-[var(--c-border)] p-3">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--c-text-mute)]">
+                Questions
+              </p>
+              <p className="text-[18px] font-black text-[var(--c-text)]">
+                Dynamic Set
+              </p>
+            </div>
+            <div className="rounded-2xl bg-[var(--c-bg)] border border-[var(--c-border)] p-3">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--c-text-mute)]">
+                Mode
+              </p>
+              <p className="text-[18px] font-black text-[var(--c-text)]">
+                Single Answer
+              </p>
+            </div>
+            <div className="rounded-2xl bg-[var(--c-bg)] border border-[var(--c-border)] p-3">
+              <p className="text-[10px] uppercase tracking-wider text-[var(--c-text-mute)]">
+                Rules
+              </p>
+              <p className="text-[18px] font-black text-[var(--c-text)]">
+                Secure
+              </p>
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-[var(--c-error)] text-[13px] mb-5">{error}</p>
+          )}
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={onBack}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[13px] font-bold border border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)]"
+            >
+              <ArrowLeft size={14} /> Back
+            </button>
+            <button
+              onClick={startTest}
+              className="btn-primary flex-1 flex items-center justify-center gap-2 py-3"
+            >
+              Start Test <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -131,172 +194,272 @@ export function McqTestPage({ appId, onComplete, onBack }: Props) {
 
   return (
     <ProctoringGuard appId={appId} round="mcq" onAutoTerminate={handleSubmit}>
-    <div className="min-h-screen bg-[var(--c-bg)] flex">
-      {/* Sidebar — Question Navigator */}
-      <div className="w-64 bg-[var(--c-surface)] border-r border-[var(--c-border)] p-4 flex flex-col">
-        <div className={`text-center py-3 px-4 rounded-xl mb-4 ${isLowTime ? 'bg-[var(--c-error-dim)] text-[var(--c-error)]' : 'bg-[var(--c-surface-2)] text-[var(--c-text)]'}`}>
-          <div className="flex items-center justify-center gap-2">
-            <Clock size={16} />
-            <span className="text-xl font-mono font-bold">{formatTime(timeLeft)}</span>
-          </div>
-        </div>
-
-        <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--c-text-mute)] mb-3">
-          Questions ({answered}/{total} answered)
-        </p>
-
-        <div className="grid grid-cols-5 gap-1.5 mb-4 overflow-y-auto flex-1">
-          {testData.questions.map((q, i) => {
-            const isAnswered = answers.has(q._id);
-            const isFlagged = flagged.has(q._id);
-            const isCurrent = i === currentIndex;
-
-            return (
-              <button
-                key={q._id}
-                onClick={() => setCurrentIndex(i)}
-                className={`w-9 h-9 rounded-lg text-[11px] font-bold transition-all relative ${
-                  isCurrent
-                    ? 'bg-[var(--c-accent)] text-black'
-                    : isAnswered
-                    ? 'bg-[var(--c-success-dim)] text-[var(--c-success)]'
-                    : 'bg-[var(--c-surface-2)] text-[var(--c-text-mute)] hover:text-[var(--c-text)]'
-                }`}
-              >
-                {i + 1}
-                {isFlagged && <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-[var(--c-accent)]" />}
-              </button>
-            );
-          })}
-        </div>
-
-        {!showSubmitConfirm ? (
-          <button
-            onClick={() => setShowSubmitConfirm(true)}
-            disabled={submitting}
-            className="btn-primary btn-full flex items-center gap-2 justify-center mt-auto"
-          >
-            {submitting ? <div className="spinner" /> : <><Send size={14} /> Submit Test</>}
-          </button>
-        ) : (
-          <div className="mt-auto flex flex-col gap-2">
-            <div className="bg-[var(--c-accent-dim)] border border-[var(--c-accent)]/20 rounded-xl p-3 text-center">
-              <AlertTriangle size={18} className="text-[var(--c-accent)] mx-auto mb-1.5" />
-              <p className="text-[12px] font-bold text-[var(--c-text)] mb-0.5">Submit Test?</p>
-              <p className="text-[11px] text-[var(--c-text-dim)]">
-                {total - answered > 0
-                  ? `${total - answered} question${total - answered > 1 ? 's' : ''} unanswered`
-                  : 'All questions answered'}
+      <div className="h-screen bg-[var(--c-bg)] overflow-hidden flex flex-col">
+        <header className="shrink-0 border-b border-[var(--c-border)] bg-[var(--c-surface)]/95 backdrop-blur px-4 md:px-6 py-3">
+          <div className="flex flex-wrap items-center gap-3 justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--c-accent)]">
+                MCQ Assessment Round
+              </p>
+              <p className="text-[14px] font-bold text-[var(--c-text)]">
+                Question {currentIndex + 1} of {total}
               </p>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setShowSubmitConfirm(false)}
-                className="flex-1 py-2 rounded-xl text-[12px] font-bold bg-[var(--c-surface-2)] hover:bg-[var(--c-surface-3)] text-[var(--c-text-dim)] border border-[var(--c-border)] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="flex-1 py-2 rounded-xl text-[12px] font-bold bg-[var(--c-error)] hover:bg-red-600 text-white transition-colors flex items-center justify-center gap-1.5 active:scale-95"
-              >
-                {submitting ? <div className="spinner" /> : <><CheckCircle size={13} /> Confirm</>}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
 
-      {/* Main Question Area */}
-      <div className="flex-1 p-8 flex flex-col">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentIndex}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2 }}
-            className="flex-1"
-          >
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <span className="text-[12px] font-bold text-[var(--c-text-mute)]">Question {currentIndex + 1}/{total}</span>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                  currentQuestion.difficulty === 1 ? 'bg-[var(--c-success-dim)] text-[var(--c-success)]' :
-                  currentQuestion.difficulty === 3 ? 'bg-[var(--c-error-dim)] text-[var(--c-error)]' :
-                  'bg-[var(--c-accent-dim)] text-[var(--c-accent)]'
-                }`}>
-                  {currentQuestion.difficulty === 1 ? 'Easy' : currentQuestion.difficulty === 3 ? 'Hard' : 'Medium'}
-                </span>
-                {currentQuestion.topic && <span className="text-[11px] text-[var(--c-text-mute)]">{currentQuestion.topic}</span>}
-              </div>
-              <button
-                onClick={() => toggleFlag(currentQuestion._id)}
-                className={`p-2 rounded-lg transition-colors ${
-                  flagged.has(currentQuestion._id)
-                    ? 'bg-[var(--c-accent-dim)] text-[var(--c-accent)]'
-                    : 'text-[var(--c-text-mute)] hover:text-[var(--c-accent)]'
+            <div className="flex items-center gap-2 flex-wrap justify-end">
+              <div
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[12px] font-bold ${
+                  isLowTime
+                    ? "bg-[var(--c-error-dim)] border-red-500/30 text-[var(--c-error)]"
+                    : "bg-[var(--c-surface-2)] border-[var(--c-border)] text-[var(--c-text)]"
                 }`}
               >
-                <Flag size={16} />
-              </button>
-            </div>
+                <Clock size={13} /> {formatTime(timeLeft)}
+              </div>
 
-            <h2 className="text-lg font-bold text-[var(--c-text)] mb-6 leading-relaxed">
-              {currentQuestion.question}
-            </h2>
-
-            <div className="space-y-3">
-              {currentQuestion.options.map((opt, oi) => {
-                const isSelected = answers.get(currentQuestion._id) === oi;
-                return (
+              {!showSubmitConfirm ? (
+                <button
+                  onClick={() => setShowSubmitConfirm(true)}
+                  disabled={submitting}
+                  className="px-4 py-2 rounded-xl text-[12px] font-black uppercase tracking-wide bg-[var(--c-accent)] text-black hover:brightness-110 transition-all disabled:opacity-60"
+                >
+                  Submit Test
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 bg-[var(--c-surface-2)] border border-[var(--c-border)] rounded-xl px-2 py-1.5">
                   <button
-                    key={oi}
-                    onClick={() => selectAnswer(currentQuestion._id, oi)}
-                    className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
-                      isSelected
-                        ? 'border-[var(--c-accent)] bg-[var(--c-accent-dim)]'
-                        : 'border-[var(--c-border)] bg-[var(--c-surface)] hover:border-[var(--c-border-2)] hover:bg-[var(--c-surface-2)]'
-                    }`}
+                    onClick={() => setShowSubmitConfirm(false)}
+                    className="px-2.5 py-1 rounded-lg text-[11px] font-bold text-[var(--c-text-dim)] hover:text-[var(--c-text)]"
                   >
-                    <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg mr-3 text-[12px] font-bold ${
-                      isSelected
-                        ? 'bg-[var(--c-accent)] text-black'
-                        : 'bg-[var(--c-surface-3)] text-[var(--c-text-mute)]'
-                    }`}>
-                      {String.fromCharCode(65 + oi)}
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting}
+                    className="px-3 py-1 rounded-lg text-[11px] font-bold bg-[var(--c-error)] text-white hover:brightness-110"
+                  >
+                    {submitting ? "Submitting..." : "Confirm"}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-3 h-1.5 rounded-full bg-[var(--c-surface-3)] overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[var(--c-accent)] to-[#fb923c]"
+              style={{ width: `${(answered / total) * 100}%` }}
+            />
+          </div>
+        </header>
+
+        <div className="flex-1 min-h-0 p-4 md:p-6">
+          <div className="h-full grid grid-cols-1 xl:grid-cols-[1fr_320px] gap-4">
+            <section className="min-h-0 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-3xl flex flex-col overflow-hidden">
+              <div className="px-4 md:px-6 py-4 border-b border-[var(--c-border)] flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span
+                      className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                        currentQuestion.difficulty === 1
+                          ? "bg-[var(--c-success-dim)] text-[var(--c-success)]"
+                          : currentQuestion.difficulty === 3
+                            ? "bg-[var(--c-error-dim)] text-[var(--c-error)]"
+                            : "bg-[var(--c-accent-dim)] text-[var(--c-accent)]"
+                      }`}
+                    >
+                      {currentQuestion.difficulty === 1
+                        ? "Easy"
+                        : currentQuestion.difficulty === 3
+                          ? "Hard"
+                          : "Medium"}
                     </span>
-                    <span className={`text-[14px] ${isSelected ? 'text-[var(--c-text)] font-semibold' : 'text-[var(--c-text-dim)]'}`}>
-                      {opt.text}
+                    {currentQuestion.topic && (
+                      <span className="text-[11px] text-[var(--c-text-mute)] truncate">
+                        {currentQuestion.topic}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="text-[18px] md:text-[20px] font-black text-[var(--c-text)] leading-snug">
+                    {currentQuestion.question}
+                  </h2>
+                </div>
+
+                <button
+                  onClick={() => toggleFlag(currentQuestion._id)}
+                  className={`shrink-0 px-3 py-2 rounded-xl border text-[12px] font-bold flex items-center gap-1.5 ${
+                    flagged.has(currentQuestion._id)
+                      ? "bg-[var(--c-accent-dim)] text-[var(--c-accent)] border-[var(--c-accent)]/25"
+                      : "bg-[var(--c-surface-2)] text-[var(--c-text-dim)] border-[var(--c-border)] hover:text-[var(--c-accent)]"
+                  }`}
+                >
+                  <Flag size={14} />{" "}
+                  {flagged.has(currentQuestion._id) ? "Flagged" : "Flag"}
+                </button>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 md:px-6 py-5 space-y-3">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentQuestion._id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.18 }}
+                    className="space-y-3"
+                  >
+                    {currentQuestion.options.map((opt, oi) => {
+                      const isSelected =
+                        answers.get(currentQuestion._id) === oi;
+                      return (
+                        <button
+                          key={oi}
+                          onClick={() => selectAnswer(currentQuestion._id, oi)}
+                          className={`w-full text-left p-4 rounded-2xl border transition-all ${
+                            isSelected
+                              ? "border-[var(--c-accent)] bg-[var(--c-accent-dim)] shadow-[0_8px_24px_rgba(249,115,22,0.12)]"
+                              : "border-[var(--c-border)] bg-[var(--c-bg)] hover:border-[var(--c-border-2)] hover:bg-[var(--c-surface-2)]"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <span
+                              className={`inline-flex items-center justify-center w-8 h-8 rounded-xl text-[12px] font-black ${
+                                isSelected
+                                  ? "bg-[var(--c-accent)] text-black"
+                                  : "bg-[var(--c-surface-3)] text-[var(--c-text-mute)]"
+                              }`}
+                            >
+                              {String.fromCharCode(65 + oi)}
+                            </span>
+                            <span
+                              className={`text-[14px] leading-relaxed ${isSelected ? "text-[var(--c-text)] font-semibold" : "text-[var(--c-text-dim)]"}`}
+                            >
+                              {opt.text}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              <div className="shrink-0 border-t border-[var(--c-border)] px-4 md:px-6 py-3 bg-[var(--c-surface)]">
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))}
+                    disabled={currentIndex === 0}
+                    className="px-4 py-2 rounded-xl text-[13px] font-bold border border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] disabled:opacity-40"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <ChevronLeft size={14} /> Previous
                     </span>
                   </button>
-                );
-              })}
-            </div>
-          </motion.div>
-        </AnimatePresence>
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between mt-8 pt-6 border-t border-[var(--c-border)]">
-          <button
-            onClick={() => setCurrentIndex(i => Math.max(0, i - 1))}
-            disabled={currentIndex === 0}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <ChevronLeft size={14} /> Previous
-          </button>
-          <span className="text-[12px] text-[var(--c-text-mute)]">{answered} of {total} answered</span>
-          <button
-            onClick={() => setCurrentIndex(i => Math.min(total - 1, i + 1))}
-            disabled={currentIndex === total - 1}
-            className="btn-secondary flex items-center gap-2"
-          >
-            Next <ChevronRight size={14} />
-          </button>
+                  <span className="text-[12px] text-[var(--c-text-mute)] font-semibold">
+                    {answered}/{total} answered
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setCurrentIndex((i) => Math.min(total - 1, i + 1))
+                    }
+                    disabled={currentIndex === total - 1}
+                    className="px-4 py-2 rounded-xl text-[13px] font-bold border border-[var(--c-border)] text-[var(--c-text-dim)] hover:text-[var(--c-text)] hover:bg-[var(--c-surface-2)] disabled:opacity-40"
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      Next <ChevronRight size={14} />
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            <aside className="hidden xl:flex min-h-0 bg-[var(--c-surface)] border border-[var(--c-border)] rounded-3xl flex-col overflow-hidden">
+              <div className="p-4 border-b border-[var(--c-border)]">
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[var(--c-text-mute)] mb-2">
+                  Navigator
+                </p>
+                <div className="grid grid-cols-3 gap-2 text-[12px]">
+                  <div className="rounded-xl bg-[var(--c-bg)] border border-[var(--c-border)] p-2 text-center">
+                    <p className="text-[10px] text-[var(--c-text-mute)]">
+                      Answered
+                    </p>
+                    <p className="text-[15px] font-black text-[var(--c-success)]">
+                      {answered}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-[var(--c-bg)] border border-[var(--c-border)] p-2 text-center">
+                    <p className="text-[10px] text-[var(--c-text-mute)]">
+                      Flagged
+                    </p>
+                    <p className="text-[15px] font-black text-[var(--c-accent)]">
+                      {flagged.size}
+                    </p>
+                  </div>
+                  <div className="rounded-xl bg-[var(--c-bg)] border border-[var(--c-border)] p-2 text-center">
+                    <p className="text-[10px] text-[var(--c-text-mute)]">
+                      Left
+                    </p>
+                    <p className="text-[15px] font-black text-[var(--c-text)]">
+                      {total - answered}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto p-4">
+                <div className="grid grid-cols-5 gap-2">
+                  {testData.questions.map((q, i) => {
+                    const isAnswered = answers.has(q._id);
+                    const isFlagged = flagged.has(q._id);
+                    const isCurrent = i === currentIndex;
+                    return (
+                      <button
+                        key={q._id}
+                        onClick={() => setCurrentIndex(i)}
+                        className={`relative h-10 rounded-xl text-[12px] font-black border transition-all ${
+                          isCurrent
+                            ? "bg-[var(--c-accent)] text-black border-[var(--c-accent)]"
+                            : isAnswered
+                              ? "bg-[var(--c-success-dim)] text-[var(--c-success)] border-green-500/25"
+                              : "bg-[var(--c-bg)] text-[var(--c-text-mute)] border-[var(--c-border)] hover:text-[var(--c-text)]"
+                        }`}
+                      >
+                        {i + 1}
+                        {isFlagged && (
+                          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-[var(--c-accent)] border border-[var(--c-surface)]" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {showSubmitConfirm && (
+                <div className="m-4 p-3 rounded-2xl border border-[var(--c-accent)]/25 bg-[var(--c-accent-dim)]">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle
+                      size={16}
+                      className="text-[var(--c-accent)] mt-0.5"
+                    />
+                    <div>
+                      <p className="text-[12px] font-bold text-[var(--c-text)]">
+                        Ready to submit?
+                      </p>
+                      <p className="text-[11px] text-[var(--c-text-dim)]">
+                        {total - answered > 0
+                          ? `${total - answered} unanswered question${total - answered > 1 ? "s" : ""}`
+                          : "All questions answered"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </aside>
+          </div>
         </div>
       </div>
-    </div>
     </ProctoringGuard>
   );
 }
