@@ -1,6 +1,6 @@
 /**
  * LaTeX Resume Service
- * Transforms candidate's parsed resume data into LaTeX templates using NeevCloud.
+ * Transforms candidate's parsed resume data into LaTeX templates using Groq.
  * Also handles server-side PDF compilation via pdflatex if available.
  */
 const { chatCompletion } = require('./groqService');
@@ -249,7 +249,7 @@ Generate the complete LaTeX resume source using the template skeleton above, pop
 
   try {
     const responseText = await chatCompletion(systemInstruction, userPrompt, {
-      model: 'gpt-oss-120b',
+      model: 'llama-3.3-70b-versatile',
       temperature: 0.3,
       maxTokens: 8192,
     });
@@ -271,7 +271,7 @@ Generate the complete LaTeX resume source using the template skeleton above, pop
       throw new Error('Generated output does not appear to be valid LaTeX');
     }
 
-    logger.info('LaTeX resume generated via NeevCloud', { templateId, length: latex.length });
+    logger.info('LaTeX resume generated via Groq', { templateId, length: latex.length });
     return latex;
   } catch (err) {
     logger.error('Gemini LaTeX generation failed', { err: err.message });

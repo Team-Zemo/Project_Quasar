@@ -51,7 +51,7 @@ async function generateReport(req, res) {
       const userPrompt = `Based on these interview performance scores, generate improvement tips.\nScores: Overall: ${session.overallScore || 'N/A'}/10, Situation: ${starScores.situation || 'N/A'}, Task: ${starScores.task || 'N/A'}, Action: ${starScores.action || 'N/A'}, Result: ${starScores.result || 'N/A'}, Clarity: ${session.clarityScore || 'N/A'}, Filler words: ${speechMetrics.totalFillers || 0}`;
 
       let text = await chatCompletion(systemPrompt, userPrompt, {
-        model: 'gpt-oss-120b',
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.5,
         maxTokens: 512,
       });

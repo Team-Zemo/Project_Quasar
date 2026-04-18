@@ -1,7 +1,7 @@
 /**
  * MCQ Generator Service
- * Uses NeevCloud (OpenAI-compatible API) to generate multiple-choice questions
- * based on a job description. Batches requests to avoid Cloudflare timeouts.
+ * Uses Groq API (llama-3.3-70b-versatile) to generate multiple-choice questions
+ * based on a job description. Batches requests to avoid timeout issues.
  */
 const { chatCompletion } = require('./groqService');
 const logger = require('../utils/logger');
@@ -80,7 +80,7 @@ async function generateBatch(jobDescription, domain, seniority, skills, batchSiz
   }`;
 
   const responseText = await chatCompletion(systemPrompt, userPrompt, {
-    model: 'gpt-oss-120b',
+    model: 'llama-3.3-70b-versatile',
     temperature: 0.4 + (batchIndex * 0.05), // Slight temp variation for diversity
     maxTokens: 4096,
   });

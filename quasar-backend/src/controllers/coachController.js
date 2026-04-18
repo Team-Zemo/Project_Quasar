@@ -176,7 +176,7 @@ async function detectJobIntent(lastMessage, userSkills = []) {
     const response = await chatCompletion(
       INTENT_PROMPT,
       `User's profile skills: ${userSkills.join(', ') || 'none'}\n\nUser's message: "${lastMessage}"`,
-      { model: 'gpt-oss-120b', temperature: 0, maxTokens: 200 }
+      { model: 'llama-3.3-70b-versatile', temperature: 0, maxTokens: 200 }
     );
 
     // Extract JSON from response
@@ -375,11 +375,11 @@ async function chat(req, res) {
     res.setHeader('X-Accel-Buffering', 'no');
     res.flushHeaders();
 
-    // Non-streaming completion (NeevCloud does not support streaming)
+    // Non-streaming completion (simulated streaming via chunked writes)
     const completion = await chatCompletion(
       fullSystemPrompt,
       sanitized.map(m => `${m.role}: ${m.content}`).join('\n'),
-      { model: 'gpt-oss-120b', temperature: 0.5, maxTokens: 4096 }
+      { model: 'llama-3.3-70b-versatile', temperature: 0.5, maxTokens: 4096 }
     );
 
     // Simulate streaming by flushing in small chunks for progressive UI rendering

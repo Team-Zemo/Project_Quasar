@@ -121,11 +121,11 @@ Make the resource links real and specific to "${stackStr}".`;
       techStack: stackStr,
     });
 
-    // Non-streaming completion (NeevCloud does not support streaming)
+    // Non-streaming completion (simulated streaming via chunked writes)
     const completion = await chatCompletion(
       SYSTEM_PROMPT,
       userPrompt,
-      { model: 'gpt-oss-120b', temperature: 0.4, maxTokens: 8192 }
+      { model: 'llama-3.3-70b-versatile', temperature: 0.4, maxTokens: 8192 }
     );
 
     // Simulate streaming by flushing in small chunks for progressive UI rendering

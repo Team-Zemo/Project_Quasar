@@ -52,7 +52,7 @@ Generate exactly 20 questions, weighted by importance to the role. Weight values
     const userPrompt = `Job Description:\n${jobDescription}`;
 
     const responseText = await chatCompletion(systemPrompt, userPrompt, {
-      model: 'gpt-oss-120b',
+      model: 'llama-3.3-70b-versatile',
       temperature: 0.4,
       maxTokens: 4096,
     });

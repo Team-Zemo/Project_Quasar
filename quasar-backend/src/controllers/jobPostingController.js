@@ -23,7 +23,7 @@ async function parseJobDescription(jobDescription) {
 }`;
 
   const responseText = await chatCompletion(systemPrompt, `Job Description:\n${jobDescription}`, {
-    model: 'gpt-oss-120b',
+    model: 'llama-3.3-70b-versatile',
     temperature: 0.3,
     maxTokens: 2048,
   });

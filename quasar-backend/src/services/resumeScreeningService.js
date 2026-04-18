@@ -48,7 +48,7 @@ JOB REQUIRED SKILLS: ${requiredSkills.join(', ') || 'Not specified'}`;
 
   try {
     const responseText = await chatCompletion(systemPrompt, userPrompt, {
-      model: 'gpt-oss-120b',
+      model: 'llama-3.3-70b-versatile',
       temperature: 0.2,
       maxTokens: 2048,
     });
@@ -111,7 +111,7 @@ Return ONLY valid JSON (no markdown, no code fences) matching this exact schema:
 
   try {
     const responseText = await chatCompletion(systemPrompt, resumeText, {
-      model: 'gpt-oss-120b',
+      model: 'llama-3.3-70b-versatile',
       temperature: 0.1,
       maxTokens: 4096,
     });
