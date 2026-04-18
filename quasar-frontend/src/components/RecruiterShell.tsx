@@ -16,6 +16,7 @@ import { JobPostingList } from "./recruiter/JobPostingList";
 import { JobPostingForm } from "./recruiter/JobPostingForm";
 import { JobPostingDetail } from "./recruiter/JobPostingDetail";
 import { ProfilePage } from "./ProfilePage";
+import { IdenticonAvatar } from "./ui/IdenticonAvatar";
 import {
   RecruiterTour,
   TOUR_DUMMY_STATS,
@@ -258,9 +259,11 @@ export function RecruiterShell() {
           className="p-3 border-t border-[var(--c-border)]"
         >
           <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-8 h-8 rounded-full bg-[var(--c-surface-3)] flex items-center justify-center text-[var(--c-text-dim)] text-[11px] font-bold flex-shrink-0">
-              {user?.name?.charAt(0)?.toUpperCase() || "R"}
-            </div>
+            <IdenticonAvatar
+              seed={`${user?.email || ""}:${user?.name || "recruiter"}`}
+              size={32}
+              className="rounded-full flex-shrink-0"
+            />
             <AnimatePresence>
               {expanded && (
                 <motion.div
